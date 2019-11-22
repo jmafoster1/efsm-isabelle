@@ -243,6 +243,11 @@ lemma accepts_single_possible_step: "possible_steps e s d l i = {|(s', t)|} \<Lo
        accepts e s d ((l, i)#trace)"
   by (simp add: accepts_prim)
 
+lemma accepts_single_possible_step_atomic: "possible_steps e s d (fst h) (snd h) = {|(s', t)|} \<Longrightarrow>
+       accepts e s' (apply_updates (Updates t) (join_ir (snd h) d) d) trace \<Longrightarrow>
+       accepts e s d (h#trace)"
+  using accepts_single_possible_step by force
+
 abbreviation "rejects e s d t \<equiv> \<not> accepts e s d t"
 
 lemma accepts_step_equiv: "accepts e s d ((l, i)#t) = (\<exists>(s', T) |\<in>| possible_steps e s d l i.
