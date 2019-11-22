@@ -1,0 +1,2 @@
+# Ignore isabelle temp files
+*.thy~
