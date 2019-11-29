@@ -207,6 +207,9 @@ inductive accepts :: "transition_matrix \<Rightarrow> nat \<Rightarrow> register
          accepts e s' (apply_updates (Updates T) (join_ir i d) d) t \<Longrightarrow>
          accepts e s d ((l, i)#t)"
 
+abbreviation accepts_trace :: "transition_matrix \<Rightarrow> trace \<Rightarrow> bool" where
+  "accepts_trace e t \<equiv> accepts e 0 <> t"
+
 fun accepts_prim :: "transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> trace \<Rightarrow> bool" where
   "accepts_prim e s d [] = True" |
   "accepts_prim e s d ((l, i)#t) = (
@@ -247,6 +250,12 @@ lemma accepts_single_possible_step_atomic: "possible_steps e s d (fst h) (snd h)
        accepts e s' (apply_updates (Updates t) (join_ir (snd h) d) d) trace \<Longrightarrow>
        accepts e s d (h#trace)"
   using accepts_single_possible_step by force
+
+lemma accepts_trace_single_possible_step_atomic: "possible_steps e 0 <> (fst h) (snd h) = {|(s', t)|} \<Longrightarrow>
+       accepts e s' (apply_updates (Updates t) (join_ir (snd h) <>) <>) trace \<Longrightarrow>
+       accepts_trace e (h#trace)"
+  using accepts_single_possible_step_atomic
+  by simp
 
 abbreviation "rejects e s d t \<equiv> \<not> accepts e s d t"
 
@@ -382,9 +391,6 @@ lemma accepts_must_be_step: "accepts e s d (h#ts) \<Longrightarrow> \<exists>t s
 lemma accepts_cons_step: "accepts e s r (h # t) \<Longrightarrow> step e s r (fst h) (snd h) \<noteq>  None"
   by (simp add: accepts_must_be_step)
 
-abbreviation accepts_trace :: "transition_matrix \<Rightarrow> trace \<Rightarrow> bool" where
-  "accepts_trace e t \<equiv> accepts e 0 <> t"
-
 lemma no_step_none: "step e s r aa ba = None \<Longrightarrow> rejects e s r ((aa, ba) # p)"
   using accepts_cons_step by fastforce
 
@@ -406,6 +412,9 @@ lemma trace_reject: "(possible_steps e s d a b = {||} \<or> (\<forall>(s', T) |\
   using accepts.step by blast
 
 lemma trace_reject_no_possible_steps: "possible_steps e s d a b = {||} \<Longrightarrow> rejects e s d ((a, b)#t)"
+  using accepts_possible_steps_not_empty by auto
+
+lemma trace_reject_no_possible_steps_atomic: "possible_steps e s d (fst a) (snd a) = {||} \<Longrightarrow> rejects e s d (a#t)"
   using accepts_possible_steps_not_empty by auto
 
 lemma trace_reject_later: "\<forall>(s', T) |\<in>| possible_steps e s d a b. rejects e s' (apply_updates (Updates T) (join_ir b d) d) t \<Longrightarrow> rejects e s d ((a, b)#t)"
