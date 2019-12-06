@@ -41,6 +41,9 @@ definition gOr :: "gexp \<Rightarrow> gexp \<Rightarrow> gexp" (*infix "\<or>" 6
 definition gAnd :: "gexp \<Rightarrow> gexp \<Rightarrow> gexp" (*infix "\<and>" 60*) where
   "gAnd v va \<equiv> Nor (Nor v v) (Nor va va)"
 
+definition gImplies :: "gexp \<Rightarrow> gexp \<Rightarrow> gexp" where
+  "gImplies p q \<equiv> gOr (gNot p) q"
+
 definition Lt :: "aexp \<Rightarrow> aexp \<Rightarrow> gexp" (*infix "<" 60*) where
   "Lt a b \<equiv> Gt b a"
 
