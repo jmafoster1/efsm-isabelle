@@ -176,4 +176,10 @@ lemma fset_eq_alt: "(x = y) = (x |\<subseteq>| y \<and> size x = size y)"
 definition these :: "'a option fset \<Rightarrow> 'a fset"
   where "these A = the |`| (ffilter (\<lambda>x. x \<noteq> None) A)"
 
+definition fimages :: "('a \<Rightarrow> 'b fset) \<Rightarrow> 'a fset \<Rightarrow> 'b fset" where
+  "fimages f xs = ffUnion (fimage f xs)"
+
+lemma ffold_empty [simp]: "ffold f b {||} = b"
+  by (simp add: ffold_def)
+
 end

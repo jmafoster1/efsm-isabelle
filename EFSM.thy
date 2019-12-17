@@ -30,9 +30,9 @@ lemma str_not_num: "Str s \<noteq> Num x1"
 definition S :: "transition_matrix \<Rightarrow> nat fset" where
   "S m = (fimage (\<lambda>((s, s'), t). s) m) |\<union>| fimage (\<lambda>((s, s'), t). s') m"
 
-lemma "S e = (fst \<circ> fst) |`| e |\<union>| (snd \<circ> fst) |`| e"
-  apply (simp add: comp_def S_def)
-  by force
+lemma "S e = ffUnion (fimage (\<lambda>((s, s'), _). {|s, s'|}) e)"
+  unfolding S_def 
+  by(induct e, auto)
 
 definition apply_outputs :: "aexp list \<Rightarrow> datastate \<Rightarrow> value option list" where
   "apply_outputs p s = map (\<lambda>p. aval p s) p"
