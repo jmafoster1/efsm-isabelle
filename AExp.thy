@@ -31,6 +31,10 @@ text_raw\<open>\snip{aexptype}{1}{2}{%\<close>
 datatype aexp = L "value" | V vname | Plus aexp aexp | Minus aexp aexp | Times aexp aexp
 text_raw\<open>}%endsnip\<close>
 
+fun is_lit :: "aexp \<Rightarrow> bool" where
+  "is_lit (L _) = True" |
+  "is_lit _ = False"
+
 lemma aexp_induct_separate_V_cases: "(\<And>x. P (L x)) \<Longrightarrow>
     (\<And>x. P (V (I x))) \<Longrightarrow>
     (\<And>x. P (V (R x))) \<Longrightarrow>
