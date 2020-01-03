@@ -96,6 +96,9 @@ definition valid :: "gexp \<Rightarrow> bool" where
 lemma valid_true: "valid (Bc True)"
   by (simp add: valid_def)
 
+definition gexp_implies :: "gexp \<Rightarrow> gexp \<Rightarrow> bool" where
+  "gexp_implies g1 g2 = (\<forall>s. gval g1 s = true \<longrightarrow> gval g2 s = true)"
+
 fun gexp_constrains :: "gexp \<Rightarrow> aexp \<Rightarrow> bool" where
   "gexp_constrains (Bc _) _ = False" |
   "gexp_constrains (Null a) a' = aexp_constrains a a'" |
