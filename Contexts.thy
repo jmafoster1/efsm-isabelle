@@ -13,6 +13,9 @@ begin
 definition can_take :: "nat \<Rightarrow> gexp list \<Rightarrow> inputs \<Rightarrow> registers \<Rightarrow> bool" where
   "can_take a g i r = (length i = a \<and> apply_guards g (join_ir i r))"
 
+lemma can_take_empty [simp]: "length i = a \<Longrightarrow> can_take a [] i c"
+  by (simp add: can_take_def)
+
 lemma can_take_subset_append: "set (Guard t) \<subseteq> set (Guard t') \<Longrightarrow> can_take a (Guard t @ Guard t') i c = can_take a (Guard t') i c"
   by (simp add: apply_guards_subset_append can_take_def)
 
@@ -71,17 +74,17 @@ lemma bad_guards:
   by (simp add: subsumes_def)
 
 lemma inconsistent_updates:
-  "\<exists>p1 p2. (\<exists>i. posterior t2 i r = Some p2 \<and> posterior t1 i r = Some p1) \<and>
+  "\<exists>p2 p1. (\<exists>i. posterior t2 i r = Some p2 \<and> posterior t1 i r = Some p1) \<and>
            (\<exists>r. (\<exists>y. p1 $ r = Some y) \<and> p2 $ r = None) \<Longrightarrow>
    \<not> subsumes t2 r t1"
-  by (simp add: subsumes_def)
+  by (simp add: subsumes_def, metis)
 
 lemma inconsistent_updates2:
-  "\<exists>p1 p2. (\<exists>i. posterior_separate (Arity t2) (Guard t2 @ Guard t1) (Updates t2) i r = Some p2 \<and>
+  "\<exists>p2 p1. (\<exists>i. posterior_separate (Arity t2) (Guard t2 @ Guard t1) (Updates t2) i r = Some p2 \<and>
                 posterior_separate (Arity t1) (Guard t1) (Updates t1) i r = Some p1) \<and>
-           (\<exists>P r'. P (p2 $ r') \<and> (\<exists>y. p1 $ r' = Some y) \<and> \<not> P (p1 $ r')) \<Longrightarrow>
+           (\<exists>r' P. P (p2 $ r') \<and> (\<exists>y. p1 $ r' = Some y) \<and> \<not> P (p1 $ r')) \<Longrightarrow>
     \<not> subsumes t2 r t1"
-  by (simp add: subsumes_def)
+  by (simp add: subsumes_def, metis)
 
 lemma bad_outputs: "\<exists>i. can_take_transition t1 i r \<and> apply_outputs (Outputs t1) (join_ir i r) \<noteq> apply_outputs (Outputs t2) (join_ir i r) \<Longrightarrow>
  \<not> subsumes t2 r t1"
