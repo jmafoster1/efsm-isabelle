@@ -50,21 +50,21 @@ definition r2d :: "registers \<Rightarrow> datastate" where
 definition subsumes :: "transition \<Rightarrow> registers \<Rightarrow> transition \<Rightarrow> bool" where
   "subsumes t2 r t1 = (Label t1 = Label t2 \<and> Arity t1 = Arity t2 \<and>
                        (\<forall>i. can_take_transition t1 i r \<longrightarrow> can_take_transition t2 i r) \<and>
-                       (\<forall>i. can_take_transition t1 i r \<longrightarrow> apply_outputs (Outputs t1) (join_ir i r) = apply_outputs (Outputs t2) (join_ir i r)) \<and>
-                       (\<forall>p1 p2 i. posterior_separate (Arity t2) ((Guard t2)@(Guard t1)) (Updates t2) i r = Some p2 \<and>
+                       (\<forall>i. can_take_transition t1 i r \<longrightarrow>
+                            apply_outputs (Outputs t1) (join_ir i r) = apply_outputs (Outputs t2) (join_ir i r)) \<and>
+                       (\<forall>p1 p2 i. posterior_separate (Arity t1) (Guard t1) (Updates t2) i r = Some p2 \<longrightarrow>
                                   posterior_separate (Arity t1) (Guard t1) (Updates t1) i r = Some p1 \<longrightarrow>
-                                  (\<forall>P r'. (p1 $ r' = None) \<or> (P (p2 $ r') \<longrightarrow> P (p1 $ r')))) \<and>
-                       (\<forall>p1 p2 i. posterior t2 i r = Some p2 \<and> posterior t1 i r = Some p1 \<longrightarrow> (\<forall>r. p1 $ r \<noteq> None \<longrightarrow>  p2 $ r \<noteq> None))
+                                  (\<forall>P r'. (p1 $ r' = None) \<or> (P (p2 $ r') \<longrightarrow> P (p1 $ r'))))
                       )"
 
 lemma subsumption: 
   "(Label t1 = Label t2 \<and> Arity t1 = Arity t2) \<Longrightarrow>
    (\<forall>i. can_take_transition t1 i r \<longrightarrow> can_take_transition t2 i r) \<Longrightarrow>
-   (\<forall>i. can_take_transition t1 i r \<longrightarrow> apply_outputs (Outputs t1) (join_ir i r) = apply_outputs (Outputs t2) (join_ir i r)) \<Longrightarrow>
-   (\<forall>p1 p2 i. posterior_separate (Arity t2) ((Guard t2)@(Guard t1)) (Updates t2) i r = Some p2 \<and>
-                                  posterior_separate (Arity t1) (Guard t1) (Updates t1) i r = Some p1 \<longrightarrow>
-                                  (\<forall>P r'. (p1 $ r' = None) \<or> (P (p2 $ r') \<longrightarrow> P (p1 $ r')))) \<Longrightarrow>
-   (\<forall>p1 p2 i. posterior t2 i r = Some p2 \<and> posterior t1 i r = Some p1 \<longrightarrow> (\<forall>r. p1 $ r \<noteq> None \<longrightarrow>  p2 $ r \<noteq> None)) \<Longrightarrow>
+   (\<forall>i. can_take_transition t1 i r \<longrightarrow>
+        apply_outputs (Outputs t1) (join_ir i r) = apply_outputs (Outputs t2) (join_ir i r)) \<Longrightarrow>
+   (\<forall>p1 p2 i. posterior_separate (Arity t1) (Guard t1) (Updates t2) i r = Some p2 \<longrightarrow>
+              posterior_separate (Arity t1) (Guard t1) (Updates t1) i r = Some p1 \<longrightarrow>
+              (\<forall>P r'. (p1 $ r' = None) \<or> (P (p2 $ r') \<longrightarrow> P (p1 $ r')))) \<Longrightarrow>
    subsumes t2 r t1"
   by (simp add: subsumes_def)
 
@@ -74,30 +74,23 @@ lemma bad_guards:
   by (simp add: subsumes_def)
 
 lemma inconsistent_updates:
-  "\<exists>p2 p1. (\<exists>i. posterior t2 i r = Some p2 \<and> posterior t1 i r = Some p1) \<and>
-           (\<exists>r. (\<exists>y. p1 $ r = Some y) \<and> p2 $ r = None) \<Longrightarrow>
-   \<not> subsumes t2 r t1"
-  by (simp add: subsumes_def, metis)
-
-lemma inconsistent_updates2:
-  "\<exists>p2 p1. (\<exists>i. posterior_separate (Arity t2) (Guard t2 @ Guard t1) (Updates t2) i r = Some p2 \<and>
+  "\<exists>p2 p1. (\<exists>i. posterior_separate (Arity t1) (Guard t1) (Updates t2) i r = Some p2 \<and>
                 posterior_separate (Arity t1) (Guard t1) (Updates t1) i r = Some p1) \<and>
            (\<exists>r' P. P (p2 $ r') \<and> (\<exists>y. p1 $ r' = Some y) \<and> \<not> P (p1 $ r')) \<Longrightarrow>
     \<not> subsumes t2 r t1"
-  by (simp add: subsumes_def, metis)
+  by (metis (no_types, hide_lams) option.simps(3) subsumes_def)
 
 lemma bad_outputs: "\<exists>i. can_take_transition t1 i r \<and> apply_outputs (Outputs t1) (join_ir i r) \<noteq> apply_outputs (Outputs t2) (join_ir i r) \<Longrightarrow>
  \<not> subsumes t2 r t1"
   by (simp add: subsumes_def)
 
 lemma transition_subsumes_self: "subsumes t c t"
-  apply (simp add: subsumes_def)
-  using posterior_separate_def by auto
+  by (simp add: subsumes_def)
 
 definition posterior_sequence :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> trace \<Rightarrow> registers option" where
   "posterior_sequence e s r t = (case accepting_sequence e s r t [] of
-    None \<Rightarrow> None
-    | Some seq \<Rightarrow>
+    None \<Rightarrow> None |
+    Some seq \<Rightarrow>
       if seq = [] then
         Some r
       else let
@@ -110,50 +103,21 @@ abbreviation anterior_context :: "transition_matrix \<Rightarrow> trace \<Righta
 lemma anterior_context_empty: "anterior_context e [] = Some <>"
   by (simp add: posterior_sequence_def)
 
-lemma accepting_sequence_length_aux: "\<forall>s d seq. accepting_sequence e s d t seq = Some seq' \<longrightarrow> length seq' \<ge> length seq"
-proof(induct t)
-  case Nil
-  then show ?case
-    by auto
-next
-  case (Cons a t)
-  then show ?case
-    apply clarify
-    apply (simp add: Let_def)
-    apply (case_tac "ffilter (\<lambda>(s', T). accepts e s' (apply_updates (Updates T) (join_ir (snd a) d) d) t)
-         (possible_steps e s d (fst a) (snd a)) =
-        {||}")
-     apply simp
-    apply simp
-    apply (case_tac "SOME x.
-             x |\<in>| possible_steps e s d (fst a) (snd a) \<and>
-             (case x of (s', T) \<Rightarrow> accepts e s' (apply_updates (Updates T) (join_ir (snd a) d) d) t)")
-    apply (simp add: Let_def)
-    by fastforce
-qed
-
-lemma accepting_sequence_length: "accepting_sequence e s d t seq = Some seq' \<Longrightarrow> length seq' \<ge> length seq"
-  by (simp add: accepting_sequence_length_aux)
-
-lemma posterior_sequence_implies_accepting_sequence: "(posterior_sequence e s d t = Some ca) \<Longrightarrow> (accepting_sequence e s d t [] \<noteq> None)"
+lemma posterior_sequence_implies_accepting_sequence: "posterior_sequence e s d t = Some ca \<Longrightarrow> accepting_sequence e s d t [] \<noteq> None"
   apply (simp add: posterior_sequence_def)
-  apply (case_tac "accepting_sequence e s d t []")
-   apply simp
-  by simp
+  by (cases "accepting_sequence e s d t []", auto)
 
-lemma accepting_sequence_accepts: "\<forall>d. accepting_sequence e s d t [] = Some y \<longrightarrow> accepts e s d t"
-proof(induct t)
+lemma accepting_sequence_accepts: "accepting_sequence e s d t [] = Some y \<Longrightarrow> accepts e s d t"
+proof(induct t arbitrary: d)
   case Nil
   then show ?case
     by (simp add: accepts.base)
 next
   case (Cons a t)
   then show ?case
-    apply clarify
     apply (simp add: Let_def)
     apply (case_tac "ffilter (\<lambda>(s', T). accepts e s' (apply_updates (Updates T) (join_ir (snd a) d) d) t)
-         (possible_steps e s d (fst a) (snd a)) =
-        {||}")
+         (possible_steps e s d (fst a) (snd a)) = {||}")
      apply simp
     apply simp
     apply (case_tac "SOME x.
@@ -255,30 +219,11 @@ lemma accepts_trace_gives_context: "accepts_trace e p \<Longrightarrow> (\<exist
 lemma accepts_trace_anterior_not_none: "accepts_trace e p \<Longrightarrow> anterior_context e p \<noteq> None"
   using accepts_trace_gives_context by blast
 
-lemma "\<forall>s. apply_guards (Guard t2) s \<longrightarrow> apply_guards (Guard t1) s \<Longrightarrow>
-       Label t1 = Label t2 \<Longrightarrow>
-       Arity t1 = Arity t2 \<Longrightarrow>
-       Outputs t1 = Outputs t2 \<Longrightarrow>
-       Updates t1 = Updates t2 \<Longrightarrow>
-       subsumes t1 c t2"
-  apply (rule subsumption)
-      apply simp
-     apply (simp add: can_take_transition_def can_take_def)
-    apply simp
-   apply (simp add: posterior_separate_def can_take_def)
-   apply auto[1]
-  apply (simp add: posterior_def posterior_separate_def can_take_def)
-  by auto
-
 lemma no_choice_no_subsumption:
   "Label t = Label t' \<Longrightarrow>
    Arity t = Arity t' \<Longrightarrow>
    \<not> choice t t' \<Longrightarrow>
    \<exists>i. can_take_transition t' i c \<Longrightarrow>
   \<not> subsumes t c t'"
-  apply (rule bad_guards)
-  apply (simp add: can_take_transition_def can_take_def)
-  apply clarify
-  apply (rule_tac x=i in exI)
-  using choice_def by blast
+  by (meson bad_guards can_take_def can_take_transition_def choice_def)
 end
