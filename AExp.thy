@@ -42,38 +42,6 @@ lemma aexp_induct_separate_V_cases: "(\<And>x. P (L x)) \<Longrightarrow>
     (\<And>x1a x2a. P x1a \<Longrightarrow> P x2a \<Longrightarrow> P (Minus x1a x2a)) \<Longrightarrow> (\<And>x1a x2a. P x1a \<Longrightarrow> P x2a \<Longrightarrow> P (Times x1a x2a)) \<Longrightarrow> P aexp"
   by (metis aexp.induct vname.exhaust)
 
-fun MaybeArithInt :: "(int \<Rightarrow> int \<Rightarrow> int) \<Rightarrow> value option \<Rightarrow> value option \<Rightarrow> value option" where
-  "MaybeArithInt f (Some (Num x)) (Some (Num y)) = Some (Num (f x y))" |
-  "MaybeArithInt _ _ _ = None"
-
-lemma MaybeArithInt_not_None: "MaybeArithInt f a b \<noteq> None = (\<exists>n n'. a = Some (Num n) \<and> b = Some (Num n'))"
-  using MaybeArithInt.elims MaybeArithInt.simps(1) by blast
-
-lemma MaybeArithInt_Some: "MaybeArithInt f a b = Some (Num x) = (\<exists>n n'. a = Some (Num n) \<and> b = Some (Num n') \<and> f n n' = x)"
-  using MaybeArithInt.elims MaybeArithInt.simps(1) by blast
-
-lemma MaybeArithInt_None: "(MaybeArithInt f a1 a2 = None) = (\<nexists>n n'. a1 = Some (Num n) \<and> a2 = Some (Num n'))"
-  using MaybeArithInt_not_None by blast
-
-lemma MaybeArithInt_Not_Num: "(\<forall>n. MaybeArithInt f a1 a2 \<noteq> Some (Num n)) = (MaybeArithInt f a1 a2 = None)"
-  by (metis MaybeArithInt.elims option.distinct(1))
-
-definition "value_plus = MaybeArithInt (+)"
-
-lemma plus_never_string: "MaybeArithInt f a b \<noteq> Some (Str x)"
-  using MaybeArithInt.elims by blast
-
-lemma value_plus_symmetry: "value_plus x y = value_plus y x"
-  apply (induct x y rule: MaybeArithInt.induct)
-  by (simp_all add: value_plus_def)
-
-definition "value_minus = MaybeArithInt (-)"
-
-lemma minus_never_string: "value_minus a b \<noteq> Some (Str x)"
-  by (simp add: plus_never_string value_minus_def)
-
-definition "value_times = MaybeArithInt (*)"
-
 fun aval :: "aexp \<Rightarrow> datastate \<Rightarrow> value option" where
   "aval (L x) s = Some x" |
   "aval (V x) s = s x" |
@@ -353,6 +321,9 @@ lemma exists_join_ir_ext: "\<exists>i r. join_ir i r v = s v"
    apply (rule_tac x="<>(x2 := a)" in exI)
    apply simp
   by (simp add: input2state_exists)
+
+lemma join_ir_nth: "i < length is \<Longrightarrow> join_ir is r (I i) = Some (is ! i)"
+  by (simp add: join_ir_def input2state_nth)
 
 lemma aval_plus_aexp: "aval (a+b) s = aval (Plus a b) s"
   apply(induct a b rule: plus_aexp.induct)
