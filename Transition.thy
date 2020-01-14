@@ -11,6 +11,18 @@ type_synonym output_function = "aexp"
 type_synonym update_function = "(nat \<times> aexp)"
 type_synonym updates = "update_function list"
 
+abbreviation V :: "vname \<Rightarrow> aexp" where
+  "V v \<equiv> Abs_aexp (aexp_o.V (vname v))"
+
+abbreviation L :: "value \<Rightarrow> aexp" where
+  "L v \<equiv> Abs_aexp (aexp_o.L v)"
+
+abbreviation R :: "nat \<Rightarrow> vname" where
+  "R v \<equiv> Abs_vname (vname_o.R v)"
+
+abbreviation I :: "nat \<Rightarrow> vname" where
+  "I v \<equiv> Abs_vname (vname_o.I v)"
+
 text_raw\<open>\snip{transitiontype}{1}{2}{%\<close>
 record transition =
   Label :: String.literal
@@ -93,7 +105,7 @@ next
     apply simp
     apply (cases a)
     apply simp
-    by (metis List.set_insert)
+    by (metis enumerate_aexp_regs_list set_append)
 qed
 
 lemma enumerate_registers_list: "\<exists>l. enumerate_registers t = set l"
@@ -107,12 +119,25 @@ lemma enumerate_registers_list: "\<exists>l. enumerate_registers t = set l"
 definition max_reg :: "transition \<Rightarrow> nat option" where
   "max_reg t = (if enumerate_registers t = {} then None else Some (Max (enumerate_registers t)))"
 
-lemma max_reg_none_no_updates: "Transition.max_reg t = None \<Longrightarrow> Updates t = []"
-  apply (simp add: Transition.max_reg_def)
-  apply (case_tac "enumerate_registers t = {}")
-   apply (simp add: enumerate_registers_def)
-   apply (case_tac "Updates t")
-  by auto
+lemma enumerate_aexp_regs_r: "enumerate_aexp_regs (V (R r)) = {r}"
+  by (simp add: Abs_aexp_inverse Abs_vname_inverse enumerate_aexp_regs.rep_eq)
+
+lemma max_reg_none_no_updates: "max_reg t = None \<Longrightarrow> Updates t = []"
+proof(induct "Updates t")
+  case Nil
+  then show ?case
+    by simp
+next
+  case (Cons a x)
+  then show ?case
+    apply (simp add: max_reg_def)
+    apply (case_tac "enumerate_registers t = {}")
+     apply (simp add: enumerate_registers_def)
+     apply (simp add: eq_commute)
+     apply (cases a)
+     apply (simp add: enumerate_aexp_regs_r)
+    by simp
+qed
 
 definition total_max_reg :: "transition \<Rightarrow> nat" where
   "total_max_reg t = (case max_reg t of None \<Rightarrow> 0 | Some a \<Rightarrow> a)"
@@ -131,5 +156,14 @@ definition enumerate_ints :: "transition \<Rightarrow> int set" where
                          (\<Union> (set (map enumerate_aexp_ints (Outputs t)))) \<union>
                          (\<Union> (set (map (\<lambda>(_, u). enumerate_aexp_ints u) (Updates t)))) \<union>
                          (\<Union> (set (map (\<lambda>(r, _). enumerate_aexp_ints (V (R r))) (Updates t))))"
+
+lemma aval_L [simp]:  "aval (L v) i c = Some v"
+  by (simp add: Abs_aexp_inverse aval_def)
+
+lemma aval_R [simp]: "aval (V (R v)) i c = c $ v"
+  by (simp add: aval_def Abs_aexp_inverse Abs_vname_inverse)
+
+lemma aval_I [simp]: "aval (V (I v)) i c = Some (i ! v)"
+  by (simp add: aval_def Abs_aexp_inverse Abs_vname_inverse)
 
 end
