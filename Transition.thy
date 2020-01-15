@@ -4,20 +4,19 @@ begin
 
 type_synonym label = String.literal
 type_synonym arity = nat
+type_synonym guard = "vname gexp"
 type_synonym inputs = "value list"
 type_synonym outputs = "value option list"
-type_synonym output_function = "aexp"
-
-type_synonym update_function = "(nat \<times> aexp)"
-type_synonym updates = "update_function list"
+type_synonym output_function = "vname aexp"
+type_synonym update_function = "(nat \<times> vname aexp)"
 
 text_raw\<open>\snip{transitiontype}{1}{2}{%\<close>
 record transition =
   Label :: String.literal
   Arity :: nat
-  Guard :: "gexp list"
-  Outputs :: "aexp list"
-  Updates :: "(nat \<times> aexp) list"
+  Guard :: "guard list"
+  Outputs :: "output_function list"
+  Updates :: "update_function list"
 text_raw\<open>}%endsnip\<close>
 
 definition same_structure :: "transition \<Rightarrow> transition \<Rightarrow> bool" where

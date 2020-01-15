@@ -10,7 +10,7 @@ theory Contexts
     EFSM GExp
 begin
 
-definition can_take :: "nat \<Rightarrow> gexp list \<Rightarrow> inputs \<Rightarrow> registers \<Rightarrow> bool" where
+definition can_take :: "nat \<Rightarrow> vname gexp list \<Rightarrow> inputs \<Rightarrow> registers \<Rightarrow> bool" where
   "can_take a g i r = (length i = a \<and> apply_guards g (join_ir i r))"
 
 lemma can_take_empty [simp]: "length i = a \<Longrightarrow> can_take a [] i c"
@@ -38,14 +38,11 @@ lemma medial_subset:
    can_take_transition t' i r"
   by (simp add: can_take_transition_def can_take_def apply_guards_subset)
 
-definition posterior_separate :: "nat \<Rightarrow> gexp list \<Rightarrow> update_function list \<Rightarrow> inputs \<Rightarrow> registers \<Rightarrow> registers option" where
+definition posterior_separate :: "nat \<Rightarrow> vname gexp list \<Rightarrow> update_function list \<Rightarrow> inputs \<Rightarrow> registers \<Rightarrow> registers option" where
   "posterior_separate a g u i r = (if can_take a g i r then Some (apply_updates u (join_ir i r) r) else None)"
 
 definition posterior :: "transition \<Rightarrow> inputs \<Rightarrow> registers \<Rightarrow> registers option" where
   "posterior t i r = posterior_separate (Arity t) (Guard t) (Updates t) i r"
-
-definition r2d :: "registers \<Rightarrow> datastate" where
-  "r2d regs = (\<lambda>i. case i of R r \<Rightarrow> regs $ r | _ \<Rightarrow> None)"
 
 definition subsumes :: "transition \<Rightarrow> registers \<Rightarrow> transition \<Rightarrow> bool" where
   "subsumes t2 r t1 = (Label t1 = Label t2 \<and> Arity t1 = Arity t2 \<and>

@@ -25,13 +25,13 @@ declare One_nat_def [simp del]
 unbundle finfun_syntax
 
 type_synonym registers = "nat \<Rightarrow>f value option"
-type_synonym datastate = "vname \<Rightarrow> value option"
+type_synonym 'a datastate = "'a \<Rightarrow> value option"
 
 text_raw\<open>\snip{aexptype}{1}{2}{%\<close>
-datatype aexp = L "value" | V vname | Plus aexp aexp | Minus aexp aexp | Times aexp aexp
+datatype 'a aexp = L "value" | V 'a | Plus "'a aexp" "'a aexp" | Minus "'a aexp" "'a aexp" | Times "'a aexp" "'a aexp"
 text_raw\<open>}%endsnip\<close>
 
-fun is_lit :: "aexp \<Rightarrow> bool" where
+fun is_lit :: "'a aexp \<Rightarrow> bool" where
   "is_lit (L _) = True" |
   "is_lit _ = False"
 
@@ -42,7 +42,7 @@ lemma aexp_induct_separate_V_cases: "(\<And>x. P (L x)) \<Longrightarrow>
     (\<And>x1a x2a. P x1a \<Longrightarrow> P x2a \<Longrightarrow> P (Minus x1a x2a)) \<Longrightarrow> (\<And>x1a x2a. P x1a \<Longrightarrow> P x2a \<Longrightarrow> P (Times x1a x2a)) \<Longrightarrow> P aexp"
   by (metis aexp.induct vname.exhaust)
 
-fun aval :: "aexp \<Rightarrow> datastate \<Rightarrow> value option" where
+fun aval :: "'a aexp \<Rightarrow> 'a datastate \<Rightarrow> value option" where
   "aval (L x) s = Some x" |
   "aval (V x) s = s x" |
   "aval (Plus a\<^sub>1 a\<^sub>2) s = value_plus (aval a\<^sub>1 s)(aval a\<^sub>2 s)" |
@@ -84,22 +84,6 @@ translations
   "_maplet"  :: "['a, 'a] \<Rightarrow> maplet"             ("_ /:=/ _")
   "_maplets" :: "['a, 'a] \<Rightarrow> maplet"             ("_ /[:=]/ _")
   "_Map"     :: "maplets \<Rightarrow> 'a \<rightharpoonup> 'b"            ("(1<_>)")*)
-
-instantiation aexp :: plus begin
-fun plus_aexp :: "aexp \<Rightarrow> aexp \<Rightarrow> aexp" where
-  "plus_aexp (L (Num n1)) (L (Num n2)) = L (Num (n1+n2))" |
-  "plus_aexp x y = Plus x y"
-
-instance by standard
-end
-
-instantiation aexp :: minus begin
-fun minus_aexp :: "aexp \<Rightarrow> aexp \<Rightarrow> aexp" where
-  "minus_aexp (L (Num n1)) (L (Num n2)) = L (Num (n1-n2))" |
-  "minus_aexp x y = Minus x y"
-
-instance by standard
-end
 
 definition input2state :: "value list \<Rightarrow> registers" where
   "input2state n = fold (\<lambda>(k, v) f. f(k $:= Some v)) (enumerate 0 n) (K$ None)"
@@ -250,7 +234,7 @@ lemma input2state_double_exists_2: "x \<noteq> y \<Longrightarrow> \<exists>i. i
   apply (metis input2state_nth input2state_within_bounds le_trans length_append_repeat length_list_update linorder_not_le nth_append nth_list_update_neq order_refl)
   by (metis input2state_nth length_append length_input2state_repeat length_list_update length_repeat nth_list_update_eq)
 
-definition join_ir :: "value list \<Rightarrow> registers \<Rightarrow> datastate" where
+definition join_ir :: "value list \<Rightarrow> registers \<Rightarrow> vname datastate" where
   "join_ir i r \<equiv> (\<lambda>x. case x of
     R n \<Rightarrow> r $ n |
     I n \<Rightarrow> (input2state i) $ n
@@ -325,29 +309,21 @@ lemma exists_join_ir_ext: "\<exists>i r. join_ir i r v = s v"
 lemma join_ir_nth: "i < length is \<Longrightarrow> join_ir is r (I i) = Some (is ! i)"
   by (simp add: join_ir_def input2state_nth)
 
-lemma aval_plus_aexp: "aval (a+b) s = aval (Plus a b) s"
-  apply(induct a b rule: plus_aexp.induct)
-  by (simp_all add: value_plus_def)
-
-lemma aval_minus_aexp: "aval (a-b) s = aval (Minus a b) s"
-  apply(induct a b rule: minus_aexp.induct)
-  by (simp_all add: value_minus_def)
-
-fun aexp_constrains :: "aexp \<Rightarrow> aexp \<Rightarrow> bool" where
+fun aexp_constrains :: "'a aexp \<Rightarrow> 'a aexp \<Rightarrow> bool" where
   "aexp_constrains (L l) a = (L l = a)" |
   "aexp_constrains (V v) v' = (V v = v')" |
   "aexp_constrains (Plus a1 a2) v = ((Plus a1 a2) = v \<or> (Plus a1 a2) = v \<or> (aexp_constrains a1 v \<or> aexp_constrains a2 v))" |
   "aexp_constrains (Minus a1 a2) v = ((Minus a1 a2) = v \<or> (aexp_constrains a1 v \<or> aexp_constrains a2 v))" |
   "aexp_constrains (Times a1 a2) v = ((Times a1 a2) = v \<or> (aexp_constrains a1 v \<or> aexp_constrains a2 v))"
 
-fun aexp_same_structure :: "aexp \<Rightarrow> aexp \<Rightarrow> bool" where
+fun aexp_same_structure :: "'a aexp \<Rightarrow> 'a aexp \<Rightarrow> bool" where
   "aexp_same_structure (L v) (L v') = True" |
   "aexp_same_structure (V v) (V v') = True" |
   "aexp_same_structure (Plus a1 a2) (Plus a1' a2') = (aexp_same_structure a1 a1' \<and> aexp_same_structure a2 a2')" |
   "aexp_same_structure (Minus a1 a2) (Minus a1' a2') = (aexp_same_structure a1 a1' \<and> aexp_same_structure a2 a2')" |
   "aexp_same_structure _ _ = False"
 
-fun enumerate_aexp_inputs :: "aexp \<Rightarrow> nat set" where
+fun enumerate_aexp_inputs :: "vname aexp \<Rightarrow> nat set" where
   "enumerate_aexp_inputs (L _) = {}" |
   "enumerate_aexp_inputs (V (I n)) = {n}" |
   "enumerate_aexp_inputs (V (R n)) = {}" |
@@ -380,7 +356,7 @@ next
     by (metis enumerate_aexp_inputs.simps(6) set_append)
 qed
 
-fun enumerate_aexp_regs :: "aexp \<Rightarrow> nat set" where
+fun enumerate_aexp_regs :: "vname aexp \<Rightarrow> nat set" where
   "enumerate_aexp_regs (L _) = {}" |
   "enumerate_aexp_regs (V (R n)) = {n}" |
   "enumerate_aexp_regs (V (I _)) = {}" |
@@ -470,10 +446,10 @@ next
     by simp
 qed
 
-definition max_input :: "aexp \<Rightarrow> nat option" where
+definition max_input :: "vname aexp \<Rightarrow> nat option" where
   "max_input g = (let inputs = (enumerate_aexp_inputs g) in if inputs = {} then None else Some (Max inputs))"
 
-definition max_reg :: "aexp \<Rightarrow> nat option" where
+definition max_reg :: "vname aexp \<Rightarrow> nat option" where
   "max_reg g = (let regs = (enumerate_aexp_regs g) in if regs = {} then None else Some (Max regs))"
 
 lemma max_reg_V_I: "max_reg (V (I n)) = None"
@@ -615,7 +591,7 @@ next
     by (metis aval_take no_reg_aval_swap_regs)
 qed
 
-fun enumerate_aexp_strings :: "aexp \<Rightarrow> String.literal set" where
+fun enumerate_aexp_strings :: "'a aexp \<Rightarrow> String.literal set" where
   "enumerate_aexp_strings (L (Str s)) = {s}" |
   "enumerate_aexp_strings (L (Num s)) = {}" |
   "enumerate_aexp_strings (V _) = {}" |
@@ -623,7 +599,7 @@ fun enumerate_aexp_strings :: "aexp \<Rightarrow> String.literal set" where
   "enumerate_aexp_strings (Minus a1 a2) = enumerate_aexp_strings a1 \<union> enumerate_aexp_strings a2" |
   "enumerate_aexp_strings (Times a1 a2) = enumerate_aexp_strings a1 \<union> enumerate_aexp_strings a2"
 
-fun enumerate_aexp_ints :: "aexp \<Rightarrow> int set" where
+fun enumerate_aexp_ints :: "'a aexp \<Rightarrow> int set" where
   "enumerate_aexp_ints (L (Str s)) = {}" |
   "enumerate_aexp_ints (L (Num s)) = {s}" |
   "enumerate_aexp_ints (V _) = {}" |
@@ -631,7 +607,7 @@ fun enumerate_aexp_ints :: "aexp \<Rightarrow> int set" where
   "enumerate_aexp_ints (Minus a1 a2) = enumerate_aexp_ints a1 \<union> enumerate_aexp_ints a2" |
   "enumerate_aexp_ints (Times a1 a2) = enumerate_aexp_ints a1 \<union> enumerate_aexp_ints a2"
 
-definition enumerate_vars :: "aexp \<Rightarrow> vname set" where
+definition enumerate_vars :: "vname aexp \<Rightarrow> vname set" where
   "enumerate_vars a = (image I (enumerate_aexp_inputs a)) \<union> (image R (enumerate_aexp_regs a))"
 
 end

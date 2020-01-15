@@ -34,7 +34,7 @@ lemma "S e = ffUnion (fimage (\<lambda>((s, s'), _). {|s, s'|}) e)"
   unfolding S_def 
   by(induct e, auto)
 
-definition apply_outputs :: "aexp list \<Rightarrow> datastate \<Rightarrow> value option list" where
+definition apply_outputs :: "'a aexp list \<Rightarrow> 'a datastate \<Rightarrow> value option list" where
   "apply_outputs p s = map (\<lambda>p. aval p s) p"
 
 lemma apply_outputs_nth: "i < length p \<Longrightarrow> apply_outputs p s ! i = aval (p ! i) s"
@@ -111,7 +111,7 @@ lemma choice_alt: "choice t t' = choice_alt t t'"
 lemma choice_symmetry: "choice x y = choice y x"
   using choice_def by auto
 
-primrec apply_updates :: "updates \<Rightarrow> datastate \<Rightarrow> registers \<Rightarrow> registers" where
+primrec apply_updates :: "update_function list \<Rightarrow> vname datastate \<Rightarrow> registers \<Rightarrow> registers" where
   "apply_updates [] _ new = new" |
   "apply_updates (h#t) old new = (apply_updates t old new)(fst h $:= aval (snd h) old)"
 
@@ -293,7 +293,7 @@ primrec observe_all :: "transition_matrix \<Rightarrow> nat \<Rightarrow> regist
       _ \<Rightarrow> []
     )"
 
-definition state :: "(transition \<times> nat \<times> outputs \<times> datastate) \<Rightarrow> nat" where
+definition state :: "(transition \<times> nat \<times> outputs \<times> vname datastate) \<Rightarrow> nat" where
   "state x \<equiv> fst (snd x)"
 
 definition observe_trace :: "transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> trace \<Rightarrow> observation" where
