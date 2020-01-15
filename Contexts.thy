@@ -11,10 +11,10 @@ theory Contexts
 begin
 
 definition can_take :: "nat \<Rightarrow> gexp list \<Rightarrow> inputs \<Rightarrow> registers \<Rightarrow> bool" where
-  "can_take a g i r = (length i = a \<and> apply_guards g (join_ir i r))"
+  "can_take a g i r = (length i = a \<and> apply_guards g i r)"
 
 lemma can_take_empty [simp]: "length i = a \<Longrightarrow> can_take a [] i c"
-  by (simp add: can_take_def)
+  by (simp add: can_take_def apply_guards_def)
 
 lemma can_take_subset_append: "set (Guard t) \<subseteq> set (Guard t') \<Longrightarrow> can_take a (Guard t @ Guard t') i c = can_take a (Guard t') i c"
   by (simp add: apply_guards_subset_append can_take_def)
@@ -22,13 +22,16 @@ lemma can_take_subset_append: "set (Guard t) \<subseteq> set (Guard t') \<Longri
 definition "can_take_transition t i r = can_take (Arity t) (Guard t) i r"
 
 lemma can_take_transition_empty_guard: "Guard t = [] \<Longrightarrow> \<exists>i. can_take_transition t i c"
-  by (simp add: can_take_transition_def can_take_def Ex_list_of_length)
+  by (simp add: can_take_transition_def can_take_def Ex_list_of_length apply_guards_def)
 
 lemma valid_list_can_take: "\<forall>g \<in> set (Guard t). valid g \<Longrightarrow> \<exists>i. can_take_transition t i c"
-  by (simp add: can_take_transition_def can_take_def apply_guards_def valid_def Ex_list_of_length)
+  by (simp add: can_take_transition_def can_take_def apply_guards_def valid_def valid_o_def apply_guards_o_def Ex_list_of_length)
 
-lemma cant_take_if: "\<exists>g \<in> set (Guard t). gval g (join_ir i r) \<noteq> true \<Longrightarrow> \<not> can_take_transition t i r"
-  using apply_guards_cons apply_guards_rearrange can_take_def can_take_transition_def by blast
+lemma cant_take_if: "\<exists>g \<in> set (Guard t). gval g i r \<noteq> true \<Longrightarrow> \<not> can_take_transition t i r"
+  by (simp add: can_take_transition_def can_take_def not_true_not_apply_guards)
+
+lemma subset_map: "set g \<subseteq> set g' \<Longrightarrow> set (map f g) \<subseteq> set (map f g')"
+  by auto
 
 lemma medial_subset:
   "length i = Arity t \<Longrightarrow>
@@ -36,22 +39,20 @@ lemma medial_subset:
    set (Guard t') \<subseteq> set (Guard t) \<Longrightarrow>
    can_take_transition t i r \<Longrightarrow>
    can_take_transition t' i r"
-  by (simp add: can_take_transition_def can_take_def apply_guards_subset)
+  apply (simp add: can_take_transition_def can_take_def apply_guards_def)
+  by (metis subset_map apply_guards_o_subset)
 
 definition posterior_separate :: "nat \<Rightarrow> gexp list \<Rightarrow> update_function list \<Rightarrow> inputs \<Rightarrow> registers \<Rightarrow> registers option" where
-  "posterior_separate a g u i r = (if can_take a g i r then Some (apply_updates u (join_ir i r) r) else None)"
+  "posterior_separate a g u i r = (if can_take a g i r then Some (apply_updates u i r r) else None)"
 
 definition posterior :: "transition \<Rightarrow> inputs \<Rightarrow> registers \<Rightarrow> registers option" where
   "posterior t i r = posterior_separate (Arity t) (Guard t) (Updates t) i r"
-
-definition r2d :: "registers \<Rightarrow> datastate" where
-  "r2d regs = (\<lambda>i. case i of R r \<Rightarrow> regs $ r | _ \<Rightarrow> None)"
 
 definition subsumes :: "transition \<Rightarrow> registers \<Rightarrow> transition \<Rightarrow> bool" where
   "subsumes t2 r t1 = (Label t1 = Label t2 \<and> Arity t1 = Arity t2 \<and>
                        (\<forall>i. can_take_transition t1 i r \<longrightarrow> can_take_transition t2 i r) \<and>
                        (\<forall>i. can_take_transition t1 i r \<longrightarrow>
-                            apply_outputs (Outputs t1) (join_ir i r) = apply_outputs (Outputs t2) (join_ir i r)) \<and>
+                            apply_outputs (Outputs t1) i r = apply_outputs (Outputs t2) i r) \<and>
                        (\<forall>p1 p2 i. posterior_separate (Arity t1) (Guard t1) (Updates t2) i r = Some p2 \<longrightarrow>
                                   posterior_separate (Arity t1) (Guard t1) (Updates t1) i r = Some p1 \<longrightarrow>
                                   (\<forall>P r'. (p1 $ r' = None) \<or> (P (p2 $ r') \<longrightarrow> P (p1 $ r'))))
@@ -61,7 +62,7 @@ lemma subsumption:
   "(Label t1 = Label t2 \<and> Arity t1 = Arity t2) \<Longrightarrow>
    (\<forall>i. can_take_transition t1 i r \<longrightarrow> can_take_transition t2 i r) \<Longrightarrow>
    (\<forall>i. can_take_transition t1 i r \<longrightarrow>
-        apply_outputs (Outputs t1) (join_ir i r) = apply_outputs (Outputs t2) (join_ir i r)) \<Longrightarrow>
+        apply_outputs (Outputs t1) i r = apply_outputs (Outputs t2) i r) \<Longrightarrow>
    (\<forall>p1 p2 i. posterior_separate (Arity t1) (Guard t1) (Updates t2) i r = Some p2 \<longrightarrow>
               posterior_separate (Arity t1) (Guard t1) (Updates t1) i r = Some p1 \<longrightarrow>
               (\<forall>P r'. (p1 $ r' = None) \<or> (P (p2 $ r') \<longrightarrow> P (p1 $ r')))) \<Longrightarrow>
@@ -80,7 +81,7 @@ lemma inconsistent_updates:
     \<not> subsumes t2 r t1"
   by (metis (no_types, hide_lams) option.simps(3) subsumes_def)
 
-lemma bad_outputs: "\<exists>i. can_take_transition t1 i r \<and> apply_outputs (Outputs t1) (join_ir i r) \<noteq> apply_outputs (Outputs t2) (join_ir i r) \<Longrightarrow>
+lemma bad_outputs: "\<exists>i. can_take_transition t1 i r \<and> apply_outputs (Outputs t1) i r \<noteq> apply_outputs (Outputs t2) i r \<Longrightarrow>
  \<not> subsumes t2 r t1"
   by (simp add: subsumes_def)
 
@@ -116,13 +117,13 @@ next
   case (Cons a t)
   then show ?case
     apply (simp add: Let_def)
-    apply (case_tac "ffilter (\<lambda>(s', T). accepts e s' (apply_updates (Updates T) (join_ir (snd a) d) d) t)
+    apply (case_tac "ffilter (\<lambda>(s', T). accepts e s' (apply_updates (Updates T) (snd a) d d) t)
          (possible_steps e s d (fst a) (snd a)) = {||}")
      apply simp
     apply simp
     apply (case_tac "SOME x.
              x |\<in>| possible_steps e s d (fst a) (snd a) \<and>
-             (case x of (s', T) \<Rightarrow> accepts e s' (apply_updates (Updates T) (join_ir (snd a) d) d) t)")
+             (case x of (s', T) \<Rightarrow> accepts e s' (apply_updates (Updates T) (snd a) d d) t)")
     apply (simp add: Let_def)
     apply (case_tac a)
     apply simp
@@ -173,7 +174,7 @@ next
     apply (simp add: Let_def)
     apply (case_tac "SOME x.
                 x |\<in>| possible_steps e s d aa b \<and>
-                (case x of (s', T) \<Rightarrow> accepts e s' (apply_updates (Updates T) (join_ir b d) d) t)")
+                (case x of (s', T) \<Rightarrow> accepts e s' (apply_updates (Updates T) b d d) t)")
     apply simp
     by fastforce
 qed
@@ -195,12 +196,10 @@ next
      apply simp
     apply clarify
     apply (simp add: Let_def)
-    apply (case_tac "ffilter (\<lambda>(s', T). accepts e s' (apply_updates (Updates T) (join_ir i da) da) t) (possible_steps e sa da l i) = {||}")
+    apply (case_tac "ffilter (\<lambda>(s', T). accepts e s' (apply_updates (Updates T) i da da) t) (possible_steps e sa da l i) = {||}")
      apply auto[1]
     apply simp
-    apply (case_tac "SOME x.
-                x |\<in>| possible_steps e sa da l i \<and>
-                (case x of (s', T) \<Rightarrow> accepts e s' (apply_updates (Updates T) (join_ir i da) da) t)")
+    apply (case_tac "SOME x. x |\<in>| possible_steps e sa da l i \<and> (case x of (s', T) \<Rightarrow> accepts e s' (apply_updates (Updates T) i da da) t)")
     apply (simp add: Let_def)
     by (metis (no_types, lifting) case_prodD case_prodI someI_ex)
 qed

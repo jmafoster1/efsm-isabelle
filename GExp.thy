@@ -14,11 +14,6 @@ theory GExp
 imports AExp Trilean
 begin
 
-definition I :: "nat \<Rightarrow> vname_o" where
-  "I n = vname_o.I (n-1)"
-declare I_def [simp]
-hide_const I
-
 text_raw\<open>\snip{gexp_otype}{1}{2}{%\<close>
 datatype gexp_o = Bc bool | Eq aexp_o aexp_o | Gt aexp_o aexp_o | In vname_o "value list" |  Nor gexp_o gexp_o
 text_raw\<open>}%endsnip\<close>
@@ -39,8 +34,8 @@ definition gNot :: "gexp_o \<Rightarrow> gexp_o"  where
 definition gOr :: "gexp_o \<Rightarrow> gexp_o \<Rightarrow> gexp_o" (*infix "\<or>" 60*) where
   "gOr v va \<equiv> Nor (Nor v va) (Nor v va)"
 
-definition gAnd :: "gexp_o \<Rightarrow> gexp_o \<Rightarrow> gexp_o" (*infix "\<and>" 60*) where
-  "gAnd v va \<equiv> Nor (Nor v v) (Nor va va)"
+definition gAnd_o :: "gexp_o \<Rightarrow> gexp_o \<Rightarrow> gexp_o" (*infix "\<and>" 60*) where
+  "gAnd_o v va \<equiv> Nor (Nor v v) (Nor va va)"
 
 definition gImplies :: "gexp_o \<Rightarrow> gexp_o \<Rightarrow> gexp_o" where
   "gImplies p q \<equiv> gOr (gNot p) q"
@@ -57,7 +52,7 @@ definition Ge :: "aexp_o \<Rightarrow> aexp_o \<Rightarrow> gexp_o" (*infix "\<g
 definition Ne :: "aexp_o \<Rightarrow> aexp_o \<Rightarrow> gexp_o" (*infix "\<noteq>" 60*) where
   "Ne v va \<equiv> gNot (Eq v va)"
 
-lemmas connectives = gAnd_def gOr_def gNot_def Lt_def Le_def Ge_def Ne_def
+lemmas connectives = gAnd_o_def gOr_def gNot_def Lt_def Le_def Ge_def Ne_def
 
 lemma gval_o_gOr: "gval_o (gOr x y) i r o = (gval_o x i r o) \<or>\<^sub>? (gval_o y i r o)"
   by (simp add: maybe_double_negation maybe_or_idempotent gOr_def)
@@ -65,37 +60,37 @@ lemma gval_o_gOr: "gval_o (gOr x y) i r o = (gval_o x i r o) \<or>\<^sub>? (gval
 lemma gval_o_gNot: "gval_o (gNot x) i r o = \<not>\<^sub>? (gval_o x i r o)"
   by (simp add: maybe_or_idempotent gNot_def)
 
-lemma gval_o_gAnd: "gval_o (gAnd g1 g2) i r o = (gval_o g1 i r o) \<and>\<^sub>? (gval_o g2 i r o)"
-  by (simp add: de_morgans_1 maybe_double_negation maybe_or_idempotent gAnd_def)
+lemma gval_o_gAnd_o: "gval_o (gAnd_o g1 g2) i r o = (gval_o g1 i r o) \<and>\<^sub>? (gval_o g2 i r o)"
+  by (simp add: de_morgans_1 maybe_double_negation maybe_or_idempotent gAnd_o_def)
 
-lemma gAnd_commute: "gval_o (gAnd a b) i r o = gval_o (gAnd b a) i r o"
-  using gval_o_gAnd times_trilean_commutative by auto
+lemma gAnd_o_commute: "gval_o (gAnd_o a b) i r o = gval_o (gAnd_o b a) i r o"
+  using gval_o_gAnd_o times_trilean_commutative by auto
 
 lemma gOr_commute: "gval_o (gOr a b) i r o = gval_o (gOr b a) i r o"
   by (simp add: plus_trilean_commutative gOr_def)
 
-lemma gval_o_gAnd_True: "(gval_o (gAnd g1 g2) i r o = true) = ((gval_o g1 i r o = true) \<and> gval_o g2 i r o = true)"
-  using gval_o_gAnd maybe_and_not_true by fastforce
+lemma gval_o_gAnd_o_True: "(gval_o (gAnd_o g1 g2) i r o = true) = ((gval_o g1 i r o = true) \<and> gval_o g2 i r o = true)"
+  using gval_o_gAnd_o maybe_and_not_true by fastforce
 
 lemma nor_equiv: "gval_o (gNot (gOr a b)) i r o = gval_o (Nor a b) i r o"
   by (simp add: gval_o_gNot gval_o_gOr)
 
-definition satisfiable :: "gexp_o \<Rightarrow> bool" where
-  "satisfiable g \<equiv> (\<exists>i r o. gval_o g i r o = true)"
+definition satisfiable_o :: "gexp_o \<Rightarrow> bool" where
+  "satisfiable_o g \<equiv> (\<exists>i r o. gval_o g i r o = true)"
 
-definition "satisfiable_list l = satisfiable (fold gAnd l (Bc True))"
+definition "satisfiable_o_list l = satisfiable_o (fold gAnd_o l (Bc True))"
 
-lemma unsatisfiable_false: "\<not> satisfiable (Bc False)"
-  by (simp add: satisfiable_def)
+lemma unsatisfiable_o_false: "\<not> satisfiable_o (Bc False)"
+  by (simp add: satisfiable_o_def)
 
-lemma satisfiable_true: "satisfiable (Bc True)"
-  by (simp add: satisfiable_def)
+lemma satisfiable_o_true: "satisfiable_o (Bc True)"
+  by (simp add: satisfiable_o_def)
 
-definition valid :: "gexp_o \<Rightarrow> bool" where
-  "valid g \<equiv> (\<forall>i r o. gval_o g i r o = true)"
+definition valid_o :: "gexp_o \<Rightarrow> bool" where
+  "valid_o g \<equiv> (\<forall>i r o. gval_o g i r o = true)"
 
-lemma valid_true: "valid (Bc True)"
-  by (simp add: valid_def)
+lemma valid_o_true: "valid_o (Bc True)"
+  by (simp add: valid_o_def)
 
 definition gexp_o_implies :: "gexp_o \<Rightarrow> gexp_o \<Rightarrow> bool" where
   "gexp_o_implies g1 g2 = (\<forall>i r o. gval_o g1 i r o = true \<longrightarrow> gval_o g2 i r o = true)"
@@ -120,7 +115,7 @@ fun gexp_o_same_structure :: "gexp_o \<Rightarrow> gexp_o \<Rightarrow> bool" wh
   "gexp_o_same_structure (In v l) (In v' l') = (v = v' \<and> l = l')" |
   "gexp_o_same_structure _ _ = False"
 
-lemma gval_o_foldr_true: "(gval_o (foldr gAnd G (Bc True)) i r o = true) = (\<forall>g \<in> set G. gval_o g i r o = true)"
+lemma gval_o_foldr_true: "(gval_o (foldr gAnd_o G (Bc True)) i r o = true) = (\<forall>g \<in> set G. gval_o g i r o = true)"
 proof(induct G)
   case Nil
   then show ?case
@@ -128,7 +123,7 @@ proof(induct G)
 next
   case (Cons a G)
   then show ?case
-    apply (simp only: foldr.simps comp_def gval_o_gAnd maybe_and_true)
+    apply (simp only: foldr.simps comp_def gval_o_gAnd_o maybe_and_true)
     by simp
 qed
 
@@ -246,17 +241,17 @@ lemma no_variables_list_gval_o:
    apply (case_tac x1a)
   by auto
 
-lemma no_variables_list_valid_or_unsat:
+lemma no_variables_list_valid_o_or_unsat:
   "enumerate_gexp_o_inputs g = {} \<Longrightarrow>
    enumerate_gexp_o_regs g = {} \<Longrightarrow>
    enumerate_gexp_o_outputs g = {} \<Longrightarrow>
-   valid g \<or> \<not> satisfiable g"
+   valid_o g \<or> \<not> satisfiable_o g"
   apply (induct g)
-      apply (metis (full_types) unsatisfiable_false valid_true)
-     apply (metis no_variables_list_gval_o satisfiable_def valid_def)
-    apply (metis no_variables_list_gval_o satisfiable_def valid_def)
-   apply (metis no_variables_list_gval_o satisfiable_def valid_def)
-  by (metis no_variables_list_gval_o satisfiable_def valid_def)
+      apply (metis (full_types) unsatisfiable_o_false valid_o_true)
+     apply (metis no_variables_list_gval_o satisfiable_o_def valid_o_def)
+    apply (metis no_variables_list_gval_o satisfiable_o_def valid_o_def)
+   apply (metis no_variables_list_gval_o satisfiable_o_def valid_o_def)
+  by (metis no_variables_list_gval_o satisfiable_o_def valid_o_def)
 
 definition max_reg :: "gexp_o \<Rightarrow> nat option" where
   "max_reg g = (let regs = (enumerate_gexp_o_regs g) in if regs = {} then None else Some (Max regs))"
@@ -321,8 +316,8 @@ lemma unconstrained_variable_swap_gval_o:
 lemma gval_o_In_cons: "gval_o (In v (a # as)) i r o = (gval_o (Eq (aexp_o.V v) (L a)) i r o \<or>\<^sub>? gval_o (In v as) i r o)"
   by (cases v, auto)
 
-lemma possible_to_be_in: "s \<noteq> [] \<Longrightarrow> satisfiable (In v s)"
-  apply (simp add: satisfiable_def neq_Nil_conv)
+lemma possible_to_be_in: "s \<noteq> [] \<Longrightarrow> satisfiable_o (In v s)"
+  apply (simp add: satisfiable_o_def neq_Nil_conv)
   apply clarify
   apply (simp add: gval_o_In_cons)
   apply (cases v)
@@ -364,13 +359,13 @@ lemma apply_guards_o_empty [simp]: "apply_guards_o [] i r o"
 lemma apply_guards_o_cons: "apply_guards_o (a # G) i r o = (gval_o a i r o = true \<and> apply_guards_o G i r o)"
   by (simp add: apply_guards_o_def)
 
-lemma apply_guards_o_double_cons: "apply_guards_o (y # x # G) i r o = (gval_o (gAnd y x) i r o = true \<and> apply_guards_o G i r o)"
-  using apply_guards_o_cons gval_o_gAnd_True by auto
+lemma apply_guards_o_double_cons: "apply_guards_o (y # x # G) i r o = (gval_o (gAnd_o y x) i r o = true \<and> apply_guards_o G i r o)"
+  using apply_guards_o_cons gval_o_gAnd_o_True by auto
 
 lemma apply_guards_o_append: "apply_guards_o (a@a') i r o = (apply_guards_o a i r o \<and> apply_guards_o a' i r o)"
   using apply_guards_o_def by auto
 
-lemma apply_guards_o_foldr: "apply_guards_o G i r o = (gval_o (foldr gAnd G (Bc True)) i r o = true)"
+lemma apply_guards_o_foldr: "apply_guards_o G i r o = (gval_o (foldr gAnd_o G (Bc True)) i r o = true)"
 proof(induct G)
   case Nil
   then show ?case
@@ -379,20 +374,20 @@ next
   case (Cons a G)
   then show ?case
     apply (simp only: foldr.simps comp_def)
-    using apply_guards_o_cons gval_o_gAnd_True by auto
+    using apply_guards_o_cons gval_o_gAnd_o_True by auto
 qed
 
 lemma rev_apply_guards_o: "apply_guards_o (rev G) i r o = apply_guards_o G i r o"
   by (simp add: apply_guards_o_def)
 
-lemma apply_guards_o_fold: "apply_guards_o G i r o = (gval_o (fold gAnd G (Bc True)) i r o = true)"
+lemma apply_guards_o_fold: "apply_guards_o G i r o = (gval_o (fold gAnd_o G (Bc True)) i r o = true)"
   using rev_apply_guards_o[symmetric]
   by (simp add: foldr_conv_fold apply_guards_o_foldr)
 
-lemma fold_apply_guards_o: "(gval_o (fold gAnd G (Bc True)) i r o = true) = apply_guards_o G i r o"
+lemma fold_apply_guards_o: "(gval_o (fold gAnd_o G (Bc True)) i r o = true) = apply_guards_o G i r o"
   by (simp add: apply_guards_o_fold)
 
-lemma foldr_apply_guards_o: "(gval_o (foldr gAnd G (Bc True)) i r o = true) = apply_guards_o G i r o"
+lemma foldr_apply_guards_o: "(gval_o (foldr gAnd_o G (Bc True)) i r o = true) = apply_guards_o G i r o"
   by (simp add: apply_guards_o_foldr)
 
 lemma apply_guards_o_subset: "set g' \<subseteq> set g \<Longrightarrow> apply_guards_o g i r o \<longrightarrow> apply_guards_o g' i r o"
@@ -658,19 +653,19 @@ next
     by (metis (no_types, lifting) gval_o_In_fold gval_o_fold_gOr list.simps(9))
 qed
 
-lemma gval_o_fold_gAnd_append_singleton:
-  "gval_o (fold gAnd (a @ [G]) (Bc True)) i r o = gval_o (fold gAnd a (Bc True)) i r o \<and>\<^sub>? gval_o G i r o"
+lemma gval_o_fold_gAnd_o_append_singleton:
+  "gval_o (fold gAnd_o (a @ [G]) (Bc True)) i r o = gval_o (fold gAnd_o a (Bc True)) i r o \<and>\<^sub>? gval_o G i r o"
   apply (simp add: fold_conv_foldr del: foldr.simps)
-  by (simp only: foldr.simps comp_def gval_o_gAnd times_trilean_commutative)
+  by (simp only: foldr.simps comp_def gval_o_gAnd_o times_trilean_commutative)
 
 lemma gval_o_fold_rev_true:
-  "gval_o (fold gAnd (rev G) (Bc True)) i r o = true \<Longrightarrow>
-   gval_o (fold gAnd G (Bc True)) i r o = true"
+  "gval_o (fold gAnd_o (rev G) (Bc True)) i r o = true \<Longrightarrow>
+   gval_o (fold gAnd_o G (Bc True)) i r o = true"
   by (simp add: fold_conv_foldr gval_o_foldr_true)
 
-lemma gval_o_fold_not_invalid_all_valid_contra:
+lemma gval_o_fold_not_invalid_all_valid_o_contra:
   "\<exists>g \<in> set G. gval_o g i r o = invalid \<Longrightarrow>
-   gval_o (fold gAnd G (Bc True)) i r o = invalid"
+   gval_o (fold gAnd_o G (Bc True)) i r o = invalid"
 proof(induct G rule: rev_induct)
   case Nil
   then show ?case
@@ -678,15 +673,15 @@ proof(induct G rule: rev_induct)
 next
   case (snoc a G)
   then show ?case
-    apply (simp only: gval_o_fold_gAnd_append_singleton)
+    apply (simp only: gval_o_fold_gAnd_o_append_singleton)
     apply simp
     using maybe_and_valid by blast
 qed
 
-lemma gval_o_fold_not_invalid_all_valid:
-  "gval_o (fold gAnd G (Bc True)) i r o \<noteq> invalid \<Longrightarrow>
+lemma gval_o_fold_not_invalid_all_valid_o:
+  "gval_o (fold gAnd_o G (Bc True)) i r o \<noteq> invalid \<Longrightarrow>
    \<forall>g \<in> set G. gval_o g i r o \<noteq> invalid"
-  using gval_o_fold_not_invalid_all_valid_contra by blast
+  using gval_o_fold_not_invalid_all_valid_o_contra by blast
 
 lemma all_gval_o_not_false:
   "(\<forall>g \<in> set G. gval_o g i r o \<noteq> false) = (\<forall>g \<in> set G. gval_o g i r o = true) \<or> (\<exists>g \<in> set G. gval_o g i r o = invalid)"
@@ -694,19 +689,19 @@ lemma all_gval_o_not_false:
 
 lemma must_have_one_false_contra:
   "\<forall>g \<in> set G. gval_o g i r o \<noteq> false \<Longrightarrow>
-   gval_o (fold gAnd G (Bc True)) i r o \<noteq> false"
+   gval_o (fold gAnd_o G (Bc True)) i r o \<noteq> false"
   using all_gval_o_not_false[of G i r o]
   apply simp
   apply (case_tac "(\<forall>g\<in>set G. gval_o g i r o = true)")
    apply (metis (no_types, lifting) fold_apply_guards_o foldr_apply_guards_o gval_o_foldr_true trilean.distinct(1))
-  by (simp add: gval_o_fold_not_invalid_all_valid_contra)
+  by (simp add: gval_o_fold_not_invalid_all_valid_o_contra)
 
 lemma must_have_one_false:
-  "gval_o (fold gAnd G (Bc True)) i r o = false \<Longrightarrow>
+  "gval_o (fold gAnd_o G (Bc True)) i r o = false \<Longrightarrow>
    \<exists>g \<in> set G. gval_o g i r o = false"
   using must_have_one_false_contra by blast
 
-lemma all_valid_fold: "\<forall>g \<in> set G. gval_o g i r o \<noteq> invalid \<Longrightarrow> gval_o (fold gAnd G (Bc True)) i r o \<noteq> invalid"
+lemma all_valid_o_fold: "\<forall>g \<in> set G. gval_o g i r o \<noteq> invalid \<Longrightarrow> gval_o (fold gAnd_o G (Bc True)) i r o \<noteq> invalid"
 proof(induct G rule: rev_induct)
   case Nil
   then show ?case
@@ -715,11 +710,11 @@ next
   case (snoc a G)
   then show ?case
     apply (simp add: fold_conv_foldr del: foldr.simps)
-    apply (simp only: foldr.simps comp_def gval_o_gAnd)
+    apply (simp only: foldr.simps comp_def gval_o_gAnd_o)
     by (simp add: maybe_and_invalid)
 qed
 
-lemma one_false_all_valid_false: "\<exists>g\<in>set G. gval_o g i r o = false \<Longrightarrow> \<forall>g\<in>set G. gval_o g i r o \<noteq> invalid \<Longrightarrow> gval_o (fold gAnd G (Bc True)) i r o = false"
+lemma one_false_all_valid_o_false: "\<exists>g\<in>set G. gval_o g i r o = false \<Longrightarrow> \<forall>g\<in>set G. gval_o g i r o \<noteq> invalid \<Longrightarrow> gval_o (fold gAnd_o G (Bc True)) i r o = false"
 proof(induct G rule: rev_induct)
   case Nil
   then show ?case
@@ -728,54 +723,54 @@ next
   case (snoc x xs)
   then show ?case
     apply (simp add: fold_conv_foldr del: foldr.simps)
-    apply (simp only: foldr.simps comp_def gval_o_gAnd)
+    apply (simp only: foldr.simps comp_def gval_o_gAnd_o)
     apply (case_tac "gval_o x i r o = false")
      apply simp
-     apply (case_tac "gval_o (foldr gAnd (rev xs) (Bc True)) i r o")
+     apply (case_tac "gval_o (foldr gAnd_o (rev xs) (Bc True)) i r o")
        apply simp
       apply simp
      apply simp
-    using all_valid_fold
+    using all_valid_o_fold
      apply (simp add: fold_conv_foldr)
     apply simp
     by (metis maybe_not.cases times_trilean.simps(5))
 qed
 
-lemma gval_o_fold_rev_false: "gval_o (fold gAnd (rev G) (Bc True)) i r o = false \<Longrightarrow> gval_o (fold gAnd G (Bc True)) i r o = false"
+lemma gval_o_fold_rev_false: "gval_o (fold gAnd_o (rev G) (Bc True)) i r o = false \<Longrightarrow> gval_o (fold gAnd_o G (Bc True)) i r o = false"
   using must_have_one_false[of "rev G" i r o]
-        gval_o_fold_not_invalid_all_valid[of "rev G" i r o]
-  by (simp add: one_false_all_valid_false)
+        gval_o_fold_not_invalid_all_valid_o[of "rev G" i r o]
+  by (simp add: one_false_all_valid_o_false)
 
-lemma fold_invalid_means_one_invalid: "gval_o (fold gAnd G (Bc True)) i r o = invalid \<Longrightarrow> \<exists>g \<in> set G. gval_o g i r o = invalid"
-  using all_valid_fold by blast
+lemma fold_invalid_means_one_invalid: "gval_o (fold gAnd_o G (Bc True)) i r o = invalid \<Longrightarrow> \<exists>g \<in> set G. gval_o g i r o = invalid"
+  using all_valid_o_fold by blast
 
-lemma gval_o_fold_rev_invalid: "gval_o (fold gAnd (rev G) (Bc True)) i r o = invalid \<Longrightarrow> gval_o (fold gAnd G (Bc True)) i r o = invalid"
+lemma gval_o_fold_rev_invalid: "gval_o (fold gAnd_o (rev G) (Bc True)) i r o = invalid \<Longrightarrow> gval_o (fold gAnd_o G (Bc True)) i r o = invalid"
   using fold_invalid_means_one_invalid[of "rev G" i r o]
-  by (simp add: gval_o_fold_not_invalid_all_valid_contra)
+  by (simp add: gval_o_fold_not_invalid_all_valid_o_contra)
 
-lemma gval_o_fold_rev_equiv_fold: "gval_o (fold gAnd (rev G) (Bc True)) i r o =  gval_o (fold gAnd G (Bc True)) i r o"
-  apply (cases "gval_o (fold gAnd (rev G) (Bc True)) i r o")
+lemma gval_o_fold_rev_equiv_fold: "gval_o (fold gAnd_o (rev G) (Bc True)) i r o =  gval_o (fold gAnd_o G (Bc True)) i r o"
+  apply (cases "gval_o (fold gAnd_o (rev G) (Bc True)) i r o")
     apply (simp add: gval_o_fold_rev_true)
    apply (simp add: gval_o_fold_rev_false)
   by (simp add: gval_o_fold_rev_invalid)
 
-lemma gval_o_fold_equiv_fold_rev: "gval_o (fold gAnd G (Bc True)) i r o = gval_o (fold gAnd (rev G) (Bc True)) i r o"
+lemma gval_o_fold_equiv_fold_rev: "gval_o (fold gAnd_o G (Bc True)) i r o = gval_o (fold gAnd_o (rev G) (Bc True)) i r o"
   by (simp add: gval_o_fold_rev_equiv_fold)
 
-lemma gval_o_fold_equiv_gval_o_foldr: "gval_o (fold gAnd G (Bc True)) i r o = gval_o (foldr gAnd G (Bc True)) i r o"
+lemma gval_o_fold_equiv_gval_o_foldr: "gval_o (fold gAnd_o G (Bc True)) i r o = gval_o (foldr gAnd_o G (Bc True)) i r o"
 proof -
-  have "gval_o (fold gAnd G (Bc True)) i r o = gval_o (fold gAnd (rev G) (Bc True)) i r o"
+  have "gval_o (fold gAnd_o G (Bc True)) i r o = gval_o (fold gAnd_o (rev G) (Bc True)) i r o"
     using gval_o_fold_equiv_fold_rev by force
   then show ?thesis
   by (simp add: foldr_conv_fold)
 qed
 
-lemma gval_o_foldr_equiv_gval_o_fold: "gval_o (foldr gAnd G (Bc True)) i r o = gval_o (fold gAnd G (Bc True)) i r o"
+lemma gval_o_foldr_equiv_gval_o_fold: "gval_o (foldr gAnd_o G (Bc True)) i r o = gval_o (fold gAnd_o G (Bc True)) i r o"
   by (simp add: gval_o_fold_equiv_gval_o_foldr)
 
-lemma gval_o_fold_cons: "gval_o (fold gAnd (g # gs) (Bc True)) i r o = gval_o g i r o \<and>\<^sub>? gval_o (fold gAnd gs (Bc True)) i r o"
+lemma gval_o_fold_cons: "gval_o (fold gAnd_o (g # gs) (Bc True)) i r o = gval_o g i r o \<and>\<^sub>? gval_o (fold gAnd_o gs (Bc True)) i r o"
   apply (simp only: apply_guards_o_fold gval_o_fold_equiv_gval_o_foldr)
-  by (simp only: foldr.simps comp_def gval_o_gAnd)
+  by (simp only: foldr.simps comp_def gval_o_gAnd_o)
 
 lemma gval_o_take:
   "max_input G < Some a \<Longrightarrow>
@@ -796,7 +791,7 @@ lemma gval_o_fold_take:
   "max_input_list G < Some a \<Longrightarrow>
    a \<le> length i \<Longrightarrow>
    max_input_list G \<le> Some (length i) \<Longrightarrow>
-   gval_o (fold gAnd G (Bc True)) i r o = gval_o (fold gAnd G (Bc True)) (take a i) r o"
+   gval_o (fold gAnd_o G (Bc True)) i r o = gval_o (fold gAnd_o G (Bc True)) (take a i) r o"
 proof(induct G)
   case Nil
   then show ?case
@@ -826,7 +821,7 @@ lemma max_reg_None_gval_o_swap: "max_reg G = None \<Longrightarrow>
 
 lemma gval_o_fold_swap_regs:
   "max_reg_list G = None \<Longrightarrow>
-   gval_o (fold gAnd G (Bc True)) i r o = gval_o (fold gAnd G (Bc True)) i r' o"
+   gval_o (fold gAnd_o G (Bc True)) i r o = gval_o (fold gAnd_o G (Bc True)) i r' o"
 proof(induct G)
   case Nil
   then show ?case
@@ -834,7 +829,7 @@ proof(induct G)
 next
   case (Cons a G)
   then show ?case
-    apply (simp only: gval_o_fold_equiv_gval_o_foldr foldr.simps comp_def gval_o_gAnd)
+    apply (simp only: gval_o_fold_equiv_gval_o_foldr foldr.simps comp_def gval_o_gAnd_o)
     by (metis max_is_None max_reg_None_gval_o_swap max_reg_list_cons)
 qed
 
@@ -905,12 +900,17 @@ typedef gexp = "{g :: gexp_o. \<forall>n. \<not> gexp_o_constrains g (aexp_o.V (
   using gexp_o_constrains.simps(1) by fastforce
 
 setup_lifting type_definition_gexp
-lift_definition gval :: "gexp \<Rightarrow> inputs \<Rightarrow> registers \<Rightarrow> outputs \<Rightarrow> trilean" is "gval_o".
-lift_definition enumerate_gexp_inputs :: "gexp \<Rightarrow> nat set" is "enumerate_gexp_o_inputs".
-lift_definition enumerate_gexp_regs :: "gexp \<Rightarrow> nat set" is "enumerate_gexp_o_regs".
-lift_definition enumerate_gexp_strings :: "gexp \<Rightarrow> String.literal set" is "enumerate_gexp_o_strings".
-lift_definition enumerate_gexp_ints :: "gexp \<Rightarrow> int set" is "enumerate_gexp_o_ints".
+lift_definition gval :: "gexp \<Rightarrow> inputs \<Rightarrow> registers \<Rightarrow> trilean" is "\<lambda>g i r. gval_o g i r []".
+lift_definition enumerate_gexp_inputs :: "gexp \<Rightarrow> nat set" is enumerate_gexp_o_inputs.
+lift_definition enumerate_gexp_regs :: "gexp \<Rightarrow> nat set" is enumerate_gexp_o_regs.
+lift_definition enumerate_gexp_strings :: "gexp \<Rightarrow> String.literal set" is enumerate_gexp_o_strings.
+lift_definition enumerate_gexp_ints :: "gexp \<Rightarrow> int set" is enumerate_gexp_o_ints.
 lift_definition apply_guards :: "gexp list \<Rightarrow> inputs \<Rightarrow> registers \<Rightarrow> bool" is "\<lambda>a i r. apply_guards_o a i r []".
+lift_definition satisfiable :: "gexp \<Rightarrow> bool"  is satisfiable_o.
+lift_definition valid :: "gexp \<Rightarrow> bool"  is valid_o.
+lift_definition gAnd :: "gexp \<Rightarrow> gexp \<Rightarrow> gexp" is gAnd_o by (simp add: gAnd_o_def)
+lift_definition gexp_constrains :: "gexp \<Rightarrow> aexp \<Rightarrow> bool" is gexp_o_constrains.
+
 
 lemma enumerate_gexp_regs_list: "\<exists>l. enumerate_gexp_regs g = set l"
   by (simp add: enumerate_gexp_o_regs_list enumerate_gexp_regs.rep_eq)
@@ -918,5 +918,50 @@ lemma enumerate_gexp_regs_list: "\<exists>l. enumerate_gexp_regs g = set l"
 lemma apply_guards_append: "apply_guards (a@a') i r = (apply_guards a i r \<and> apply_guards a' i r)"
   by (simp add: apply_guards_def apply_guards_o_append)
 
+lemma apply_guards_subset_append: "set G \<subseteq> set G' \<Longrightarrow> apply_guards (G @ G') i r = apply_guards G' i r"
+  apply (simp add: apply_guards_def)
+  using apply_guards_o_subset_append[of "map gexp G"] by force
 
+lemma not_true_not_apply_guards: "\<exists>g\<in>set G. gval g i r \<noteq> true \<Longrightarrow> \<not> apply_guards G i r"
+proof(induct G)
+  case Nil
+  then show ?case
+    by simp
+next
+  case (Cons a G)
+  then show ?case
+    by (simp add: apply_guards_def apply_guards_o_cons gval.rep_eq)
+qed
+
+lemma apply_guards_cons: "apply_guards (a # G) i r = (gval a i r = true \<and> apply_guards G i r)"
+  by (simp add: apply_guards_def apply_guards_o_cons gval.rep_eq)
+
+lemma apply_guards_foldr: "apply_guards G i r = (gval (foldr gAnd G (Abs_gexp (Bc True))) i r = true)"
+proof(induct G)
+  case Nil
+  then show ?case
+    by (simp add: apply_guards_def gval_def Abs_gexp_inverse)
+next
+  case (Cons a G)
+  then show ?case
+    apply (simp only: foldr.simps comp_def)
+    by (simp add: apply_guards.rep_eq apply_guards_o_cons gAnd.rep_eq gval.rep_eq gval_o_gAnd_o_True)
+qed
+
+lemma rev_apply_guards: "apply_guards (rev G) i r = apply_guards G i r"
+  by (simp add: apply_guards_def apply_guards_o_def)
+
+lemma apply_guards_fold: "apply_guards G i r = (gval (fold gAnd G (Abs_gexp (Bc True))) i r = true)"
+  using rev_apply_guards[symmetric]
+  by (simp add: foldr_conv_fold apply_guards_foldr)
+
+lemma apply_guards_empty [simp]: "apply_guards [] i c"
+  by (simp add: apply_guards.rep_eq)
+
+lemma apply_guards_rearrange: "x \<in> set G \<Longrightarrow> apply_guards G i r = apply_guards (x#G) i r"
+  using apply_guards_o_rearrange apply_guards_cons not_true_not_apply_guards by blast
+
+lemma apply_guards_double_cons: "apply_guards (y # x # G) i r = (gval (gAnd y x) i r = true \<and> apply_guards G i r)"
+  using apply_guards_o_double_cons
+  by (simp add: apply_guards.rep_eq gAnd.rep_eq gval.rep_eq)
 end

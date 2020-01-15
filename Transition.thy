@@ -11,17 +11,35 @@ type_synonym output_function = "aexp"
 type_synonym update_function = "(nat \<times> aexp)"
 type_synonym updates = "update_function list"
 
-abbreviation V :: "vname \<Rightarrow> aexp" where
-  "V v \<equiv> Abs_aexp (aexp_o.V (vname v))"
-
-abbreviation L :: "value \<Rightarrow> aexp" where
-  "L v \<equiv> Abs_aexp (aexp_o.L v)"
+abbreviation I :: "nat \<Rightarrow> vname" where
+  "I v \<equiv> Abs_vname (vname_o.I v)"
 
 abbreviation R :: "nat \<Rightarrow> vname" where
   "R v \<equiv> Abs_vname (vname_o.R v)"
 
-abbreviation I :: "nat \<Rightarrow> vname" where
-  "I v \<equiv> Abs_vname (vname_o.I v)"
+abbreviation L :: "value \<Rightarrow> aexp" where
+  "L v \<equiv> Abs_aexp (aexp_o.L v)"
+
+abbreviation V :: "vname \<Rightarrow> aexp" where
+  "V v \<equiv> Abs_aexp (aexp_o.V (vname v))"
+
+abbreviation Plus :: "aexp \<Rightarrow> aexp \<Rightarrow> aexp" where
+  "Plus a1 a2 \<equiv> Abs_aexp (aexp_o.Plus (aexp a1) (aexp a2))"
+
+abbreviation Minus :: "aexp \<Rightarrow> aexp \<Rightarrow> aexp" where
+  "Minus a1 a2 \<equiv> Abs_aexp (aexp_o.Plus (aexp a1) (aexp a2))"
+
+abbreviation Times :: "aexp \<Rightarrow> aexp \<Rightarrow> aexp" where
+  "Times a1 a2 \<equiv> Abs_aexp (aexp_o.Plus (aexp a1) (aexp a2))"
+
+abbreviation Bc :: "bool \<Rightarrow> gexp" where
+  "Bc b \<equiv> Abs_gexp (gexp_o.Bc b)"
+
+abbreviation Eq :: "aexp \<Rightarrow> aexp \<Rightarrow> gexp" where
+  "Eq a1 a2 \<equiv> Abs_gexp (gexp_o.Eq (aexp a1) (aexp a2))"
+
+abbreviation Gt :: "aexp \<Rightarrow> aexp \<Rightarrow> gexp" where
+  "Gt a1 a2 \<equiv> Abs_gexp (gexp_o.Gt (aexp a1) (aexp a2))"
 
 text_raw\<open>\snip{transitiontype}{1}{2}{%\<close>
 record transition =

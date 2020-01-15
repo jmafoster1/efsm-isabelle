@@ -464,8 +464,8 @@ fun enumerate_aexp_o_ints :: "aexp_o \<Rightarrow> int set" where
   "enumerate_aexp_o_ints (Minus a1 a2) = enumerate_aexp_o_ints a1 \<union> enumerate_aexp_o_ints a2" |
   "enumerate_aexp_o_ints (Times a1 a2) = enumerate_aexp_o_ints a1 \<union> enumerate_aexp_o_ints a2"
 
-definition enumerate_vars :: "aexp_o \<Rightarrow> vname_o set" where
-  "enumerate_vars a = (image I (enumerate_aexp_o_inputs a)) \<union> (image R (enumerate_aexp_o_regs a)) \<union> (image O (enumerate_aexp_o_inputs a))"
+definition enumerate_vars_o :: "aexp_o \<Rightarrow> vname_o set" where
+  "enumerate_vars_o a = (image I (enumerate_aexp_o_inputs a)) \<union> (image R (enumerate_aexp_o_regs a)) \<union> (image O (enumerate_aexp_o_inputs a))"
 
 lemma enumerate_aexp_o_inputs_aexp_o_constrains: "(\<forall>r. \<not> aexp_o_constrains a (V (I r))) = (enumerate_aexp_o_inputs a = {})"
 proof (induct a)
@@ -574,6 +574,8 @@ lift_definition enumerate_aexp_inputs :: "aexp \<Rightarrow> nat set" is "enumer
 lift_definition enumerate_aexp_regs :: "aexp \<Rightarrow> nat set" is "enumerate_aexp_o_regs".
 lift_definition enumerate_aexp_strings :: "aexp \<Rightarrow> String.literal set" is "enumerate_aexp_o_strings".
 lift_definition enumerate_aexp_ints :: "aexp \<Rightarrow> int set" is "enumerate_aexp_o_ints".
+lift_definition enumerate_vars :: "aexp \<Rightarrow> vname_o set" is "enumerate_vars_o".
+lift_definition aexp_constrains :: "aexp \<Rightarrow> aexp \<Rightarrow> bool" is aexp_o_constrains.
 
 lemma enumerate_aexp_regs_list: "\<exists>l. enumerate_aexp_regs a = set l"
   by (simp add: enumerate_aexp_o_regs_list enumerate_aexp_regs.rep_eq)
