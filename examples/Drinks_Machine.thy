@@ -141,7 +141,6 @@ lemma purchase_coke: "observe_trace drinks 0 <> [(STR ''select'', [Str ''coke'']
      apply (simp add: possible_steps_0)
      apply (simp add: select_def join_ir_def input2state_def accepts_from_1)
     apply (simp add: select_def)
-   apply (simp add: select_def join_ir_def input2state_def)
   apply (rule observe_trace_possible_step)
       apply (simp add: possible_steps_1_coin)
      apply (simp add: coin_def value_plus_def join_ir_def input2state_def regsimp accepts_from_1a)

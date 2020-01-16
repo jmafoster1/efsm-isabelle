@@ -249,6 +249,9 @@ lemma join_ir_empty [simp]: "join_ir [] <> = (\<lambda>x. None)"
    apply (simp add: input2state_def)
   by simp
 
+lemma join_ir_R [simp]: "(join_ir i r) (R n) = r $ n"
+  by (simp add: join_ir_def)
+
 lemma join_ir_double_exists: "\<exists>i r. join_ir i r v = Some a \<and> join_ir i r v' = Some a"
 proof(cases v)
   case (I x1)
@@ -306,7 +309,7 @@ lemma exists_join_ir_ext: "\<exists>i r. join_ir i r v = s v"
    apply simp
   by (simp add: input2state_exists)
 
-lemma join_ir_nth: "i < length is \<Longrightarrow> join_ir is r (I i) = Some (is ! i)"
+lemma join_ir_nth [simp]: "i < length is \<Longrightarrow> join_ir is r (I i) = Some (is ! i)"
   by (simp add: join_ir_def input2state_nth)
 
 fun aexp_constrains :: "'a aexp \<Rightarrow> 'a aexp \<Rightarrow> bool" where
