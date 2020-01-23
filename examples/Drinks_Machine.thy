@@ -15,10 +15,6 @@ theory Drinks_Machine
   imports "../Contexts"
 begin
 
-definition I :: "nat \<Rightarrow> vname" where
-  "I n = vname.I (n-1)"
-declare I_def [simp]
-
 definition select :: "transition" where
 "select \<equiv> \<lparr>
         Label = STR ''select'',
@@ -26,7 +22,7 @@ definition select :: "transition" where
         Guard = [], \<comment> \<open> No guards \<close>
         Outputs = [],
         Updates = [ \<comment> \<open> Two updates: \<close>
-                    (1, V (I 1)), \<comment> \<open>  Firstly set value of r1 to value of i1 \<close>
+                    (1, V (I 0)), \<comment> \<open>  Firstly set value of r1 to value of i1 \<close>
                     (2, L (Num 0)) \<comment> \<open> Secondly set the value of r2 to literal zero \<close>
                   ]
       \<rparr>"
@@ -37,10 +33,10 @@ definition coin :: "transition" where
         Label = STR ''coin'',
         Arity = 1,
         Guard = [],
-        Outputs = [Plus (V (R 2)) (V (I 1))],
+        Outputs = [Plus (V (R 2)) (V (I 0))],
         Updates = [
                     (1, V (R 1)),
-                    (2, Plus (V (R 2)) (V (I 1)))
+                    (2, Plus (V (R 2)) (V (I 0)))
                   ]
       \<rparr>"
 text_raw\<open>}%endsnip\<close>
@@ -64,7 +60,7 @@ definition vend_fail :: "transition" where
 "vend_fail \<equiv> \<lparr>
         Label = STR ''vend'',
         Arity = 0,
-        Guard = [(GExp.Lt (V (R 2)) (L (Num 100)))],
+        Guard = [(Lt (V (R 2)) (L (Num 100)))],
         Outputs =  [],
         Updates = [(1, V (R 1)), (2, V (R 2))]
       \<rparr>"
