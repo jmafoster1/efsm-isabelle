@@ -223,4 +223,46 @@ lemma no_choice_no_subsumption:
    \<exists>i. can_take_transition t' i c \<Longrightarrow>
   \<not> subsumes t c t'"
   by (meson bad_guards can_take_def can_take_transition_def choice_def)
+
+lemma subsumption_def_alt: "subsumes t1 c t2 = (Label t2 = Label t1 \<and>
+    Arity t2 = Arity t1 \<and>
+    (\<forall>i. can_take_transition t2 i c \<longrightarrow> can_take_transition t1 i c) \<and>
+    (\<forall>i. can_take_transition t2 i c \<longrightarrow> apply_outputs (Outputs t2) (join_ir i c) = apply_outputs (Outputs t1) (join_ir i c)) \<and>
+    (\<forall>i. can_take_transition t2 i c \<longrightarrow>
+         (\<forall>r' P.
+             P (apply_updates (Updates t1) (join_ir i c) c $ r') \<longrightarrow>
+             apply_updates (Updates t2) (join_ir i c) c $ r' = None \<or> P (apply_updates (Updates t2) (join_ir i c) c $ r'))))"
+  apply (simp add: subsumes_def posterior_separate_def can_take_transition_def[symmetric])
+  by blast
+
+lemma subsumes_update_equality: "subsumes t1 c t2 \<Longrightarrow> (\<forall>i. can_take_transition t2 i c \<longrightarrow>
+         (\<forall>r'.
+             ((apply_updates (Updates t1) (join_ir i c) c $ r') = (apply_updates (Updates t2) (join_ir i c) c $ r')) \<or>
+             apply_updates (Updates t2) (join_ir i c) c $ r' = None))"
+  apply (simp add: subsumption_def_alt)
+  apply clarify
+  apply (erule_tac x=i in allE)+
+  apply simp
+  apply (erule_tac x=r' in allE)
+  by auto
+
+lemma subsumption_def_alt2: "subsumes t1 c t2 = (Label t2 = Label t1 \<and>
+    Arity t2 = Arity t1 \<and>
+    (\<forall>i. can_take_transition t2 i c \<longrightarrow> can_take_transition t1 i c) \<and>
+    (\<forall>i. can_take_transition t2 i c \<longrightarrow> apply_outputs (Outputs t2) (join_ir i c) = apply_outputs (Outputs t1) (join_ir i c)) \<and>
+    (\<forall>i. can_take_transition t2 i c \<longrightarrow>
+         (\<forall>r'. ((apply_updates (Updates t1) (join_ir i c) c $ r') = (apply_updates (Updates t2) (join_ir i c) c $ r')) \<or>
+             apply_updates (Updates t2) (join_ir i c) c $ r' = None)))"
+  apply (simp add: subsumes_def)
+  apply standard
+   apply (simp add: subsumes_update_equality subsumption)
+  by (metis can_take_transition_def option.sel posterior_separate_def)
+
+lemma subsumes_trans:
+  assumes p1: "subsumes t1 c t2" and p2: "subsumes t2 c t3"
+  shows "subsumes t1 c t3"
+  using p1 p2
+  apply (simp add: subsumes_def)
+  by (metis subsumes_update_equality p1 p2 can_take_transition_def option.distinct(1) option.sel posterior_separate_def)
+
 end
