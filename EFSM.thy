@@ -501,8 +501,8 @@ fun maxS :: "transition_matrix \<Rightarrow> nat" where
 definition max_int :: "transition_matrix \<Rightarrow> int" where
   "max_int e = Max (insert 0 (enumerate_ints e))"
 
-fun test_exec :: "execution \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> (label \<times> inputs \<times> cfstate \<times> registers \<times> value list \<times> outputs) list" where
-  "test_exec [] _ _ _ = []" |
+fun test_exec :: "execution \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> ((label \<times> inputs \<times> cfstate \<times> registers \<times> value list \<times> outputs) list \<times> execution)" where
+  "test_exec [] _ _ _ = ([], [])" |
   "test_exec ((l, i, expected)#es) e s r = (
     let
       ps = possible_steps e s r l i
@@ -511,13 +511,14 @@ fun test_exec :: "execution \<Rightarrow> transition_matrix \<Rightarrow> cfstat
         let
           (s', t) = fthe_elem ps;
           r' = apply_updates (Updates t) (join_ir i r) r;
-          actual = apply_outputs (Outputs t) (join_ir i r)
+          actual = apply_outputs (Outputs t) (join_ir i r);
+          (est, fail) = (test_exec es e s' r')
         in
-        (l, i, s, r, expected, actual)#(test_exec es e s' r')
+        ((l, i, s, r, expected, actual)#est, fail)
       else
-        []
+        ([], (l, i, expected)#es)
   )"
 
-definition test_log :: "log \<Rightarrow> transition_matrix \<Rightarrow> (label \<times> inputs \<times> cfstate \<times> registers \<times> value list \<times> outputs) list list" where
+definition test_log :: "log \<Rightarrow> transition_matrix \<Rightarrow> ((label \<times> inputs \<times> cfstate \<times> registers \<times> value list \<times> outputs) list \<times> execution) list" where
   "test_log l e = map (\<lambda>t. test_exec t e 0 <>) l"
 end
