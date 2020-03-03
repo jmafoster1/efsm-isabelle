@@ -182,4 +182,32 @@ definition fimages :: "('a \<Rightarrow> 'b fset) \<Rightarrow> 'a fset \<Righta
 lemma ffold_empty [simp]: "ffold f b {||} = b"
   by (simp add: ffold_def)
 
+lemma exists_fset_of_list: "\<exists>l. f = fset_of_list l"
+  using exists_fset_of_list by fastforce
+
+lemma sorted_list_of_fset_sort: "sorted_list_of_fset (fset_of_list l) = sort (remdups l)"
+  by (simp add: fset_of_list.rep_eq sorted_list_of_fset.rep_eq sorted_list_of_set_sort_remdups)
+
+lemma fMin_Min: "fMin (fset_of_list l) = Min (set l)"
+  by (simp add: fMin.F.rep_eq fset_of_list.rep_eq)
+
+lemma sorted_hd_Min: "sorted l \<Longrightarrow> l \<noteq> [] \<Longrightarrow> hd l = Min (set l)"
+  by (metis List.finite_set Min_eqI eq_iff hd_Cons_tl insertE list.set_sel(1) list.simps(15) sorted.simps(2))
+
+lemma hd_sort_Min: "l \<noteq> [] \<Longrightarrow> hd (sort l) = Min (set l)"
+  by (metis sorted_hd_Min set_empty set_sort sorted_sort)
+
+lemma hd_sort_remdups: "hd (sort (remdups l)) = hd (sort l)"
+  by (metis hd_sort_Min remdups_eq_nil_iff set_remdups)
+
+lemma hd_sorted_list_of_fset: "s \<noteq> {||} \<Longrightarrow> hd (sorted_list_of_fset s) = (fMin s)"
+  apply (insert exists_fset_of_list[of s])
+  apply (erule exE)
+  apply simp
+  apply (simp add: sorted_list_of_fset_sort fMin_Min hd_sort_remdups)
+  by (metis fset_of_list_simps(1) hd_sort_Min)
+
+lemma fminus_filter_singleton: "fset_of_list l |-| {|x|} = fset_of_list (filter (\<lambda>e. e \<noteq> x) l)"
+  by auto
+
 end
