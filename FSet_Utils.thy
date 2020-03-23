@@ -210,4 +210,25 @@ lemma hd_sorted_list_of_fset: "s \<noteq> {||} \<Longrightarrow> hd (sorted_list
 lemma fminus_filter_singleton: "fset_of_list l |-| {|x|} = fset_of_list (filter (\<lambda>e. e \<noteq> x) l)"
   by auto
 
+lemma card_minus_fMin: "s \<noteq> {||} \<Longrightarrow>
+       card (fset s - {fMin s}) < card (fset s)"
+  by (metis Min_in bot_fset.rep_eq card_Diff1_less fMin.F.rep_eq finite_fset fset_equiv)
+
+function ffold_ord :: "(('a::linorder) \<Rightarrow> 'b \<Rightarrow> 'b) \<Rightarrow> 'a fset \<Rightarrow> 'b \<Rightarrow> 'b" where
+  "ffold_ord f s b = (
+    if s = {||} then
+      b
+    else
+      let
+        h = fMin s;
+        t = s - {|h|}
+      in
+        ffold_ord f t (f h b)
+  )"
+  by auto
+termination
+  apply (relation "measures [\<lambda>(a, s, ab). size s]")
+   apply simp
+  by (simp add: card_minus_fMin)
+
 end
