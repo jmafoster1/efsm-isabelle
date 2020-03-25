@@ -501,4 +501,14 @@ fun maxS :: "transition_matrix \<Rightarrow> nat" where
 definition max_int :: "transition_matrix \<Rightarrow> int" where
   "max_int e = Max (insert 0 (enumerate_ints e))"
 
+lemma finite_all_regs: "finite (all_regs e)"
+  apply (simp add: all_regs_def enumerate_registers_def)
+  apply clarify
+  apply standard
+   apply (rule finite_UnI)+
+     apply (metis List.finite_set enumerate_gexp_regs_list finite_UN_I)
+    apply (metis List.finite_set outputs_regs_list set_map)
+   apply (metis List.finite_set enumerate_aexp_regs_list finite_UN_I split_beta)
+  by auto
+
 end
