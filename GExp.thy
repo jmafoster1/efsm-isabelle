@@ -46,14 +46,26 @@ definition gImplies :: "'a gexp \<Rightarrow> 'a gexp \<Rightarrow> 'a gexp" whe
 definition Lt :: "'a aexp \<Rightarrow> 'a aexp \<Rightarrow> 'a gexp" (*infix "<" 60*) where
   "Lt a b \<equiv> Gt b a"
 
+lemma gval_Lt [simp]:  "gval (Lt a\<^sub>1 a\<^sub>2) s = value_gt (aval a\<^sub>2 s) (aval a\<^sub>1 s)"
+  by (simp add: Lt_def)
+
 definition Le :: "'a aexp \<Rightarrow> 'a aexp \<Rightarrow> 'a gexp" (*infix "\<le>" 60*) where
   "Le v va \<equiv> gNot (Gt v va)"
+
+lemma gval_Le [simp]:  "gval (Le a\<^sub>1 a\<^sub>2) s = \<not>\<^sub>? (value_gt (aval a\<^sub>1 s) (aval a\<^sub>2 s))"
+  by (simp add: Le_def value_gt_def gNot_def maybe_or_idempotent)
 
 definition Ge :: "'a aexp \<Rightarrow> 'a aexp \<Rightarrow> 'a gexp" (*infix "\<ge>" 60*) where
   "Ge v va \<equiv> gNot (Lt v va)"
 
+lemma gval_Ge [simp]:  "gval (Ge a\<^sub>1 a\<^sub>2) s = \<not>\<^sub>? (value_gt (aval a\<^sub>2 s) (aval a\<^sub>1 s))"
+  by (simp add: Ge_def value_gt_def gNot_def maybe_or_idempotent)
+
 definition Ne :: "'a aexp \<Rightarrow> 'a aexp \<Rightarrow> 'a gexp" (*infix "\<noteq>" 60*) where
   "Ne v va \<equiv> gNot (Eq v va)"
+
+lemma gval_Ne [simp]:  "gval (Ne a\<^sub>1 a\<^sub>2) s = \<not>\<^sub>? (value_eq (aval a\<^sub>2 s) (aval a\<^sub>1 s))"
+  by (simp add: Ne_def value_gt_def gNot_def maybe_or_idempotent)
 
 lemmas connectives = gAnd_def gOr_def gNot_def Lt_def Le_def Ge_def Ne_def
 
@@ -382,9 +394,7 @@ qed
 definition apply_guards :: "vname gexp list \<Rightarrow> vname datastate \<Rightarrow> bool" where
   "apply_guards G s = (\<forall>g \<in> set (map (\<lambda>g. gval g s) G). g = true)"
 
-lemmas apply_guards = datastate apply_guards_def gval.simps value_eq_def value_gt_def
-
-lemma apply_guards_singleton: "(apply_guards [g] s) = (gval g s = true)"
+lemma apply_guards_singleton[simp]: "(apply_guards [g] s) = (gval g s = true)"
   by (simp add: apply_guards_def)
 
 lemma apply_guards_empty [simp]: "apply_guards [] s"
@@ -447,7 +457,7 @@ lemma no_reg_apply_guards_swap_regs:
 proof(induct G)
   case Nil
   then show ?case
-    by (simp add: apply_guards(3))
+    by simp
 next
   case (Cons a G)
   then show ?case

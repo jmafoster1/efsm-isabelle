@@ -146,53 +146,50 @@ next
 qed
 
 definition possible_steps :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> label \<Rightarrow> inputs \<Rightarrow> (cfstate \<times> transition) fset" where
-  "possible_steps e s r l i = fimage (\<lambda>((origin, dest), t). (dest, t)) (ffilter (\<lambda>((origin, dest::nat), t::transition). origin = s \<and> (Label t) = l \<and> (length i) = (Arity t) \<and> apply_guards (Guard t) (join_ir i r)) e)"
+  "possible_steps e s r l i = fimage (\<lambda>((origin, dest), t). (dest, t)) (ffilter (\<lambda>((origin, dest), t). origin = s \<and> (Label t) = l \<and> (length i) = (Arity t) \<and> apply_guards (Guard t) (join_ir i r)) e)"
 
 lemma in_possible_steps: "(a, bb) |\<in>| possible_steps b s r ab ba \<Longrightarrow> \<exists>s. ((s, a), bb) |\<in>| b"
   apply (simp add: possible_steps_def fimage_def ffilter_def fmember_def Abs_fset_inverse)
   by auto
 
-lemma possible_steps_alt_aux: "(\<lambda>((origin, dest), t). (dest, t)) |`|
-    ffilter (\<lambda>((origin, dest), t). origin = s \<and> Label t = l \<and> length i = Arity t \<and> apply_guards (Guard t) (join_ir i r)) e =
-    {|(d, t)|} \<Longrightarrow>
-    ffilter
-     (\<lambda>((origin, dest), t).
-         origin = s \<and> Label t = l \<and> length i = Arity t \<and> apply_guards (Guard t) (\<lambda>x. case x of vname.I n \<Rightarrow> input2state i $ n | R n \<Rightarrow> r $ n))
-     e =
-    {|((s, d), t)|}"
+lemma possible_steps_alt_aux: "possible_steps e s r l i = {|(d, t)|} \<Longrightarrow>
+       ffilter (\<lambda>((origin, dest), t). origin = s \<and> Label t = l \<and> length i = Arity t \<and> apply_guards (Guard t) (join_ir i r)) e = {|((s, d), t)|}"
 proof(induct e)
   case empty
   then show ?case
-    by auto
+    by (simp add: fempty_not_finsert possible_steps_def)
 next
   case (insert x e)
   then show ?case
-    apply (cases x)
-    apply (case_tac a)
-    apply clarify
-    apply simp
-    apply (simp add: ffilter_finsert join_ir_def)
+    apply (case_tac x, case_tac a)
+    apply (simp add: possible_steps_def)
+    apply (simp add: ffilter_finsert)
     apply (case_tac "aa = s")
      apply simp
-     apply (case_tac "Label ba = l")
+     apply (case_tac "Label b = l")
       apply simp
-      apply (case_tac "length i = Arity ba")
+      apply (case_tac "length i = Arity b")
        apply simp
-       apply (case_tac "apply_guards (Guard ba) (case_vname (\<lambda>n. input2state i $ n) (\<lambda>n. r $  n))")
+       apply (case_tac "apply_guards (Guard b) (join_ir i r)")
     by auto
 qed
 
 lemma possible_steps_alt: "(possible_steps e s r l i = {|(d, t)|}) = (ffilter
-     (\<lambda>((origin, dest), t).
-         origin = s \<and> Label t = l \<and> length i = Arity t \<and> apply_guards (Guard t) (join_ir i r))
-     e =
-    {|((s, d), t)|})"
+     (\<lambda>((origin, dest), t). origin = s \<and> Label t = l \<and> length i = Arity t \<and> apply_guards (Guard t) (join_ir i r))
+     e = {|((s, d), t)|})"
   apply standard
-   apply (simp add: possible_steps_def possible_steps_alt_aux join_ir_def)
-  by (simp add: possible_steps_def join_ir_def)
+   apply (simp add: possible_steps_alt_aux)
+  by (simp add: possible_steps_def)
 
-lemmas possible_steps_singleton = possible_steps_alt Abs_ffilter Set.filter_def
-lemmas possible_steps_empty = possible_steps_def Abs_ffilter Set.filter_def
+lemma possible_steps_singleton: "(possible_steps e s r l i = {|(d, t)|}) = 
+    ({((origin, dest), t) \<in> fset e. origin = s \<and> Label t = l \<and> length i = Arity t \<and> apply_guards (Guard t) (join_ir i r)} = {((s, d), t)})"
+  apply (simp add: possible_steps_alt Abs_ffilter Set.filter_def)
+  by fast
+
+lemma possible_steps_empty: "(possible_steps e s r l i = {||}) = (\<forall>((origin, dest), t) \<in> fset e. origin \<noteq> s \<or> Label t \<noteq> l \<or> \<not> can_take_transition t i r)"
+  apply (simp add: can_take_transition_def can_take_def)
+  apply (simp add: possible_steps_def Abs_ffilter Set.filter_def)
+  by auto
 
 lemma singleton_dest: "fis_singleton (possible_steps e s r aa b) \<Longrightarrow>
        fthe_elem (possible_steps e s r aa b) = (baa, aba) \<Longrightarrow>

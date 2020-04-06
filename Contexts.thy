@@ -10,26 +10,6 @@ theory Contexts
     EFSM GExp
 begin
 
-definition can_take :: "nat \<Rightarrow> vname gexp list \<Rightarrow> inputs \<Rightarrow> registers \<Rightarrow> bool" where
-  "can_take a g i r = (length i = a \<and> apply_guards g (join_ir i r))"
-
-lemma can_take_empty [simp]: "length i = a \<Longrightarrow> can_take a [] i c"
-  by (simp add: can_take_def)
-
-lemma can_take_subset_append: "set (Guard t) \<subseteq> set (Guard t') \<Longrightarrow> can_take a (Guard t @ Guard t') i c = can_take a (Guard t') i c"
-  by (simp add: apply_guards_subset_append can_take_def)
-
-definition "can_take_transition t i r = can_take (Arity t) (Guard t) i r"
-
-lemma can_take_transition_empty_guard: "Guard t = [] \<Longrightarrow> \<exists>i. can_take_transition t i c"
-  by (simp add: can_take_transition_def can_take_def Ex_list_of_length)
-
-lemma valid_list_can_take: "\<forall>g \<in> set (Guard t). valid g \<Longrightarrow> \<exists>i. can_take_transition t i c"
-  by (simp add: can_take_transition_def can_take_def apply_guards_def valid_def Ex_list_of_length)
-
-lemma cant_take_if: "\<exists>g \<in> set (Guard t). gval g (join_ir i r) \<noteq> true \<Longrightarrow> \<not> can_take_transition t i r"
-  using apply_guards_cons apply_guards_rearrange can_take_def can_take_transition_def by blast
-
 lemma medial_subset:
   "length i = Arity t \<Longrightarrow>
    Arity t = Arity t' \<Longrightarrow>
