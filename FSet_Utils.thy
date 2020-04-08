@@ -31,14 +31,6 @@ context includes fset.lifting begin
   lift_definition fis_singleton :: "'a fset \<Rightarrow> bool" is "\<lambda>A. is_singleton (fset A)".
 end
 
-lemma fis_singleton_alt: "fis_singleton f = (\<exists>e. f = {|e|})"
-  by (metis fis_singleton.rep_eq fset_inverse fset_simps(1) fset_simps(2) is_singleton_def)
-
-definition "fSum \<equiv> fsum (\<lambda>x. x)"
-
-lemma fprod_member: "x |\<in>| xs \<Longrightarrow> y |\<in>| ys \<Longrightarrow> (x, y) |\<in>| xs |\<times>| ys"
-  by (simp add: fmember_def fprod_def Abs_fset_inverse)
-
 lemma fprod_empty_l: "{||} |\<times>| a = {||}"
   using bot_fset_def fprod.abs_eq by force
 
@@ -54,9 +46,8 @@ lemma fprod_finsert: "(finsert a as) |\<times>| (finsert b bs) = finsert (a, b) 
                     Abs_fset])
   by auto
 
-lemma fis_singleton_code [code]: "fis_singleton s = (size s = 1)"
-  apply (simp add: fis_singleton_def is_singleton_def)
-  by (simp add: card_Suc_eq)
+lemma fprod_member: "x |\<in>| xs \<Longrightarrow> y |\<in>| ys \<Longrightarrow> (x, y) |\<in>| xs |\<times>| ys"
+  by (simp add: fmember_def fprod_def Abs_fset_inverse)
 
 lemma fprod_subseteq: "x |\<subseteq>| x' \<and> y |\<subseteq>| y' \<Longrightarrow> x |\<times>| y |\<subseteq>| x' |\<times>| y'"
   apply (simp add: fprod_def less_eq_fset_def Abs_fset_inverse)
@@ -72,14 +63,16 @@ lemma fprod_singletons: "{|a|} |\<times>| {|b|} = {|(a, b)|}"
 lemma fprod_equiv: "(fset (f |\<times>| f') = s) = (((fset f) \<times> (fset f')) = s)"
   by (simp add: fprod_def Abs_fset_inverse)
 
+lemma fis_singleton_alt: "fis_singleton f = (\<exists>e. f = {|e|})"
+  by (metis fis_singleton.rep_eq fset_inverse fset_simps(1) fset_simps(2) is_singleton_def)
+
+definition "fSum \<equiv> fsum (\<lambda>x. x)"
+
 lemma fset_both_sides: "(Abs_fset s = f) = (fset (Abs_fset s) = fset f)"
   by (simp add: fset_inject)
 
-lemma Abs_ffilter: "(ffilter f s = s') = (Set.filter f (fset s) = (fset s'))"
-  by (simp add: ffilter_def fset_both_sides Abs_fset_inverse)
-
-lemma Abs_fimage: "(fimage f s = s') = (Set.image f (fset s) = (fset s'))"
-  by (simp add: fimage_def fset_both_sides Abs_fset_inverse)
+lemma Abs_ffilter: "(ffilter f s = s') = ({e \<in> (fset s). f e} = (fset s'))"
+  by (simp add: ffilter_def fset_both_sides Abs_fset_inverse Set.filter_def)
 
 lemma ffilter_empty [simp]: "ffilter f {||} = {||}"
   apply (simp add: ffilter_def fset_both_sides Abs_fset_inverse)
@@ -173,9 +166,6 @@ lemma ffilter_out_all: "\<forall>e |\<in>| f. \<not>P e \<Longrightarrow> ffilte
 lemma fset_eq_alt: "(x = y) = (x |\<subseteq>| y \<and> size x = size y)"
   by (metis exists_least_iff le_less size_fsubset)
 
-definition these :: "'a option fset \<Rightarrow> 'a fset"
-  where "these A = the |`| (ffilter (\<lambda>x. x \<noteq> None) A)"
-
 definition fimages :: "('a \<Rightarrow> 'b fset) \<Rightarrow> 'a fset \<Rightarrow> 'b fset" where
   "fimages f xs = ffUnion (fimage f xs)"
 
@@ -214,6 +204,7 @@ lemma card_minus_fMin: "s \<noteq> {||} \<Longrightarrow>
        card (fset s - {fMin s}) < card (fset s)"
   by (metis Min_in bot_fset.rep_eq card_Diff1_less fMin.F.rep_eq finite_fset fset_equiv)
 
+(* Provides a deterministic way to fold fsets similar to List.fold that works with the code generator *)
 function ffold_ord :: "(('a::linorder) \<Rightarrow> 'b \<Rightarrow> 'b) \<Rightarrow> 'a fset \<Rightarrow> 'b \<Rightarrow> 'b" where
   "ffold_ord f s b = (
     if s = {||} then
@@ -230,5 +221,49 @@ termination
   apply (relation "measures [\<lambda>(a, s, ab). size s]")
    apply simp
   by (simp add: card_minus_fMin)
+
+lemma sorted_list_of_fset_Cons: "\<exists>h t. (sorted_list_of_fset (finsert s ss)) = h#t"
+  apply (simp add: sorted_list_of_fset_def)
+  by (cases "insort s (sorted_list_of_set (fset ss - {s}))", auto)
+
+lemma list_eq_hd_tl: "l \<noteq> [] \<Longrightarrow> hd l = h \<Longrightarrow> tl l = t \<Longrightarrow> l = (h#t)"
+  by auto
+
+lemma fset_of_list_sort: "fset_of_list l = fset_of_list (sort l)"
+  by (simp add: fset_of_list.abs_eq)
+
+lemma exists_sorted_distinct_fset_of_list: "\<exists>l. sorted l \<and> distinct l \<and> f = fset_of_list l"
+  by (metis distinct_sorted_list_of_set sorted_list_of_fset.rep_eq sorted_list_of_fset_simps(2) sorted_sorted_list_of_set)
+
+lemma fset_of_list_empty [simp]: "(fset_of_list l = {||}) = (l = [])"
+  by (metis fset_of_list.rep_eq fset_of_list_simps(1) set_empty)
+
+lemma ffold_ord_cons: 
+  assumes sorted: "sorted (h#t)"
+    and distinct: "distinct (h#t)"
+  shows "ffold_ord f (fset_of_list (h#t)) b = ffold_ord f (fset_of_list t) (f h b)"
+proof-
+  have h_is_min: "h = fMin (fset_of_list (h#t))"
+    by (metis sorted fMin_Min list.sel(1) list.simps(3) sorted_hd_Min)
+  have remove_min: "fset_of_list t = (fset_of_list (h#t)) - {|h|}"
+    using distinct fset_of_list_elem by force
+  show ?thesis
+    apply (simp only: ffold_ord.simps[of f "fset_of_list (h#t)"])
+    by (metis h_is_min remove_min fset_of_list_empty list.distinct(1))
+qed
+
+lemma sorted_distinct_ffold_ord: "sorted l \<Longrightarrow> distinct l \<Longrightarrow> ffold_ord f (fset_of_list l) b = fold f l b"
+proof(induct l arbitrary: b)
+case Nil
+  then show ?case
+    by simp
+next
+  case (Cons a l)
+  then show ?case
+    by (metis distinct.simps(2) ffold_ord_cons fold_simps(2) sorted.simps(2))
+qed
+
+lemma ffold_ord_fold_sorted: "ffold_ord f s b = fold f (sorted_list_of_fset s) b"
+  by (metis exists_sorted_distinct_fset_of_list sorted_distinct_ffold_ord distinct_remdups_id sorted_list_of_fset_sort sorted_sort_id)
 
 end
