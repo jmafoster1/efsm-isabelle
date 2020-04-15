@@ -1,4 +1,4 @@
-session "efsm" = "FinFun" +
+session "EFSM" = "FinFun" +
 options [quick_and_dirty, document = pdf, document_output = "output"]
 directories
   "examples"
