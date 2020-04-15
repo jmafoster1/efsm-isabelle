@@ -1,3 +1,5 @@
 # Ignore isabelle temp files
 *.thy~
 *.thy#
+
+output
