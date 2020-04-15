@@ -26,16 +26,27 @@
   \endgroup% 
 }
 
+\newcommand{\orcidID}[1]{} % temp. hack
 
 \newcommand{\repeatisanl}[1]
 {\ifnum#1=0\else\isanewline\repeatisanl{\numexpr#1-1}\fi}
 \newcommand{\snip}[4]{\repeatisanl#2#4\repeatisanl#3}
 
-\title{EFSM}
-\author{%
-}
-
+\title{A Formal Model of Extended Finite State Machine}%
+\author{Michael~Foster\orcidID{0000-0001-8233-9873} \and
+ Ramsay~G.~Taylor\orcidID{0000-0002-4036-7590} \and
+ Achim~D.~Brucker\orcidID{0000-0002-6355-1200} \and
+ John~Derrick\orcidID{0000-0002-6631-8914}}
 \publishers{%
+  Department of Computer Science\\
+  The University of Sheffield\\
+  Sheffield, UK\\
+  \texttt{\{%
+	\href{mailto:jmafoster1@sheffield.ac.uk}{jmafoster1},
+	\href{mailto:a.brucker@sheffield.ac.uk}{a.brucker},
+	\href{mailto:r.g.taylor@sheffield.ac.uk}{r.g.taylor},
+	\href{mailto:j.derrick@sheffield.ac.uk}{j.derrick}
+  \}@sheffield.ac.uk}
 }
 
 \begin{document}
