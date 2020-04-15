@@ -7,7 +7,7 @@ finite types. See the examples for details.
 \<close>
 
 theory EFSM
-  imports "~~/src/HOL/Library/FSet" Transition FSet_Utils
+  imports "HOL-Library.FSet" Transition FSet_Utils
 begin
 
 declare One_nat_def [simp del]
