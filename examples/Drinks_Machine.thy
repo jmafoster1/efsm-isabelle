@@ -197,14 +197,19 @@ lemma drinks_rejects_future: "rejects drinks 2 d ((l, i)#t)"
   apply (rule trace_reject_no_possible_steps)
   by (simp add: possible_steps_empty drinks_def)
 
-lemma drinks_1_rejects_trace: "\<not> (aa = STR ''vend'' \<and> b = []) \<Longrightarrow> \<not> (aa = STR ''coin'' \<and> length b = 1) \<Longrightarrow> \<not>accepts drinks 1 r ((aa, b) # t)"
-  apply clarify
-  apply (rule accepts.cases)
-    apply simp
-   apply simp
-  apply clarify
-  unfolding step_def
-  using drinks_1_rejects by auto
+lemma drinks_1_rejects_trace:
+  assumes not_vend: "e \<noteq> (STR ''vend'', [])"
+      and not_coin: "\<nexists>i. e = (STR ''coin'', [i])"
+  shows "rejects drinks 1 r (e # es)"
+proof-
+  show ?thesis
+    apply (cases e, simp)
+    apply (rule no_possible_steps_rejects)
+    apply (simp add: possible_steps_empty drinks_def can_take_transition_def can_take_def transitions)
+    apply (case_tac b)
+    using not_vend apply simp
+    using not_coin by auto
+qed
 
 lemma rejects_state_step: "s > 1 \<Longrightarrow> step drinks s r l i = None"
   apply (rule no_possible_steps_1)

@@ -260,8 +260,6 @@ lemma accepts_trace_single_possible_step_atomic: "possible_steps e 0 <> (fst h) 
   using accepts_single_possible_step_atomic
   by simp
 
-abbreviation "rejects e s d t \<equiv> \<not> accepts e s d t"
-
 lemma accepts_step_equiv: "accepts e s d ((l, i)#t) = (\<exists>(s', T) |\<in>| possible_steps e s d l i.
          accepts e s' (apply_updates (Updates T) (join_ir i d) d) t)"
   apply standard
@@ -270,6 +268,11 @@ lemma accepts_step_equiv: "accepts e s d ((l, i)#t) = (\<exists>(s', T) |\<in>| 
 
 lemma accepts_must_be_possible_step: "accepts e s r (h # t) \<Longrightarrow> \<exists>aa ba. (aa, ba) |\<in>| possible_steps e s r (fst h) (snd h)"
   using accepts_step_equiv by fastforce
+
+abbreviation "rejects e s d t \<equiv> \<not> accepts e s d t"
+
+lemma no_possible_steps_rejects: "possible_steps e s d l i = {||} \<Longrightarrow> rejects e s d ((l, i)#t)"
+  by (simp add: accepts_step_equiv)
 
 definition step :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> label \<Rightarrow> inputs \<Rightarrow> (transition \<times> cfstate \<times> outputs \<times> registers) option" where
   "step e s r l i = (case random_member (possible_steps e s r l i) of

@@ -37,6 +37,13 @@ lemma ltl_step_alt:  "ltl_step e (Some s) r t = (let possibilities = possible_st
 lemma ltl_step_none: "possible_steps e s r (fst ie) (snd ie) = {||} \<Longrightarrow> ltl_step e (Some s) r ie = (None, [], r)"
   by (simp add: ltl_step_alt)
 
+lemma ltl_step_some:
+  assumes "possible_steps e s r l i = {|(s', t)|}"
+      and "apply_outputs (Outputs t) (join_ir i r) = p"
+      and "apply_updates (Updates t) (join_ir i r) r = r'"
+    shows "ltl_step e (Some s) r (l, i) = (Some s', p, r')"
+  by (simp add: assms)
+
 primcorec make_full_observation :: "transition_matrix \<Rightarrow> nat option \<Rightarrow> registers \<Rightarrow> outputs \<Rightarrow> event stream \<Rightarrow> state stream" where
   "make_full_observation e s d p i = (
     let (s', o', d') = ltl_step e s d (shd i) in
@@ -110,6 +117,9 @@ qed
 lemma no_output_none_nxt: "alw (nxt (output_eq [])) (make_full_observation e None r p t)"
   by (metis alw_inv alw_mono no_output_none nxt.simps)
 
+lemma no_output_none_if_empty: "alw (output_eq []) (make_full_observation e None r [] t)"
+  by (metis alw_nxt make_full_observation.sel(1) no_output_none output_eq_def state.select_convs(4))
+
 lemma no_updates_none: "alw (\<lambda>x. datastate (shd x) = r) (make_full_observation e None r p t)"
 proof -
   have "alw (\<lambda>x. datastate (shd x) = r) (make_full_observation e None r [] (stl t))"
@@ -126,7 +136,7 @@ proof -
       then show ?case
         by simp
     qed
-qed
+  qed
 
 lemma event_components: "(label_eq l aand input_eq i) s = (event (shd s) = (String.implode l, i))"
   apply (simp add: label_eq_def input_eq_def)

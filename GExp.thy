@@ -1032,5 +1032,4 @@ lemma not_restricted_cons: "not_restricted v (g#gs) = ((\<not> gexp_constrains g
 
 definition enumerate_vars :: "vname gexp \<Rightarrow> vname list" where
   "enumerate_vars g = sorted_list_of_set ((image R (enumerate_gexp_regs g)) \<union> (image I (enumerate_gexp_inputs g)))"
-
 end
