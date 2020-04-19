@@ -262,10 +262,11 @@ lemma ltl_step_not_coin_or_vend: "\<nexists>i. e = (STR ''coin'', [i]) \<Longrig
 lemma ltl_step_coin: "\<exists>p r'. ltl_step drinks (Some 1) r (STR ''coin'', [i]) = (Some 1, p, r')"
   by (simp add: possible_steps_1_coin)
 
-lemma alw_mono_watch:
-assumes alw: "alw \<phi> (watch e xs)" and 0: "\<And> xs. \<phi> (watch e xs) \<Longrightarrow> \<psi> (watch e xs)"
-shows "alw \<psi> (watch e xs)"
-  oops
+lemma alw_tl: "alw \<phi> (make_full_observation e (Some 0) <> [] xs) \<Longrightarrow>
+    alw \<phi>
+     (make_full_observation e (fst (ltl_step e (Some 0) <> (shd xs))) (snd (snd (ltl_step e (Some 0) <> (shd xs))))
+       (fst (snd (ltl_step e (Some 0) <> (shd xs)))) (stl xs))"
+  by auto
 
 lemma stop_at_none: "alw (\<lambda>xs. output (shd (stl xs)) = [Some (EFSM.Str drink)] \<longrightarrow> check_exp (Ge (V (Rg 2)) (L (Num 100))) xs)
             (make_full_observation drinks None r p t)"
@@ -273,50 +274,63 @@ lemma stop_at_none: "alw (\<lambda>xs. output (shd (stl xs)) = [Some (EFSM.Str d
    apply (simp add: no_output_none_nxt)
   by (simp add: output_eq_def)
 
+text\<open>The approach here is to split ltl_steps down to its various cases such that we can analyse
+them all separately rather than having to do cases on label and inputs in LTL proofs. Here, the
+vend_fail, coin, and invalid cases don't need guards because they either don't change the state, or
+don't have a guard we care about. We need the antecedent of the vend case since vend has a guard
+which affects the truth value of drinks_cost_money."\<close>
+
+lemma ltl_steps_1:
+  assumes vend_fail: "P (Some 1, [], r)"
+  assumes coin: "P (Some 1, [value_plus (r$2) (Some (i!0))], r(2 $:= value_plus (r$2) (Some (i!0))))"
+  assumes invalid: "P (None, [], r)"
+  assumes vend: "possible_steps drinks 1 r l i = {|(2, vend)|} \<longrightarrow> P (Some 2, [r$1], r)"
+  shows "P (ltl_step drinks (Some 1) r (l, i))"
+proof-
+  show ?thesis
+    apply (case_tac "l = STR ''coin'' \<and> length i = 1")
+     apply (simp add: possible_steps_1_coin coin_def apply_outputs_def finfun_update_twist coin)
+    apply (case_tac "l = STR ''vend'' \<and> i = []")
+     apply (case_tac "r $ 2")
+      apply (simp add: drinks_vend_invalid invalid)
+     apply (case_tac a)
+      apply (case_tac "x1 < 100")
+       apply (simp add: drinks_vend_insufficient vend_fail_def)
+       apply (metis vend_fail finfun_upd_triv)
+      apply (simp add: drinks_vend_sufficient vend_def apply_outputs_def)
+      apply (metis vend finfun_upd_triv not_le possible_steps_2_vend)
+     apply (simp add: drinks_vend_r2_String invalid)
+    by (simp add: drinks_no_possible_steps_1 invalid)
+qed
+
 lemma drink_costs_money_aux:
-  assumes "\<exists>p r t. j = ( (make_full_observation drinks (Some 1) r p) t)"
+  assumes "\<exists>p r t. j = make_full_observation drinks (Some 1) r p t"
   shows "alw (\<lambda>xs. output (shd (stl xs)) = [Some (EFSM.Str drink)] \<longrightarrow> check_exp (Ge (V (Rg 2)) (L (Num 100))) xs) j"
   using assms apply coinduct
   apply clarify
   apply simp
-  apply (case_tac "shd t \<noteq> (STR ''vend'', [])")
-   apply (case_tac "\<nexists>i. shd t = (STR ''coin'', [i])")
-    apply (simp add: ltl_step_not_coin_or_vend stop_at_none)
+  apply (case_tac "shd t")
+  apply (simp del: ltl_step.simps)
+  apply (rule ltl_steps_1)
+     apply auto[1]
+  using value_plus_never_string Str_def apply force
    apply simp
-   apply clarify
-   apply (simp add: possible_steps_1_coin)
-   apply standard
-    apply (simp add: coin_def apply_outputs_def value_plus_def Str_def plus_never_string)
-   apply (rule disjI1, metis)
+   apply (metis (mono_tags, lifting) alw_mono list.distinct(1) no_output_none_nxt nxt.simps output_eq_def)
   apply simp
-  apply (case_tac "r $ 2")
-   apply (simp add: drinks_vend_invalid stop_at_none)
-  apply (case_tac a)
-   defer
-   apply (simp add: drinks_vend_invalid stop_at_none)
-  apply (case_tac "x1 < 100")
-   apply (simp add: drinks_vend_insufficient vend_fail_def)
-   apply (rule disjI1, metis)
-  apply (simp add: drinks_vend_sufficient vend_def check_exp_def value_gt_def)
-  apply (rule disjI2)
-  apply (coinduction)
-  apply (simp add: drinks_step_2_none)
-  apply (rule disjI2)
-  apply (rule alw_mono[of "nxt (output_eq [])"])
-   apply (simp add: no_output_none_nxt)
-  by (simp add: output_eq_def)
+  apply standard
+  apply standard
+   apply (simp add: check_exp_def vend_ge_100)
+  apply (rule disjI2, coinduction)
+  by (simp add: drinks_step_2_none stop_at_none)
 
-lemma "alw (nxt (output_eq [Some (Str drink)]) impl (check_exp (Ge (V (Rg 2)) (L (Num 100))))) (watch drinks t)"
+lemma drinks_cost_money:
+  "alw (nxt (output_eq [Some (Str drink)]) impl (check_exp (Ge (V (Rg 2)) (L (Num 100))))) (watch drinks t)"
 proof(coinduction)
   case alw
   then show ?case
     apply (simp add: watch_def output_eq_def)
     apply (case_tac "\<nexists>i. shd t = (STR ''select'', [i])")
-     apply (simp add: ltl_step_not_select)
-     apply (rule disjI2)
-     apply (rule alw_mono[of "nxt (output_eq [])"])
-      apply (simp add: no_output_none_nxt)
-     apply (simp add: output_eq_def)
+     apply (simp add: ltl_step_not_select stop_at_none)
     apply simp
     apply (erule exE)
     apply (simp only: ltl_step_select, simp)

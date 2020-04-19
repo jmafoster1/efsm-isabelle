@@ -27,51 +27,55 @@ definition drinks2 :: transition_matrix where
               ((2,3), vend)
          |}"
 
-lemma possible_steps_0:  "length i = 1 \<Longrightarrow> possible_steps drinks2 0 r ((STR ''select'')) i = {|(1, select)|}"
+lemma possible_steps_0:
+   "length i = 1 \<Longrightarrow> possible_steps drinks2 0 r ((STR ''select'')) i = {|(1, select)|}"
   apply (simp add: possible_steps_def drinks2_def transitions)
   by force
 
-lemma possible_steps_1: "length i = 1 \<Longrightarrow> possible_steps drinks2 1 r ((STR ''coin'')) i = {|(2, coin)|}"
+lemma possible_steps_1:
+  "length i = 1 \<Longrightarrow> possible_steps drinks2 1 r ((STR ''coin'')) i = {|(2, coin)|}"
   apply (simp add: possible_steps_def drinks2_def transitions)
   by force
 
-lemma possible_steps_2_coin: "length i = 1 \<Longrightarrow> possible_steps drinks2 2 r ((STR ''coin'')) i = {|(2, coin)|}"
+lemma possible_steps_2_coin:
+  "length i = 1 \<Longrightarrow> possible_steps drinks2 2 r ((STR ''coin'')) i = {|(2, coin)|}"
   apply (simp add: possible_steps_def drinks2_def transitions)
   by force
 
-lemma possible_steps_2_vend: "r $ 2 = Some (Num n) \<Longrightarrow> n \<ge> 100 \<Longrightarrow> possible_steps drinks2 2 r ((STR ''vend'')) [] = {|(3, vend)|}"
+lemma possible_steps_2_vend:
+  "r $ 2 = Some (Num n) \<Longrightarrow> n \<ge> 100 \<Longrightarrow> possible_steps drinks2 2 r ((STR ''vend'')) [] = {|(3, vend)|}"
   apply (simp add: possible_steps_singleton drinks2_def)
   apply safe
   by (simp_all add: transitions apply_guards_def value_gt_def join_ir_def connectives)
 
-lemma first_step_select: "(s', T) |\<in>| possible_steps drinks 0 r aa b \<Longrightarrow> s' = 1 \<and> T = select"
-  apply (simp add: possible_steps_def fimage_def ffilter_def fmember_def Abs_fset_inverse Set.filter_def drinks_def)
-  apply safe
-  by (simp_all add: transitions)
-
-lemma accepts_first_select: "accepts drinks 0 r ((aa, b) # as) \<Longrightarrow> aa = STR ''select'' \<and> length b = 1"
+lemma accepts_first_select:
+  "accepts drinks 0 r ((aa, b) # as) \<Longrightarrow> aa = STR ''select'' \<and> length b = 1"
   using accepts_must_be_possible_step[of drinks 0 r "(aa, b)" as]
   apply simp
   apply clarify
   by (metis first_step_select accepts_possible_steps_not_empty drinks_0_rejects fst_conv snd_conv)
 
-lemma drinks2_vend_insufficient: "possible_steps drinks2 1 r ((STR ''vend'')) [] = {|(1, vend_nothing)|}"
+lemma drinks2_vend_insufficient:
+  "possible_steps drinks2 1 r ((STR ''vend'')) [] = {|(1, vend_nothing)|}"
   apply (simp add: possible_steps_def drinks2_def transitions)
   by force
 
-lemma drinks2_vend_insufficient2: "r $ 2 = Some (Num x1) \<Longrightarrow> x1 < 100 \<Longrightarrow> possible_steps drinks2 2 r ((STR ''vend'')) [] = {|(2, vend_fail)|}"
+lemma drinks2_vend_insufficient2:
+  "r $ 2 = Some (Num x1) \<Longrightarrow> x1 < 100 \<Longrightarrow> possible_steps drinks2 2 r ((STR ''vend'')) [] = {|(2, vend_fail)|}"
   apply (simp add: possible_steps_singleton drinks2_def)
   apply safe
   by (simp_all add: transitions apply_guards_def value_gt_def join_ir_def connectives)
 
-lemma drinks2_vend_sufficient: "r $ 2 = Some (Num x1) \<Longrightarrow>
+lemma drinks2_vend_sufficient:
+  "r $ 2 = Some (Num x1) \<Longrightarrow>
                 \<not> x1 < 100 \<Longrightarrow>
                 possible_steps drinks2 2 r ((STR ''vend'')) [] = {|(3, vend)|}"
   apply (simp add: possible_steps_singleton drinks2_def)
   apply safe
   by (simp_all add: transitions apply_guards_def value_gt_def join_ir_def connectives)
 
-lemma accepts_1_2: "accepts drinks 1 r t \<longrightarrow> accepts drinks2 2 r t"
+lemma accepts_1_2:
+  "accepts drinks 1 r t \<longrightarrow> accepts drinks2 2 r t"
 proof(induct t arbitrary: r)
   case Nil
   then show ?case
@@ -80,70 +84,91 @@ next
   case (Cons a as)
   then show ?case
     apply (cases a)
-    apply clarify
-    apply (case_tac "aa = STR ''coin'' \<and> length b = 1")
-     apply (simp add: accepts_cons)
+    apply (simp add: accepts_step_equiv)
+    apply (case_tac "a=(STR ''vend'', [])")
+     apply (case_tac "\<exists>n. r$2 = Some (Num n)")
+      apply clarify
+      apply (case_tac "n < 100")
+       apply (simp add: drinks_vend_insufficient drinks2_vend_insufficient2)
+      apply (simp add: drinks_vend_sufficient drinks2_vend_sufficient)
+      apply (metis accepts_prim accepts_prim.elims(3) drinks_rejects_future)
+    using drinks_vend_invalid apply blast
+    apply (case_tac "\<exists>i. a=(STR ''coin'', [i])")
+     apply clarify
      apply (simp add: possible_steps_1_coin possible_steps_2_coin)
-    apply (case_tac "aa = STR ''vend'' \<and> b = []")
-     defer
-     apply (simp add: drinks_1_rejects_trace)
-    apply (case_tac "r $ 2")
-     apply (simp add: drinks_vend_r2_rejects step_none_rejects)
-    apply clarify
-    apply (case_tac aaa)
-    defer
-     apply (simp add: drinks_vend_r2_String trace_reject_no_possible_steps)
-    apply (case_tac "x1 \<ge> 100")
-     defer
-     apply (simp add: accepts_cons drinks_vend_insufficient drinks2_vend_insufficient2)
-    apply simp
-    apply (simp add: accepts_cons drinks_vend_sufficient drinks2_vend_sufficient)
-    apply (cases as)
-     apply (simp add: accepts.base)
-    using drinks_rejects_future by auto
+    by (metis accepts.simps drinks_1_rejects_trace fBexE old.prod.exhaust)
 qed
 
-lemma acceptance: "accepts drinks s r t \<longrightarrow> accepts drinks2 s r t"
-proof(induct t arbitrary: s r)
+lemma drinks_reject_0_2: "\<nexists>i. a = (STR ''select'', [i]) \<Longrightarrow> possible_steps drinks 0 r (fst a) (snd a) = {||}"
+  apply (rule drinks_0_rejects)
+  by (cases a, case_tac "snd a", auto)
+
+lemma input_simulation_1_2:
+"input_simulation drinks 1 r drinks2 2 r t"
+proof(induction t arbitrary: r)
   case Nil
   then show ?case
-    by (simp add: accepts.base)
+    by (simp add: input_simulation.base)
 next
-  case (Cons a as)
+  case (Cons a t)
   then show ?case
-    apply (cases a)
-    apply clarify
-    apply (case_tac "s=0")
-     apply simp
-     apply (case_tac "aa = STR ''select'' \<and> length b = 1")
-      apply (rule accepts.step)
-      apply (simp add: possible_steps_0)
-    using accepts_cons first_step_select apply fastforce
-    using accepts_first_select apply auto[1]
-    apply (case_tac "s=1")
-     apply (case_tac "aa = STR ''coin'' \<and> length b = 1")
-      apply (simp add: accepts_cons possible_steps_1_coin possible_steps_1 accepts_1_2)
-     apply (case_tac "aa = STR ''vend'' \<and> b = []")
-      defer
-      apply (simp add: drinks_1_rejects_trace)
-     apply (case_tac "s=2")
-      apply (simp add: drinks_end trace_reject_no_possible_steps)
-     apply (simp add: invalid_other_states)
-    apply (case_tac "r $ 2")
-     apply (simp add: drinks_vend_r2_rejects step_none_rejects)
-    apply clarify
-    apply (case_tac aaa)
-    defer
-     apply (simp add: drinks_vend_r2_String trace_reject_no_possible_steps)
-    apply (case_tac "x1 \<ge> 100")
-     defer
-     apply (simp add: accepts_cons drinks_vend_insufficient drinks2_vend_insufficient vend_nothing_def vend_fail_def)
+    apply (cases a, clarify)
     apply simp
-    apply (simp add: accepts_cons drinks_vend_sufficient drinks2_vend_insufficient)
-    by (metis accepts.simps drinks_rejects_future)
+    subgoal for l i
+      apply (rule input_simulation.step)
+      apply (case_tac "l = STR ''coin'' \<and> length i = 1")
+       apply (simp add: possible_steps_1_coin possible_steps_2_coin coin_def)
+      apply (case_tac "a=(STR ''vend'', [])")
+       apply (case_tac "r$2")
+      using drinks_vend_invalid apply simp
+       apply (case_tac aa)
+        apply (case_tac "x1 < 100")
+         apply (clarify, simp add: drinks_vend_insufficient drinks2_vend_insufficient2)
+        apply (clarify, simp add: drinks_vend_sufficient drinks2_vend_sufficient)
+        apply (induct t)
+         apply (simp add: input_simulation.base)
+        apply (case_tac aa, clarify)
+        apply (rule input_simulation.step)
+        apply (simp add: drinks_end)
+      using drinks_vend_invalid apply simp
+      using drinks_1_rejects by auto
+    done
 qed
 
-lemma purchase_coke: "observe_trace drinks2 0 <> [((STR ''select''), [Str ''coke'']), ((STR ''coin''), [Num 50]), ((STR ''coin''), [Num 50]), ((STR ''vend''), [])] =
+lemma input_simulation_1_1:
+"input_simulation drinks 1 (<>(2 := Num 0, 1 := i ! 0)) drinks2 1 (<>(2 := Num 0, 1 := i ! 0)) t"
+proof(induction rule: input_simulation_induct)
+  case (1 l i t)
+  then show ?case
+    apply (case_tac "l = STR ''coin'' \<and> length i = 1")
+     apply (rule input_simulation.step)
+     apply (simp add: possible_steps_1_coin possible_steps_1 input_simulation_1_2)
+    apply (case_tac "l = STR ''vend'' \<and> i = []")
+     apply (rule input_simulation.step)
+     apply (simp add: drinks_vend_insufficient drinks2_vend_insufficient transitions finfun_update_twist)
+     apply (rule input_simulation.step)
+    using drinks_1_rejects by auto
+qed
+
+lemma input_simulation: "input_simulates drinks drinks2"
+proof(induction rule: input_simulates_induct)
+  case (1 l i t)
+  then show ?case
+    apply (case_tac "l = STR ''select'' \<and> length i = 1")
+     apply simp
+     apply (rule input_simulation.step)
+     apply (simp add: possible_steps_0 Drinks_Machine.possible_steps_0 select_def input_simulation_1_1)
+     apply (rule input_simulation.step)
+    using drinks_0_rejects by auto
+qed
+
+lemma acceptance:
+  "accepts_trace drinks t \<Longrightarrow> accepts_trace drinks2 t"
+  using input_simulation input_simulates_accepts_trace
+  by simp
+
+lemma purchase_coke:
+  "observe_trace drinks2 0 <> [((STR ''select''), [Str ''coke'']), ((STR ''coin''), [Num 50]), ((STR ''coin''), [Num 50]), ((STR ''vend''), [])] =
                        [[], [Some (Num 50)], [Some (Num 100)], [Some (Str ''coke'')]]"
   apply (rule observe_trace_possible_step)
      apply (simp add: possible_steps_0)
@@ -167,91 +192,52 @@ lemma purchase_coke: "observe_trace drinks2 0 <> [((STR ''select''), [Str ''coke
    apply simp
   by simp
 
-lemma drinks2_0_invalid: "\<not> (aa = (STR ''select'') \<and> length (b) = 1) \<Longrightarrow>
+lemma drinks2_0_invalid:
+  "\<not> (aa = (STR ''select'') \<and> length (b) = 1) \<Longrightarrow>
     (possible_steps drinks2 0 <> aa b) = {||}"
   apply (simp add: drinks2_def possible_steps_def transitions)
   by force
 
-lemma drinks2_vend_r2_none: "r $ 2 = None \<Longrightarrow> possible_steps drinks2 2 r ((STR ''vend'')) [] = {||}"
+lemma drinks2_vend_r2_none:
+  "r $ 2 = None \<Longrightarrow> possible_steps drinks2 2 r ((STR ''vend'')) [] = {||}"
   apply (simp add: possible_steps_empty drinks2_def can_take_transition_def can_take_def transitions)
   by (simp add: value_gt_def)
 
-lemma drinks2_end: "possible_steps drinks2 3 r a b = {||}"
+lemma drinks2_end:
+  "possible_steps drinks2 3 r a b = {||}"
   apply (simp add: possible_steps_def drinks2_def transitions)
   by force
 
-lemma drinks2_vend_r2_String: "r $ 2 = Some (value.Str x2) \<Longrightarrow>
+lemma drinks2_vend_r2_String:
+  "r $ 2 = Some (value.Str x2) \<Longrightarrow>
                 possible_steps drinks2 2 r ((STR ''vend'')) [] = {||}"
   apply (simp add: possible_steps_empty drinks2_def)
   apply safe
   by (simp_all add: transitions can_take_transition_def can_take_def value_gt_def)
 
-lemma drinks2_2_invalid: "fst a = (STR ''coin'') \<longrightarrow> length (snd a) \<noteq> 1 \<Longrightarrow>
+lemma drinks2_2_invalid:
+  "fst a = (STR ''coin'') \<longrightarrow> length (snd a) \<noteq> 1 \<Longrightarrow>
           a \<noteq> ((STR ''vend''), []) \<Longrightarrow>
           possible_steps drinks2 2 r (fst a) (snd a) = {||}"
   apply (simp add: possible_steps_empty drinks2_def transitions can_take_transition_def can_take_def)
   by (metis prod.collapse)
 
-lemma drinks2_1_invalid: "\<not>(a = (STR ''coin'') \<and> length b = 1) \<Longrightarrow>
+lemma drinks2_1_invalid:
+  "\<not>(a = (STR ''coin'') \<and> length b = 1) \<Longrightarrow>
       \<not>(a = (STR ''vend'') \<and> b = []) \<Longrightarrow>
     possible_steps drinks2 1 r a b = {||}"
   apply (simp add: possible_steps_empty drinks2_def)
   apply safe
   by (simp_all add: transitions can_take_transition_def can_take_def value_gt_def)
 
-lemma drinks2_vend_invalid: "\<nexists>n. r $ 2 = Some (Num n) \<Longrightarrow> possible_steps drinks2 2 r (STR ''vend'') [] = {||}"
+lemma drinks2_vend_invalid:
+  "\<nexists>n. r $ 2 = Some (Num n) \<Longrightarrow> possible_steps drinks2 2 r (STR ''vend'') [] = {||}"
   apply (simp add: possible_steps_empty drinks2_def)
   apply safe
   by (simp_all add: transitions can_take_transition_def can_take_def value_gt_def MaybeBoolInt_not_num_1)
 
-lemma rejects_1_2: "rejects drinks 1 r t \<longrightarrow> rejects drinks2 2 r t"
-proof(induct t arbitrary: r)
-  case Nil
-  then show ?case
-    by (simp add: accepts.base)
-next
-  case (Cons a t)
-  then show ?case
-    apply (cases a)
-    apply (case_tac "aa = STR ''coin'' \<and> length b = 1")
-     apply (simp add: accepts_cons possible_steps_1_coin possible_steps_2_coin)
-    apply (case_tac "aa = STR ''vend'' \<and> b = []")
-     defer
-    using accepts_possible_steps_not_empty drinks2_2_invalid apply fastforce
-    apply (case_tac "r $ 2")
-     apply (simp add: drinks2_vend_r2_none trace_reject_no_possible_steps)
-    apply (case_tac aaa)
-    defer
-     apply (simp add: drinks2_vend_invalid trace_reject_no_possible_steps)
-    apply (case_tac "x1 \<ge> 100")
-     apply (simp add: trace_reject_2 drinks_vend_sufficient drinks2_vend_sufficient)
-     apply (case_tac t)
-      apply (simp add: accepts.base)
-     apply simp
-     apply standard
-    using accepts_possible_steps_not_empty drinks2_end apply blast
-    by (simp add: trace_reject_2 drinks_vend_insufficient drinks2_vend_insufficient2)
-qed
-
-lemma accepts_1_1: "rejects drinks 1 (<>(1 := d, 2 := Num 0)) t \<Longrightarrow> rejects drinks2 1 (<>(1 := d, 2 := Num 0)) t"
-proof(induct t)
-  case Nil
-  then show ?case
-    by (simp add: accepts.base)
-next
-  case (Cons a t)
-  then show ?case
-    apply (case_tac "a = (STR ''vend'', [])")
-     apply (simp add: trace_reject_2 drinks_vend_insufficient drinks2_vend_insufficient vend_fail_def vend_nothing_def join_ir_def)
-     apply (simp add: finfun_update_twist)
-    apply (cases a)
-    apply (case_tac "aa = STR ''coin'' \<and> length b = 1")
-     apply (simp add: trace_reject_2 possible_steps_1_coin possible_steps_1)
-    using rejects_1_2 apply blast
-    by (simp add: drinks2_1_invalid trace_reject_no_possible_steps)
-qed
-
-lemma equiv_1_2: "observe_trace drinks 1 r t = observe_trace drinks2 2 r t"
+lemma equiv_1_2:
+  "observe_trace drinks 1 r t = observe_trace drinks2 2 r t"
 proof(induct t arbitrary: r)
   case Nil
   then show ?case
@@ -292,7 +278,8 @@ next
     by (simp add: drinks2_end)
 qed
 
-lemma equiv_1_1: "observe_trace drinks 1 (<>(2 := Num 0, 1 := snd a ! 0)) t = observe_trace drinks2 1 (<>(2 := Num 0, 1 := snd a ! 0)) t"
+lemma equiv_1_1:
+  "observe_trace drinks 1 (<>(2 := Num 0, 1 := snd a ! 0)) t = observe_trace drinks2 1 (<>(2 := Num 0, 1 := snd a ! 0)) t"
 proof(induct t)
   case Nil
   then show ?case
@@ -320,7 +307,8 @@ next
 qed
 
 (* Corresponds to Example 3 in Foster et. al. *)
-lemma observational_equivalence: "observably_equivalent drinks drinks2 t"
+lemma observational_equivalence:
+  "observably_equivalent drinks drinks2 t"
 proof (induct t)
   case Nil
   then show ?case

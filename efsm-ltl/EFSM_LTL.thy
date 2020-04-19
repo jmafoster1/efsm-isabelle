@@ -44,6 +44,20 @@ lemma ltl_step_some:
     shows "ltl_step e (Some s) r (l, i) = (Some s', p, r')"
   by (simp add: assms)
 
+lemma ltl_step_cases:
+  assumes invalid: "P (None, [], r)"
+  assumes valid: "\<forall>(s', t) |\<in>| (possible_steps e s r l i). P (Some s', (apply_outputs (Outputs t) (join_ir i r)), (apply_updates (Updates t) (join_ir i r) r))"
+  shows "P (ltl_step e (Some s) r (l, i))"
+  apply simp
+  apply (case_tac "possible_steps e s r l i")
+   apply (simp add: invalid)
+  apply simp
+  apply (case_tac "SOME xa. xa = x \<or> xa |\<in>| S'")
+  apply simp
+  apply (insert assms(2))
+  apply (simp add: fBall_def Ball_def fmember_def)
+  by (metis (mono_tags, lifting) fst_conv prod.case_eq_if snd_conv someI_ex)
+
 primcorec make_full_observation :: "transition_matrix \<Rightarrow> nat option \<Rightarrow> registers \<Rightarrow> outputs \<Rightarrow> event stream \<Rightarrow> state stream" where
   "make_full_observation e s d p i = (
     let (s', o', d') = ltl_step e s d (shd i) in
