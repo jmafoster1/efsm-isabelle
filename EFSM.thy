@@ -1,9 +1,12 @@
 subsection \<open>Extended Finite State Machines\<close>
 text\<open>
-This theory defines extended finite state machines. Each EFSM takes a type variable which represents
-$S$. This is a slight devaition from the definition presented in \cite{foster2018} as this
-type variable may be of an infinite type such as integers, however the intended use is for custom
-finite types. See the examples for details.
+This theory defines extended finite state machines as presented in \cite{foster2018}. States are
+indexed by natural numbers, however, since transition matrices are implemented by finite sets, the
+number of reachable states in $S$ is necessarily finite. For ease of implementation, we implicitly
+make the initial state zero for all EFSMs. This allows EFSMs to be represented purely by their
+transition matrix which, in this implementation, is a finite set of tuples of the form
+$((s_1, s_2), t)$ in which $s_1$ is the origin state, $s_2$ is the destination state, and t is a
+transition.
 \<close>
 
 theory EFSM
@@ -77,10 +80,10 @@ lemma apply_outputs_unupdated:
   by (metis apply_outputs_nth assms(1) assms(2) length_list_update nth_list_update_neq)
 
 definition choice :: "transition \<Rightarrow> transition \<Rightarrow> bool" where
-  "choice t t' = (\<exists> i r. apply_guards (Guard t) (join_ir i r) \<and> apply_guards (Guard t') (join_ir i r))"
+  "choice t t' = (\<exists> i r. apply_guards (Guards t) (join_ir i r) \<and> apply_guards (Guards t') (join_ir i r))"
 
 definition choice_alt :: "transition \<Rightarrow> transition \<Rightarrow> bool" where
-  "choice_alt t t' = (\<exists> i r. apply_guards (Guard t@Guard t') (join_ir i r))"
+  "choice_alt t t' = (\<exists> i r. apply_guards (Guards t@Guards t') (join_ir i r))"
 
 lemma choice_alt:
   "choice t t' = choice_alt t t'"
@@ -105,11 +108,11 @@ lemma r_not_updated_stays_the_same:
   by (induct U, auto)
 
 definition possible_steps :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> label \<Rightarrow> inputs \<Rightarrow> (cfstate \<times> transition) fset" where
-  "possible_steps e s r l i = fimage (\<lambda>((origin, dest), t). (dest, t)) (ffilter (\<lambda>((origin, dest), t). origin = s \<and> (Label t) = l \<and> (length i) = (Arity t) \<and> apply_guards (Guard t) (join_ir i r)) e)"
+  "possible_steps e s r l i = fimage (\<lambda>((origin, dest), t). (dest, t)) (ffilter (\<lambda>((origin, dest), t). origin = s \<and> (Label t) = l \<and> (length i) = (Arity t) \<and> apply_guards (Guards t) (join_ir i r)) e)"
 
 lemma possible_steps_alt_aux:
   "possible_steps e s r l i = {|(d, t)|} \<Longrightarrow>
-       ffilter (\<lambda>((origin, dest), t). origin = s \<and> Label t = l \<and> length i = Arity t \<and> apply_guards (Guard t) (join_ir i r)) e = {|((s, d), t)|}"
+       ffilter (\<lambda>((origin, dest), t). origin = s \<and> Label t = l \<and> length i = Arity t \<and> apply_guards (Guards t) (join_ir i r)) e = {|((s, d), t)|}"
 proof(induct e)
   case empty
   then show ?case
@@ -120,13 +123,13 @@ next
     apply (case_tac x, case_tac a)
     apply (simp add: possible_steps_def)
     apply (simp add: ffilter_finsert)
-    apply (case_tac "aa = s \<and> Label b = l \<and> length i = Arity b \<and> apply_guards (Guard b) (join_ir i r)")
+    apply (case_tac "aa = s \<and> Label b = l \<and> length i = Arity b \<and> apply_guards (Guards b) (join_ir i r)")
     by auto
 qed
 
 lemma possible_steps_alt:
   "(possible_steps e s r l i = {|(d, t)|}) = (ffilter
-     (\<lambda>((origin, dest), t). origin = s \<and> Label t = l \<and> length i = Arity t \<and> apply_guards (Guard t) (join_ir i r))
+     (\<lambda>((origin, dest), t). origin = s \<and> Label t = l \<and> length i = Arity t \<and> apply_guards (Guards t) (join_ir i r))
      e = {|((s, d), t)|})"
   apply standard
    apply (simp add: possible_steps_alt_aux)
@@ -134,12 +137,12 @@ lemma possible_steps_alt:
 
 lemma possible_steps_singleton:
   "(possible_steps e s r l i = {|(d, t)|}) =
-    ({((origin, dest), t) \<in> fset e. origin = s \<and> Label t = l \<and> length i = Arity t \<and> apply_guards (Guard t) (join_ir i r)} = {((s, d), t)})"
+    ({((origin, dest), t) \<in> fset e. origin = s \<and> Label t = l \<and> length i = Arity t \<and> apply_guards (Guards t) (join_ir i r)} = {((s, d), t)})"
   apply (simp add: possible_steps_alt Abs_ffilter Set.filter_def)
   by fast
 
 lemma possible_steps_apply_guards:
-  "possible_steps e s r l i = {|(s', t)|} \<Longrightarrow> apply_guards (Guard t) (join_ir i r)"
+  "possible_steps e s r l i = {|(s', t)|} \<Longrightarrow> apply_guards (Guards t) (join_ir i r)"
   apply (simp add: possible_steps_singleton)
   by auto
 
@@ -150,12 +153,12 @@ lemma possible_steps_empty:
   by auto
 
 lemma singleton_dest:
-  "fis_singleton (possible_steps e s r aa b) \<Longrightarrow>
-       fthe_elem (possible_steps e s r aa b) = (baa, aba) \<Longrightarrow>
-       ((s, baa), aba) |\<in>| e"
-  apply (simp add: fis_singleton_def fthe_elem_def singleton_equiv)
-  apply (simp add: possible_steps_def fmember_def)
-  by auto
+  assumes "fis_singleton (possible_steps e s r aa b)"
+      and "fthe_elem (possible_steps e s r aa b) = (baa, aba)"
+    shows "((s, baa), aba) |\<in>| e"
+  using assms
+  apply (simp add: fis_singleton_fthe_elem)
+  using possible_steps_alt_aux by force
 
 inductive accepts :: "transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> trace \<Rightarrow> bool" where
   base: "accepts e s d []" |
@@ -173,7 +176,8 @@ lemma no_possible_steps_rejects:
   using accepts.cases by blast
 
 lemma accepts_step_equiv:
-  "accepts e s d ((l, i)#t) = (\<exists>(s', T) |\<in>| possible_steps e s d l i. accepts e s' (apply_updates (Updates T) (join_ir i d) d) t)"
+  "accepts e s d ((l, i)#t) =
+   (\<exists>(s', T) |\<in>| possible_steps e s d l i. accepts e s' (apply_updates (Updates T) (join_ir i d) d) t)"
   apply standard
    apply (rule accepts.cases, simp)
     apply simp
@@ -229,7 +233,7 @@ inductive input_simulation :: "transition_matrix \<Rightarrow> nat \<Rightarrow>
             input_simulation e1 s1' (apply_updates (Updates t1) (join_ir i r1) r1) e2 s2' (apply_updates (Updates t2) (join_ir i r2) r2) es \<Longrightarrow>
          input_simulation e1 s1 r1 e2 s2 r2 ((l, i)#es)"
 
-lemma input_simulation_induct:
+lemma input_simulation_induct [rule_format]:
 "(\<And>l i t. input_simulation e1 s1 r1 e2 s2 r2 t \<Longrightarrow> input_simulation e1 s1 r1 e2 s2 r2 ((l, i) # t)) \<Longrightarrow>
 input_simulation e1 s1 r1 e2 s2 r2 t"
   using input_simulation.base by (induct t, auto)
@@ -278,9 +282,18 @@ lemma input_simulates_accepts_trace:
 definition random_member :: "'a fset \<Rightarrow> 'a option" where
   "random_member f = (if f = {||} then None else Some (Eps (\<lambda>x. x |\<in>| f)))"
 
-lemma random_member_singleton [simp]:
-  "random_member {|a|} = Some a"
+lemma random_member_singleton [simp]: "random_member {|a|} = Some a"
   by (simp add: random_member_def)
+
+lemma random_member_Some: "random_member ss = Some s \<Longrightarrow> s |\<in>| ss"
+  apply (simp add: random_member_def)
+  by (metis equalsffemptyI option.distinct(1) option.inject verit_sko_ex_indirect)
+
+lemma random_member_None[simp]: "random_member ss = None = (ss = {||})"
+  by (simp add: random_member_def)
+
+lemma random_member_empty[simp]: "random_member {||} = None"
+  by simp
 
 definition step :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> label \<Rightarrow> inputs \<Rightarrow> (transition \<times> cfstate \<times> outputs \<times> registers) option" where
   "step e s r l i = (case random_member (possible_steps e s r l i) of
@@ -483,37 +496,24 @@ lemma no_further_steps:
   apply (rule gets_us_to.cases)
   by auto
 
-primrec accepting_sequence :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> trace \<Rightarrow> (transition \<times> cfstate \<times> outputs \<times> registers) list \<Rightarrow> (transition \<times> cfstate \<times> outputs \<times> registers) list option" where
-  "accepting_sequence _ _ r [] obs = Some (rev obs)" |
-  "accepting_sequence e s r (a#t) obs = (let
-    poss = possible_steps e s r (fst a) (snd a);
-    accepting = ffilter (\<lambda>(s', T). accepts e s' (apply_updates (Updates T) (join_ir (snd a) r) r) t) poss  in
-    if accepting = {||} then
-      None
-    else let
-      (s', T) = Eps (\<lambda>x. x |\<in>| accepting);
-      r' = (apply_updates (Updates T) (join_ir (snd a) r) r) in
-      accepting_sequence e s' r' t ((T, s', (apply_outputs (Outputs T) (join_ir (snd a) r)), r')#obs)
-  )"
-
 lemma observe_trace_empty_iff:
   "(observe_trace e s r t = []) = (observe_all e s r t = [])"
   by (simp add: observe_trace_def)
 
-definition enumerate_strings :: "transition_matrix \<Rightarrow> String.literal set" where
-  "enumerate_strings e = \<Union> (image (\<lambda>(_, t). Transition.enumerate_strings t) (fset e))"
+definition max_reg :: "transition_matrix \<Rightarrow> nat option" where
+  "max_reg e = (let maxes = (fimage (\<lambda>(_, t). Transition.max_reg t) e) in if maxes = {||} then None else fMax maxes)"
 
 definition enumerate_ints :: "transition_matrix \<Rightarrow> int set" where
   "enumerate_ints e = \<Union> (image (\<lambda>(_, t). Transition.enumerate_ints t) (fset e))"
 
-definition max_reg :: "transition_matrix \<Rightarrow> nat option" where
-  "max_reg e = (let maxes = (fimage (\<lambda>(_, t). Transition.max_reg t) e) in if maxes = {||} then None else fMax maxes)"
+definition max_int :: "transition_matrix \<Rightarrow> int" where
+  "max_int e = Max (insert 0 (enumerate_ints e))"
 
 definition max_output :: "transition_matrix \<Rightarrow> nat" where
   "max_output e = fMax (fimage (\<lambda>(_, t). length (Outputs t)) e)"
 
 definition all_regs :: "transition_matrix \<Rightarrow> nat set" where
-  "all_regs e = \<Union> (image (\<lambda>(_, t). enumerate_registers t) (fset e))"
+  "all_regs e = \<Union> (image (\<lambda>(_, t). enumerate_regs t) (fset e))"
 
 definition max_input :: "transition_matrix \<Rightarrow> nat option" where
   "max_input e = fMax (fimage (\<lambda>(_, t). Transition.max_input t) e)"
@@ -521,18 +521,14 @@ definition max_input :: "transition_matrix \<Rightarrow> nat option" where
 fun maxS :: "transition_matrix \<Rightarrow> nat" where
   "maxS t = (if t = {||} then 0 else fMax ((fimage (\<lambda>((origin, dest), t). origin) t) |\<union>| (fimage (\<lambda>((origin, dest), t). dest) t)))"
 
-definition max_int :: "transition_matrix \<Rightarrow> int" where
-  "max_int e = Max (insert 0 (enumerate_ints e))"
-
-lemma finite_all_regs:
-  "finite (all_regs e)"
-  apply (simp add: all_regs_def enumerate_registers_def)
+lemma finite_all_regs: "finite (all_regs e)"
+  apply (simp add: all_regs_def enumerate_regs_def)
   apply clarify
   apply standard
    apply (rule finite_UnI)+
-     apply (metis List.finite_set enumerate_gexp_regs_list finite_UN_I)
-    apply (metis List.finite_set outputs_regs_list set_map)
-   apply (metis List.finite_set enumerate_aexp_regs_list finite_UN_I split_beta)
+  using GExp.finite_enumerate_regs apply blast
+  using AExp.finite_enumerate_regs apply blast
+   apply (simp add: AExp.finite_enumerate_regs prod.case_eq_if)
   by auto
 
 definition isomorphic :: "transition_matrix \<Rightarrow> transition_matrix \<Rightarrow> bool" where

@@ -2,6 +2,13 @@ theory Trilean
 imports Main
 begin
 
+section\<open>Three-Valued Logic\<close>
+
+(* TODO: Can we cite Bochvar? *)
+text\<open>The \texttt{trilean} datatype is used to implement three-valued Bochvar logic. Here we prove
+that the logic is an idempotent semiring, define a partial order, and prove some other useful
+lemmas.\<close>
+
 datatype trilean = true | false | invalid
 
 instantiation trilean :: semiring begin
@@ -197,24 +204,19 @@ instance
 end
 
 lemma maybe_and_one: "true \<and>\<^sub>? x = x"
-  apply (cases x)
-  by auto
+  by (cases x, auto)
 
 lemma maybe_or_zero: "false \<or>\<^sub>? x = x"
-  apply (cases x)
-  by auto
+  by (cases x, auto)
 
 lemma maybe_double_negation: "\<not>\<^sub>? \<not>\<^sub>? x = x"
-  apply (cases x)
-  by auto
+  by (cases x, auto)
 
 lemma maybe_negate_true: "(\<not>\<^sub>? x = true) = (x = false)"
-  apply (cases x)
-  by auto
+  by (cases x, auto)
 
 lemma maybe_negate_false: "(\<not>\<^sub>? x = false) = (x = true)"
-  apply (cases x)
-  by auto
+  by (cases x, auto)
 
 lemma maybe_and_true: "(x \<and>\<^sub>? y = true) = (x = true \<and> y = true)"
   using times_trilean.elims by blast

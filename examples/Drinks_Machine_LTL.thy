@@ -4,25 +4,29 @@ begin
 
 declare One_nat_def [simp del]
 
-lemma LTL_r2_not_always_gt_100: "not (alw (check_exp (Gt (V (Rg 2)) (L (Num 100))))) (watch drinks i)"
+lemma LTL_r2_not_always_gt_100:
+"not (alw (check_exp (Gt (V (Rg 2)) (L (Num 100))))) (watch drinks i)"
   apply (simp add: not_alw_iff watch_def)
   apply (rule ev.base)
   by (simp add: check_exp_def value_gt_def)
 
-lemma possible_steps_select_wrong_arity: "a = STR ''select'' \<Longrightarrow>
+lemma possible_steps_select_wrong_arity:
+"a = STR ''select'' \<Longrightarrow>
        length b \<noteq> 1 \<Longrightarrow>
        possible_steps drinks 0 <> a b = {||}"
   apply (simp add: possible_steps_def ffilter_def fset_both_sides Abs_fset_inverse Set.filter_def drinks_def)
   apply safe
   by (simp_all add: select_def)
 
-lemma possible_steps_0_not_select: "a \<noteq> STR ''select'' \<Longrightarrow>
+lemma possible_steps_0_not_select:
+"a \<noteq> STR ''select'' \<Longrightarrow>
        possible_steps drinks 0 <> a b = {||}"
   apply (simp add: possible_steps_def ffilter_def fset_both_sides Abs_fset_inverse Set.filter_def drinks_def)
   apply safe
   by (simp_all add: select_def)
 
-lemma statename_smap: "alw (nxt (state_eq (Some 2)) impl (state_eq (Some 1))) s =
+lemma statename_smap:
+"alw (nxt (state_eq (Some 2)) impl (state_eq (Some 1))) s =
        alw (nxt (\<lambda>x. shd x = (Some 2)) impl (\<lambda>x. shd x = (Some 1))) (smap statename s)"
   by (simp add: state_eq_def alw_iff_sdrop)
 
@@ -32,13 +36,16 @@ lemma drinks_no_possible_steps_1:
 shows "possible_steps drinks 1 r a b = {||}"
   using drinks_1_rejects not_coin not_vend by auto
 
-lemma apply_updates_vend: "apply_updates (Updates vend) (join_ir [] r) r = r"
+lemma apply_updates_vend:
+"apply_updates (Updates vend) (join_ir [] r) r = r"
   by (simp add: vend_def)
 
-lemma drinks_step_2_none: "ltl_step drinks (Some 2) r e = (None, [], r)"
+lemma drinks_step_2_none:
+"ltl_step drinks (Some 2) r e = (None, [], r)"
   by (simp add: drinks_end ltl_step_none)
 
-lemma one_before_two_2: "alw (\<lambda>x. statename (shd (stl x)) = Some 2 \<longrightarrow> statename (shd x) = Some 1) (make_full_observation drinks (Some 2) r [r $ 1] x2a)"
+lemma one_before_two_2:
+"alw (\<lambda>x. statename (shd (stl x)) = Some 2 \<longrightarrow> statename (shd x) = Some 1) (make_full_observation drinks (Some 2) r [r $ 1] x2a)"
 proof(coinduction)
   case alw
   then show ?case
@@ -104,7 +111,8 @@ lemma "alw (\<lambda>x. nxt (state_eq (Some 2)) x \<longrightarrow> state_eq (So
             (nxt (make_full_observation drinks (Some 1) r p) i)"
   using one_before_two_aux by blast
 
-lemma LTL_nxt_2_means_vend: "alw (nxt (state_eq (Some 2)) impl (state_eq (Some 1))) (watch drinks i)"
+lemma LTL_nxt_2_means_vend:
+"alw (nxt (state_eq (Some 2)) impl (state_eq (Some 1))) (watch drinks i)"
   apply (simp only: statename_smap watch_def)
   apply simp
 proof(coinduction)
@@ -129,7 +137,8 @@ proof(coinduction)
     using one_before_two_aux by blast
 qed
 
-lemma possible_steps_0_invalid: "\<not> (l = STR ''select'' \<and> length i = 1) \<Longrightarrow> possible_steps drinks 0 <> l i = {||}"
+lemma possible_steps_0_invalid:
+"\<not> (l = STR ''select'' \<and> length i = 1) \<Longrightarrow> possible_steps drinks 0 <> l i = {||}"
   using possible_steps_0_not_select possible_steps_select_wrong_arity by blast
 
 lemma costsMoney_aux:
@@ -184,7 +193,8 @@ lemma costsMoney_aux:
   by (simp add: state_eq_def)
 
 (* costsMoney: THEOREM drinks |- G(X(cfstate=State_2) => gval(value_ge(r_2, Some(NUM(100))))); *)
-lemma LTL_costsMoney: "(alw (nxt (state_eq (Some 2)) impl (check_exp (Ge (V (Rg 2)) (L (Num 100)))))) (watch drinks i)"
+lemma LTL_costsMoney:
+"(alw (nxt (state_eq (Some 2)) impl (check_exp (Ge (V (Rg 2)) (L (Num 100)))))) (watch drinks i)"
 proof(coinduction)
   case alw
   then show ?case
@@ -206,16 +216,20 @@ proof(coinduction)
     done
 qed
 
-lemma LTL_costsMoney_aux: "(alw (not (check_exp (Ge (V (Rg 2)) (L (Num 100)))) impl (not (nxt (state_eq (Some 2)))))) (watch drinks i)"
+lemma LTL_costsMoney_aux:
+"(alw (not (check_exp (Ge (V (Rg 2)) (L (Num 100)))) impl (not (nxt (state_eq (Some 2)))))) (watch drinks i)"
   by (metis (no_types, lifting) LTL_costsMoney alw_mono)
 
-lemma implode_select: "String.implode ''select'' = STR ''select''"
+lemma implode_select:
+"String.implode ''select'' = STR ''select''"
   by (metis Literal.rep_eq String.implode_explode_eq zero_literal.rep_eq)
 
-lemma implode_coin: "String.implode ''coin'' = STR ''coin''"
+lemma implode_coin:
+"String.implode ''coin'' = STR ''coin''"
   by (metis Literal.rep_eq String.implode_explode_eq zero_literal.rep_eq)
 
-lemma implode_vend: "String.implode ''vend'' = STR ''vend''"
+lemma implode_vend:
+"String.implode ''vend'' = STR ''vend''"
   by (metis Literal.rep_eq String.implode_explode_eq zero_literal.rep_eq)
 
 lemmas implode_labels = implode_select implode_coin implode_vend
@@ -241,34 +255,40 @@ lemma LTL_neverReachS2:"(((((event_eq (''select'', [Str ''coke''])))
   apply (case_tac "shd (stl x2)", clarify)
   by (simp add: drinks_vend_sufficient state_eq_def)
 
-lemma ltl_step_not_select: "\<nexists>i. e = (STR ''select'', [i]) \<Longrightarrow> ltl_step drinks (Some 0) r e = (None, [], r)"
+lemma ltl_step_not_select:
+"\<nexists>i. e = (STR ''select'', [i]) \<Longrightarrow> ltl_step drinks (Some 0) r e = (None, [], r)"
   apply (rule ltl_step_none)
   apply (simp add: possible_steps_empty drinks_def can_take_transition_def can_take_def select_def)
   by (cases e, case_tac b, auto)
 
-lemma ltl_step_select: "ltl_step drinks (Some 0) <> (STR ''select'', [i]) = (Some 1, [], <>(1 := i, 2 := Num 0))"
+lemma ltl_step_select:
+"ltl_step drinks (Some 0) <> (STR ''select'', [i]) = (Some 1, [], <>(1 := i, 2 := Num 0))"
   apply (rule  ltl_step_some[of _ _ _ _ _ _ select])
     apply (simp add: possible_steps_0)
    apply (simp add: select_def)
   by (simp add: select_def finfun_update_twist)
 
-lemma ltl_step_not_coin_or_vend: "\<nexists>i. e = (STR ''coin'', [i]) \<Longrightarrow>
+lemma ltl_step_not_coin_or_vend:
+"\<nexists>i. e = (STR ''coin'', [i]) \<Longrightarrow>
     e \<noteq> (STR ''vend'', []) \<Longrightarrow>
     ltl_step drinks (Some 1) r e = (None, [], r)"
   apply (rule ltl_step_none)
   apply (simp add: possible_steps_empty drinks_def can_take_transition_def can_take_def transitions)
   by (case_tac e, case_tac b, auto)
 
-lemma ltl_step_coin: "\<exists>p r'. ltl_step drinks (Some 1) r (STR ''coin'', [i]) = (Some 1, p, r')"
+lemma ltl_step_coin:
+"\<exists>p r'. ltl_step drinks (Some 1) r (STR ''coin'', [i]) = (Some 1, p, r')"
   by (simp add: possible_steps_1_coin)
 
-lemma alw_tl: "alw \<phi> (make_full_observation e (Some 0) <> [] xs) \<Longrightarrow>
+lemma alw_tl:
+"alw \<phi> (make_full_observation e (Some 0) <> [] xs) \<Longrightarrow>
     alw \<phi>
      (make_full_observation e (fst (ltl_step e (Some 0) <> (shd xs))) (snd (snd (ltl_step e (Some 0) <> (shd xs))))
        (fst (snd (ltl_step e (Some 0) <> (shd xs)))) (stl xs))"
   by auto
 
-lemma stop_at_none: "alw (\<lambda>xs. output (shd (stl xs)) = [Some (EFSM.Str drink)] \<longrightarrow> check_exp (Ge (V (Rg 2)) (L (Num 100))) xs)
+lemma stop_at_none:
+"alw (\<lambda>xs. output (shd (stl xs)) = [Some (EFSM.Str drink)] \<longrightarrow> check_exp (Ge (V (Rg 2)) (L (Num 100))) xs)
             (make_full_observation drinks None r p t)"
   apply (rule alw_mono[of "nxt (output_eq [])"])
    apply (simp add: no_output_none_nxt)

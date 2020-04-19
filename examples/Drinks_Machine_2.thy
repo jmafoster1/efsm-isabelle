@@ -10,7 +10,7 @@ definition vend_nothing :: "transition" where
 "vend_nothing \<equiv> \<lparr>
         Label = (STR ''vend''),
         Arity = 0,
-        Guard = [],
+        Guards = [],
         Outputs =  [],
         Updates = [(1, V (R 1)), (2, V (R 2))]
       \<rparr>"
@@ -99,12 +99,19 @@ next
     by (metis accepts.simps drinks_1_rejects_trace fBexE old.prod.exhaust)
 qed
 
-lemma drinks_reject_0_2: "\<nexists>i. a = (STR ''select'', [i]) \<Longrightarrow> possible_steps drinks 0 r (fst a) (snd a) = {||}"
+lemma drinks_reject_0_2:
+"\<nexists>i. a = (STR ''select'', [i]) \<Longrightarrow> possible_steps drinks 0 r (fst a) (snd a) = {||}"
   apply (rule drinks_0_rejects)
   by (cases a, case_tac "snd a", auto)
 
+(*Here's the lemma for which
+proof(induction t rule: input_simulation_induct arbitrary: r)
+breaks
+*)
+
 lemma input_simulation_1_2:
 "input_simulation drinks 1 r drinks2 2 r t"
+
 proof(induction t arbitrary: r)
   case Nil
   then show ?case
@@ -150,7 +157,8 @@ proof(induction rule: input_simulation_induct)
     using drinks_1_rejects by auto
 qed
 
-lemma input_simulation: "input_simulates drinks drinks2"
+lemma input_simulation:
+"input_simulates drinks drinks2"
 proof(induction rule: input_simulates_induct)
   case (1 l i t)
   then show ?case

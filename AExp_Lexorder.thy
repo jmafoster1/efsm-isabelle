@@ -1,5 +1,5 @@
 theory AExp_Lexorder
-imports AExp
+imports AExp Value_Lexorder
 begin
 
 instantiation aexp :: (linorder) linorder begin
