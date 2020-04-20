@@ -912,15 +912,15 @@ lemma not_restricted_cons:
 definition enumerate_vars :: "vname gexp \<Rightarrow> vname list" where
   "enumerate_vars g = sorted_list_of_set ((image R (enumerate_regs g)) \<union> (image I (enumerate_gexp_inputs g)))"
 
-fun rename_regs :: "vname gexp \<Rightarrow> (nat \<Rightarrow> nat) \<Rightarrow> vname gexp" where
-  "rename_regs (Bc b) _ = Bc b" |
-  "rename_regs (Eq a1 a2) f = Eq (AExp.rename_regs a1 f) (AExp.rename_regs a2 f)" |
-  "rename_regs (Gt a1 a2) f = Gt (AExp.rename_regs a1 f) (AExp.rename_regs a2 f)" |
-  "rename_regs (In (R r) vs) f = In (R (f r)) vs" |
-  "rename_regs (In v vs) f = In v vs" |
-  "rename_regs (Nor g1 g2) f = Nor (rename_regs g1 f) (rename_regs g2 f)"
+fun rename_regs :: "(nat \<Rightarrow> nat) \<Rightarrow> vname gexp \<Rightarrow> vname gexp" where
+  "rename_regs _ (Bc b) = Bc b" |
+  "rename_regs f (Eq a1 a2) = Eq (AExp.rename_regs f a1) (AExp.rename_regs f a2)" |
+  "rename_regs f (Gt a1 a2) = Gt (AExp.rename_regs f a1) (AExp.rename_regs f a2)" |
+  "rename_regs f (In (R r) vs) = In (R (f r)) vs" |
+  "rename_regs f (In v vs) = In v vs" |
+  "rename_regs f (Nor g1 g2) = Nor (rename_regs f g1) (rename_regs f g2)"
 
 definition eq_upto_rename :: "vname gexp \<Rightarrow> vname gexp \<Rightarrow> bool" where
-  "eq_upto_rename g1 g2 = (\<exists>f. bij f \<and> rename_regs g1 f = g2)"
+  "eq_upto_rename g1 g2 = (\<exists>f. bij f \<and> rename_regs f g1 = g2)"
 
 end

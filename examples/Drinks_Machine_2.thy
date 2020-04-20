@@ -109,9 +109,7 @@ proof(induction t rule: input_simulation_induct arbitrary: r)
 breaks
 *)
 
-lemma input_simulation_1_2:
-"input_simulation drinks 1 r drinks2 2 r t"
-
+lemma input_simulation_1_2: "input_simulation drinks 1 r drinks2 2 r t"
 proof(induction t arbitrary: r)
   case Nil
   then show ?case
@@ -326,15 +324,14 @@ proof (induct t)
   then show ?case
     apply (simp add: observably_equivalent_def)
     apply (case_tac "fst a = STR ''select'' \<and> length (snd a) = 1")
-     defer
-     apply (rule observe_trace_no_possible_steps)
-    using drinks_0_rejects apply blast
-    using drinks2_0_invalid apply blast
      apply (rule observe_trace_one_possible_step)
           apply (simp add: Drinks_Machine.possible_steps_0)
          apply (simp add: possible_steps_0)
        apply simp+
-    by (simp add: select_def join_ir_def input2state_nth equiv_1_1)
+     apply (simp add: select_def join_ir_def input2state_nth equiv_1_1)
+     apply (rule observe_trace_no_possible_steps)
+    using drinks_0_rejects apply blast
+    using drinks2_0_invalid by blast
 qed
 
 end

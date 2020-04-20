@@ -634,15 +634,15 @@ fun enumerate_aexp_ints :: "'a aexp \<Rightarrow> int set" where
 definition enumerate_vars :: "vname aexp \<Rightarrow> vname set" where
   "enumerate_vars a = (image I (enumerate_aexp_inputs a)) \<union> (image R (enumerate_regs a))"
 
-fun rename_regs :: "vname aexp \<Rightarrow> (nat \<Rightarrow> nat) \<Rightarrow> vname aexp" where
-  "rename_regs (L l) _ = (L l)" |
-  "rename_regs (V (R r)) f = (V (R (f r)))" |
-  "rename_regs (V v) _ = (V v)" |
-  "rename_regs (Plus a b) f = Plus (rename_regs a f) (rename_regs b f)" |
-  "rename_regs (Minus a b) f = Minus (rename_regs a f) (rename_regs b f)" |
-  "rename_regs (Times a b) f = Times (rename_regs a f) (rename_regs b f)"
+fun rename_regs :: "(nat \<Rightarrow> nat) \<Rightarrow> vname aexp \<Rightarrow> vname aexp" where
+  "rename_regs _ (L l) = (L l)" |
+  "rename_regs f (V (R r)) = (V (R (f r)))" |
+  "rename_regs _ (V v) = (V v)" |
+  "rename_regs f (Plus a b) = Plus (rename_regs f a) (rename_regs f b)" |
+  "rename_regs f (Minus a b) = Minus (rename_regs f a) (rename_regs f b)" |
+  "rename_regs f (Times a b) = Times (rename_regs f a) (rename_regs f b)"
 
 definition eq_upto_rename :: "vname aexp \<Rightarrow> vname aexp \<Rightarrow> bool" where
-  "eq_upto_rename a1 a2 = (\<exists>f. bij f \<and> rename_regs a1 f = a2)"
+  "eq_upto_rename a1 a2 = (\<exists>f. bij f \<and> rename_regs f a1 = a2)"
 
 end

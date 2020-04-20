@@ -45,40 +45,6 @@ lemma S_ffUnion:
   unfolding S_def
   by(induct e, auto)
 
-definition apply_outputs :: "'a aexp list \<Rightarrow> 'a datastate \<Rightarrow> value option list" where
-  "apply_outputs p s = map (\<lambda>p. aval p s) p"
-
-lemma apply_outputs_nth:
-  "i < length p \<Longrightarrow> apply_outputs p s ! i = aval (p ! i) s"
-  by (simp add: apply_outputs_def)
-
-lemmas apply_outputs = datastate apply_outputs_def
-
-lemma apply_outputs_empty [simp]:
-  "apply_outputs [] s = []"
-  by (simp add: apply_outputs_def)
-
-lemma apply_outputs_preserves_length:
-  "length (apply_outputs p s) = length p"
-  by (simp add: apply_outputs_def)
-
-lemma apply_outputs_literal:
-  assumes "P ! r = L v"
-      and "r < length P"
-    shows "apply_outputs P s ! r = Some v"
-  by (simp add: assms apply_outputs_nth)
-
-lemma apply_outputs_register:
-  assumes "r < length P"
-  shows "apply_outputs (list_update P r (V (R p))) (join_ir i c) ! r = c $ p"
-  by (metis apply_outputs_nth assms aval.simps(2) join_ir_R length_list_update nth_list_update_eq)
-
-lemma apply_outputs_unupdated:
-  assumes "ia \<noteq> r"
-      and "ia < length P"
-    shows "apply_outputs P j ! ia = apply_outputs (list_update P r v)j ! ia"
-  by (metis apply_outputs_nth assms(1) assms(2) length_list_update nth_list_update_neq)
-
 definition choice :: "transition \<Rightarrow> transition \<Rightarrow> bool" where
   "choice t t' = (\<exists> i r. apply_guards (Guards t) (join_ir i r) \<and> apply_guards (Guards t') (join_ir i r))"
 
@@ -92,20 +58,6 @@ lemma choice_alt:
 lemma choice_symmetry:
   "choice x y = choice y x"
   using choice_def by auto
-
-primrec apply_updates :: "update_function list \<Rightarrow> vname datastate \<Rightarrow> registers \<Rightarrow> registers" where
-  "apply_updates [] _ new = new" |
-  "apply_updates (h#t) old new = (apply_updates t old new)(fst h $:= aval (snd h) old)"
-
-lemma apply_updates_foldr:
-  "apply_updates u old new = foldr (\<lambda>h r. r(fst h $:= aval (snd h) old)) u new"
-  by (induct u, auto)
-
-lemma r_not_updated_stays_the_same:
-  assumes "r \<notin> fst ` set U"
-  shows "apply_updates U c d $ r = d $ r"
-  using assms
-  by (induct U, auto)
 
 definition possible_steps :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> label \<Rightarrow> inputs \<Rightarrow> (cfstate \<times> transition) fset" where
   "possible_steps e s r l i = fimage (\<lambda>((origin, dest), t). (dest, t)) (ffilter (\<lambda>((origin, dest), t). origin = s \<and> (Label t) = l \<and> (length i) = (Arity t) \<and> apply_guards (Guards t) (join_ir i r)) e)"
@@ -233,7 +185,7 @@ inductive input_simulation :: "transition_matrix \<Rightarrow> nat \<Rightarrow>
             input_simulation e1 s1' (apply_updates (Updates t1) (join_ir i r1) r1) e2 s2' (apply_updates (Updates t2) (join_ir i r2) r2) es \<Longrightarrow>
          input_simulation e1 s1 r1 e2 s2 r2 ((l, i)#es)"
 
-lemma input_simulation_induct [rule_format]:
+lemma input_simulation_induct:
 "(\<And>l i t. input_simulation e1 s1 r1 e2 s2 r2 t \<Longrightarrow> input_simulation e1 s1 r1 e2 s2 r2 ((l, i) # t)) \<Longrightarrow>
 input_simulation e1 s1 r1 e2 s2 r2 t"
   using input_simulation.base by (induct t, auto)
@@ -309,6 +261,22 @@ lemma step_some:
    step e s r l i = Some (t, s', p, r')"
   by (simp add: step_def)
 
+lemma step_None: "step e s r l i = None = (possible_steps e s r l i = {||})"
+  by (simp add: step_def prod.case_eq_if random_member_def)
+
+lemma step_Some:
+  "step e s r l i = Some (t, s', p, r') =
+  (
+    random_member (possible_steps e s r l i) = Some (s', t) \<and>
+    apply_outputs (Outputs t) (join_ir i r) = p \<and>
+    apply_updates (Updates t) (join_ir i r) r = r'
+  )"
+  apply (simp add: step_def)
+  apply (case_tac "random_member (possible_steps e s r l i)")
+   apply simp
+  by (case_tac a, auto)
+
+
 lemma no_possible_steps_1:
   "possible_steps e s r l i = {||} \<Longrightarrow> step e s r l i = None"
   by (simp add: step_def random_member_def)
@@ -332,7 +300,6 @@ lemma observe_trace_empty [simp]:
   by (simp add: observe_trace_def)
 
 lemma observe_trace_step:
-
   "step e s r (fst h) (snd h) = Some (t, s', p, r') \<Longrightarrow>
    observe_trace e s' r' es = obs \<Longrightarrow>
    observe_trace e s r (h#es) = p#obs"
@@ -532,8 +499,49 @@ lemma finite_all_regs: "finite (all_regs e)"
   by auto
 
 definition isomorphic :: "transition_matrix \<Rightarrow> transition_matrix \<Rightarrow> bool" where
-  "isomorphic e1 e2 = ((\<forall>((s1, s2), t) |\<in>| e1. \<exists>f. ((f s1, f s2), t) |\<in>| e2) \<and>
-                       (\<forall>((s1, s2), t) |\<in>| e2. \<exists>f. ((f s1, f s2), t) |\<in>| e1))"
+  "isomorphic e1 e2 = (\<exists>f. bij f \<and> (\<forall>((s1, s2), t) |\<in>| e1. ((f s1, f s2), t) |\<in>| e2))"
 
+definition rename_regs :: "(nat \<Rightarrow> nat) \<Rightarrow> transition_matrix \<Rightarrow> transition_matrix" where
+  "rename_regs f e = fimage (\<lambda>(tf, t). (tf, Transition.rename_regs f t)) e"
+
+definition eq_upto_rename_strong :: "transition_matrix \<Rightarrow> transition_matrix \<Rightarrow> bool" where
+  "eq_upto_rename_strong e1 e2 = (\<exists>f. bij f \<and> rename_regs f e1 = e2)"
+
+inductive output_simulation :: "transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> trace \<Rightarrow> bool" where
+  base: "output_simulation e1 s1 r1 e2 s2 r2 []" |
+  step: "\<forall>(s1', t1) |\<in>| possible_steps e1 s1 r1 l i.
+           \<exists>(s2', t2) |\<in>| possible_steps e2 s2 r2 l i.
+            apply_outputs (Outputs t1) (join_ir i r1) = apply_outputs (Outputs t2) (join_ir i r2) \<and>
+            output_simulation e1 s1' (apply_updates (Updates t1) (join_ir i r1) r1) e2 s2' (apply_updates (Updates t2) (join_ir i r2) r2) es \<Longrightarrow>
+         output_simulation e1 s1 r1 e2 s2 r2 ((l, i)#es)"
+
+definition output_simulates :: "transition_matrix \<Rightarrow> transition_matrix \<Rightarrow> bool" where
+  "output_simulates e1 e2 \<equiv> \<forall>t. output_simulation e1 0 <> e2 0 <> t"
+
+lemma observe_trace_first_outputs_equiv:
+"observe_trace e1 s1 r1 ((l, i) # ts) = observe_trace e2 s2 r2 ((l, i) # ts) \<Longrightarrow>
+    step e1 s1 r1 l i = Some (t, s', p, r') \<Longrightarrow>
+    \<exists>(s2', t2)|\<in>|possible_steps e2 s2 r2 l i. apply_outputs (Outputs t2) (join_ir i r2) = p"
+  apply (simp add: observe_trace_def)
+  apply (case_tac "step e2 s2 r2 l i")
+   apply simp
+  apply (case_tac a)
+  apply simp
+  apply clarify
+  apply simp
+  apply (simp add: step_def random_member_def)
+  apply (case_tac "possible_steps e1 s1 r1 l i = {||}")
+   apply simp
+  apply (case_tac "possible_steps e2 s2 r2 l i = {||}")
+   apply simp
+  apply simp
+  apply (case_tac "SOME x. x |\<in>| possible_steps e1 s1 r1 l i")
+  apply (case_tac "SOME x. x |\<in>| possible_steps e2 s2 r2 l i")
+  apply simp
+  apply clarify
+  apply simp
+  apply (rule_tac x="(ba, aaa)" in fBexI)
+   apply simp
+  by (metis random_member_Some random_member_def)
 
 end

@@ -90,13 +90,70 @@ lemma cant_take_if:
   "\<exists>g \<in> set (Guards t). gval g (join_ir i r) \<noteq> true \<Longrightarrow> \<not> can_take_transition t i r"
   using apply_guards_cons apply_guards_rearrange can_take_def can_take_transition_def by blast
 
+definition apply_outputs :: "'a aexp list \<Rightarrow> 'a datastate \<Rightarrow> value option list" where
+  "apply_outputs p s = map (\<lambda>p. aval p s) p"
+
+lemma apply_outputs_nth:
+  "i < length p \<Longrightarrow> apply_outputs p s ! i = aval (p ! i) s"
+  by (simp add: apply_outputs_def)
+
+lemmas apply_outputs = datastate apply_outputs_def
+
+lemma apply_outputs_empty [simp]:
+  "apply_outputs [] s = []"
+  by (simp add: apply_outputs_def)
+
+lemma apply_outputs_preserves_length:
+  "length (apply_outputs p s) = length p"
+  by (simp add: apply_outputs_def)
+
+lemma apply_outputs_literal:
+  assumes "P ! r = L v"
+      and "r < length P"
+    shows "apply_outputs P s ! r = Some v"
+  by (simp add: assms apply_outputs_nth)
+
+lemma apply_outputs_register:
+  assumes "r < length P"
+  shows "apply_outputs (list_update P r (V (R p))) (join_ir i c) ! r = c $ p"
+  by (metis apply_outputs_nth assms aval.simps(2) join_ir_R length_list_update nth_list_update_eq)
+
+lemma apply_outputs_unupdated:
+  assumes "ia \<noteq> r"
+      and "ia < length P"
+    shows "apply_outputs P j ! ia = apply_outputs (list_update P r v)j ! ia"
+  by (metis apply_outputs_nth assms(1) assms(2) length_list_update nth_list_update_neq)
+
+primrec apply_updates :: "update_function list \<Rightarrow> vname datastate \<Rightarrow> registers \<Rightarrow> registers" where
+  "apply_updates [] _ new = new" |
+  "apply_updates (h#t) old new = (apply_updates t old new)(fst h $:= aval (snd h) old)"
+
+lemma apply_updates_foldr:
+  "apply_updates u old new = foldr (\<lambda>h r. r(fst h $:= aval (snd h) old)) u new"
+  by (induct u, auto)
+
+lemma r_not_updated_stays_the_same:
+  assumes "r \<notin> fst ` set U"
+  shows "apply_updates U c d $ r = d $ r"
+  using assms
+  by (induct U, auto)
+
+definition rename_regs :: "(nat \<Rightarrow> nat) \<Rightarrow> transition \<Rightarrow> transition" where
+  "rename_regs f t = t\<lparr>
+      Guards  := map (GExp.rename_regs f) (Guards t),
+      Outputs := map (AExp.rename_regs f) (Outputs t),
+      Updates := map (\<lambda>(r, u). (f r, AExp.rename_regs f u)) (Updates t)
+    \<rparr>"
+
+definition eq_upto_rename_strong :: "transition \<Rightarrow> transition \<Rightarrow> bool" where
+  "eq_upto_rename_strong t1 t2 = (\<exists>f. bij f \<and> rename_regs f t1 = t2)"
+
 inductive eq_upto_rename :: "transition \<Rightarrow> transition \<Rightarrow> bool" where
   "Label t1 = Label t2 \<Longrightarrow>
-   Arity t1 = Arity t2 \<Longrightarrow>
-   bij f \<Longrightarrow>
-   image (\<lambda>g1. GExp.rename_regs g1 f) (set g1) = set g2 \<Longrightarrow>
-   map (\<lambda>p. AExp.rename_regs p f) o1 = o2 \<Longrightarrow>
-   map_of (map (\<lambda>(r, u). (f r, AExp.rename_regs u f)) (Updates t1)) = map_of (Updates t2) \<Longrightarrow>
-  eq_upto_rename t1 t2"
+   Arity t2 = Arity t2 \<Longrightarrow>
+   apply_guards (map (GExp.rename_regs f) (Guards t1)) = apply_guards (Guards t2) \<Longrightarrow>
+   apply_outputs (map (AExp.rename_regs f) (Outputs t1)) = apply_outputs (Outputs t2) \<Longrightarrow>
+   apply_updates (map (\<lambda>(r, u). (f r, AExp.rename_regs f u)) (Updates t1)) = apply_updates (Updates t2) \<Longrightarrow>
+   eq_upto_rename t1 t2"
 
 end
