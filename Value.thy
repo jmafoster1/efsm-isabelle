@@ -20,16 +20,20 @@ fun MaybeArithInt :: "(int \<Rightarrow> int \<Rightarrow> int) \<Rightarrow> va
   "MaybeArithInt f (Some (Num x)) (Some (Num y)) = Some (Num (f x y))" |
   "MaybeArithInt _ _ _ = None"
 
-lemma MaybeArithInt_not_None:   "MaybeArithInt f a b \<noteq> None = (\<exists>n n'. a = Some (Num n) \<and> b = Some (Num n'))"
+lemma MaybeArithInt_not_None:
+    "MaybeArithInt f a b \<noteq> None = (\<exists>n n'. a = Some (Num n) \<and> b = Some (Num n'))"
   using MaybeArithInt.elims MaybeArithInt.simps(1) by blast
 
-lemma MaybeArithInt_Some:   "MaybeArithInt f a b = Some (Num x) = (\<exists>n n'. a = Some (Num n) \<and> b = Some (Num n') \<and> f n n' = x)"
+lemma MaybeArithInt_Some:
+    "MaybeArithInt f a b = Some (Num x) = (\<exists>n n'. a = Some (Num n) \<and> b = Some (Num n') \<and> f n n' = x)"
   using MaybeArithInt.elims MaybeArithInt.simps(1) by blast
 
-lemma MaybeArithInt_None:   "(MaybeArithInt f a1 a2 = None) = (\<nexists>n n'. a1 = Some (Num n) \<and> a2 = Some (Num n'))"
+lemma MaybeArithInt_None:
+    "(MaybeArithInt f a1 a2 = None) = (\<nexists>n n'. a1 = Some (Num n) \<and> a2 = Some (Num n'))"
   using MaybeArithInt_not_None by blast
 
-lemma MaybeArithInt_Not_Num:   "(\<forall>n. MaybeArithInt f a1 a2 \<noteq> Some (Num n)) = (MaybeArithInt f a1 a2 = None)"
+lemma MaybeArithInt_Not_Num:
+    "(\<forall>n. MaybeArithInt f a1 a2 \<noteq> Some (Num n)) = (MaybeArithInt f a1 a2 = None)"
   by (metis MaybeArithInt.elims option.distinct(1))
 
 lemma MaybeArithInt_never_string: "MaybeArithInt f a b \<noteq> Some (Str x)"
@@ -58,7 +62,8 @@ fun MaybeBoolInt :: "(int \<Rightarrow> int \<Rightarrow> bool) \<Rightarrow> va
   "MaybeBoolInt f (Some (Num a)) (Some (Num b)) = (if f a b then true else false)" |
   "MaybeBoolInt _ _ _ = invalid"
 
-lemma MaybeBoolInt_not_num_1:   "\<forall>n. r \<noteq> Some (Num n) \<Longrightarrow> MaybeBoolInt f n r = invalid"
+lemma MaybeBoolInt_not_num_1:
+    "\<forall>n. r \<noteq> Some (Num n) \<Longrightarrow> MaybeBoolInt f n r = invalid"
   using MaybeBoolInt.elims by blast
 
 definition value_gt :: "value option \<Rightarrow> value option \<Rightarrow> trilean"  where
@@ -69,4 +74,5 @@ definition value_eq :: "value option \<Rightarrow> value option \<Rightarrow> tr
 declare value_eq_def [simp]
 
 end
+
 

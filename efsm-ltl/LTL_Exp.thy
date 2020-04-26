@@ -20,3 +20,4 @@ lemma join_iro_R [simp]: "join_iro i r o (Rg n) = r $ n"
 
 end
 
+

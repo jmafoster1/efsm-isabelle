@@ -97,11 +97,6 @@ translations
   "_Map (_Maplets ms1 ms2)"     \<leftharpoondown> "_MapUpd (_Map ms1) ms2"
   "_Maplets ms1 (_Maplets ms2 ms3)" \<leftharpoondown> "_Maplets (_Maplets ms1 ms2) ms3"
 
-(*syntax
-  "_maplet"  :: "['a, 'a] \<Rightarrow> maplet"             ("_ /:=/ _")
-  "_maplets" :: "['a, 'a] \<Rightarrow> maplet"             ("_ /[:=]/ _")
-  "_Map"     :: "maplets \<Rightarrow> 'a \<rightharpoonup> 'b"            ("(1<_>)")*)
-
 definition input2state :: "value list \<Rightarrow> registers" where
   "input2state n = fold (\<lambda>(k, v) f. f(k $:= Some v)) (enumerate 0 n) (K$ None)"
 
@@ -109,7 +104,8 @@ primrec input2state_prim :: "value list \<Rightarrow> nat \<Rightarrow> register
   "input2state_prim [] _ = (K$ None)" |
   "input2state_prim (v#t) k = (input2state_prim t (k+1))(k $:= Some v)"
 
-lemma input2state_append: "input2state (i @ [a]) = (input2state i)(length i $:= Some a)"
+lemma input2state_append:
+  "input2state (i @ [a]) = (input2state i)(length i $:= Some a)"
   apply (simp add: eq_finfun_All_ext finfun_All_def finfun_All_except_def)
   apply clarify
   by (simp add: input2state_def enumerate_eq_zip)
@@ -143,7 +139,8 @@ next
     by (simp add: finfun_upd_apply nth_append)
 qed
 
-lemma input2state_some: "i < length ia \<Longrightarrow> ia ! i = x \<Longrightarrow> input2state ia $ i = Some x"
+lemma input2state_some:
+  "i < length ia \<Longrightarrow> ia ! i = x \<Longrightarrow> input2state ia $ i = Some x"
   by (simp add: input2state_nth)
 
 lemma input2state_take:   "x1 < A \<Longrightarrow>
@@ -173,7 +170,8 @@ lemma input2state_cons:   "x1 > 0 \<Longrightarrow>
    input2state (a # ia) $ x1 = input2state ia $ (x1-1)"
   by (simp add: input2state_nth)
 
-lemma input2state_cons_shift: "input2state i $ x1 = Some a \<Longrightarrow> input2state (b # i) $ (Suc x1) = Some a"
+lemma input2state_cons_shift:
+  "input2state i $ x1 = Some a \<Longrightarrow> input2state (b # i) $ (Suc x1) = Some a"
 proof(induct i rule: rev_induct)
   case Nil
   then show ?case
@@ -221,10 +219,12 @@ qed
 lemma length_append_repeat: "length (i@(repeat a y)) \<ge> length i"
   by simp
 
-lemma length_input2state_repeat: "input2state i $ x = Some a \<Longrightarrow> y < length (i @ repeat y a)"
+lemma length_input2state_repeat:
+  "input2state i $ x = Some a \<Longrightarrow> y < length (i @ repeat y a)"
   by (metis append.simps(1) append_eq_append_conv input2state_within_bounds length_append length_repeat list.size(3) neqE not_add_less2 zero_order(3))
 
-lemma input2state_double_exists: "\<exists>i. input2state i $ x = Some a \<and> input2state i $ y = Some a"
+lemma input2state_double_exists:
+  "\<exists>i. input2state i $ x = Some a \<and> input2state i $ y = Some a"
   apply (insert input2state_exists[of x a])
   apply clarify
   apply (case_tac "x \<ge> y")
@@ -234,7 +234,8 @@ lemma input2state_double_exists: "\<exists>i. input2state i $ x = Some a \<and> 
   apply (simp add: not_le)
   by (metis length_input2state_repeat input2state_nth input2state_out_of_bounds le_trans length_append_repeat length_list_update not_le_imp_less nth_append nth_list_update_eq nth_list_update_neq option.distinct(1))
 
-lemma input2state_double_exists_2: "x \<noteq> y \<Longrightarrow> \<exists>i. input2state i $ x = Some a \<and> input2state i $ y = Some a'"
+lemma input2state_double_exists_2:
+  "x \<noteq> y \<Longrightarrow> \<exists>i. input2state i $ x = Some a \<and> input2state i $ y = Some a'"
   apply (insert input2state_exists[of x a])
   apply clarify
   apply (case_tac "x \<ge> y")
@@ -264,7 +265,8 @@ lemma join_ir_empty [simp]: "join_ir [] <> = (\<lambda>x. None)"
 lemma join_ir_R [simp]: "(join_ir i r) (R n) = r $ n"
   by (simp add: join_ir_def)
 
-lemma join_ir_double_exists: "\<exists>i r. join_ir i r v = Some a \<and> join_ir i r v' = Some a"
+lemma join_ir_double_exists:
+  "\<exists>i r. join_ir i r v = Some a \<and> join_ir i r v' = Some a"
 proof(cases v)
   case (I x1)
   then show ?thesis
@@ -281,7 +283,8 @@ next
     using input2state_double_exists by fastforce
 qed
 
-lemma join_ir_double_exists_2: "v \<noteq> v' \<Longrightarrow> \<exists>i r. join_ir i r v = Some a \<and> join_ir i r v' = Some a'"
+lemma join_ir_double_exists_2:
+  "v \<noteq> v' \<Longrightarrow> \<exists>i r. join_ir i r v = Some a \<and> join_ir i r v' = Some a'"
 proof(cases v)
   case (I x1)
   assume "v \<noteq> v'"
@@ -387,7 +390,8 @@ lemma no_variables_aval:   "enumerate_aexp_inputs a = {} \<Longrightarrow>
    aval a s = aval a s'"
   by (induct a rule: aexp_induct_separate_V_cases, auto)
 
-lemma enumerate_aexp_inputs_not_empty: "(enumerate_aexp_inputs a \<noteq> {}) = (\<exists>b c. enumerate_aexp_inputs a = set (b#c))"
+lemma enumerate_aexp_inputs_not_empty:
+  "(enumerate_aexp_inputs a \<noteq> {}) = (\<exists>b c. enumerate_aexp_inputs a = set (b#c))"
   using enumerate_aexp_inputs_list by fastforce
 
 lemma aval_ir_take:   "A \<le> length i \<Longrightarrow>
@@ -463,7 +467,8 @@ lemma max_reg_Times: "max_reg (Times a1 a2) = max (max_reg a1) (max_reg a2)"
   apply (simp add: max_reg_def Let_def max_absorb2)
   by (metis Max.union bot_option_def finite_enumerate_regs max_bot2 sup_Some sup_max)
 
-lemma no_reg_aval_swap_regs: "max_reg a = None \<Longrightarrow> aval a (join_ir i r) = aval a (join_ir i r')"
+lemma no_reg_aval_swap_regs:
+  "max_reg a = None \<Longrightarrow> aval a (join_ir i r) = aval a (join_ir i r')"
 proof(induct a)
   case (L x)
   then show ?case
@@ -493,17 +498,21 @@ next
   qed
 qed
 
-lemma enumerate_regs_empty_reg_unconstrained:   "enumerate_regs a = {} \<Longrightarrow> \<forall>r. \<not> aexp_constrains a (V (R r))"
+lemma enumerate_regs_empty_reg_unconstrained:
+    "enumerate_regs a = {} \<Longrightarrow> \<forall>r. \<not> aexp_constrains a (V (R r))"
   by (induct a rule: aexp_induct_separate_V_cases, auto)
 
-lemma enumerate_aexp_inputs_empty_input_unconstrained:   "enumerate_aexp_inputs a = {} \<Longrightarrow> \<forall>r. \<not> aexp_constrains a (V (I r))"
+lemma enumerate_aexp_inputs_empty_input_unconstrained:
+    "enumerate_aexp_inputs a = {} \<Longrightarrow> \<forall>r. \<not> aexp_constrains a (V (I r))"
   by (induct a rule: aexp_induct_separate_V_cases, auto)
 
-lemma input_unconstrained_aval_input_swap:   "\<forall>i. \<not> aexp_constrains a (V (I i)) \<Longrightarrow> aval a (join_ir i r) = aval a (join_ir i' r)"
+lemma input_unconstrained_aval_input_swap:
+    "\<forall>i. \<not> aexp_constrains a (V (I i)) \<Longrightarrow> aval a (join_ir i r) = aval a (join_ir i' r)"
   using join_ir_def
   by (induct a rule: aexp_induct_separate_V_cases, auto)
 
-lemma input_unconstrained_aval_register_swap:   "\<forall>i. \<not> aexp_constrains a (V (R i)) \<Longrightarrow> aval a (join_ir i r) = aval a (join_ir i r')"
+lemma input_unconstrained_aval_register_swap:
+    "\<forall>i. \<not> aexp_constrains a (V (R i)) \<Longrightarrow> aval a (join_ir i r) = aval a (join_ir i r')"
   using join_ir_def
   by (induct a rule: aexp_induct_separate_V_cases, auto)
 
@@ -516,19 +525,23 @@ lemma unconstrained_variable_swap_aval:
 lemma max_input_I: "max_input (V (vname.I i)) = Some i"
   by (simp add: max_input_def)
 
-lemma max_input_Plus: "max_input (Plus a1 a2) = max (max_input a1) (max_input a2)"
+lemma max_input_Plus:
+  "max_input (Plus a1 a2) = max (max_input a1) (max_input a2)"
   apply (simp add: max_input_def Let_def max.commute max_absorb2)
   by (metis List.finite_set Max.union enumerate_aexp_inputs_list sup_Some sup_max)
 
-lemma max_input_Minus: "max_input (Minus a1 a2) = max (max_input a1) (max_input a2)"
+lemma max_input_Minus:
+  "max_input (Minus a1 a2) = max (max_input a1) (max_input a2)"
   apply (simp add: max_input_def Let_def max.commute max_absorb2)
   by (metis List.finite_set Max.union enumerate_aexp_inputs_list sup_Some sup_max)
 
-lemma max_input_Times: "max_input (Times a1 a2) = max (max_input a1) (max_input a2)"
+lemma max_input_Times:
+  "max_input (Times a1 a2) = max (max_input a1) (max_input a2)"
   apply (simp add: max_input_def Let_def max.commute max_absorb2)
   by (metis List.finite_set Max.union enumerate_aexp_inputs_list sup_Some sup_max)
 
-lemma aval_take: "max_input x < Some a \<Longrightarrow> aval x (join_ir i r) = aval x (join_ir (take a i) r)"
+lemma aval_take:
+  "max_input x < Some a \<Longrightarrow> aval x (join_ir i r) = aval x (join_ir (take a i) r)"
 proof(induct x rule: aexp_induct_separate_V_cases)
   case (1 x)
   then show ?case 
@@ -613,5 +626,6 @@ definition eq_upto_rename :: "vname aexp \<Rightarrow> vname aexp \<Rightarrow> 
   "eq_upto_rename a1 a2 = (\<exists>f. bij f \<and> rename_regs f a1 = a2)"
 
 end
+
 
 

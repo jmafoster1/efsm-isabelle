@@ -27,34 +27,41 @@ definition drinks2 :: transition_matrix where
               ((2,3), vend)
          |}"
 
-lemma possible_steps_0:    "length i = 1 \<Longrightarrow> possible_steps drinks2 0 r ((STR ''select'')) i = {|(1, select)|}"
+lemma possible_steps_0:
+     "length i = 1 \<Longrightarrow> possible_steps drinks2 0 r ((STR ''select'')) i = {|(1, select)|}"
   apply (simp add: possible_steps_def drinks2_def transitions)
   by force
 
-lemma possible_steps_1:   "length i = 1 \<Longrightarrow> possible_steps drinks2 1 r ((STR ''coin'')) i = {|(2, coin)|}"
+lemma possible_steps_1:
+    "length i = 1 \<Longrightarrow> possible_steps drinks2 1 r ((STR ''coin'')) i = {|(2, coin)|}"
   apply (simp add: possible_steps_def drinks2_def transitions)
   by force
 
-lemma possible_steps_2_coin:   "length i = 1 \<Longrightarrow> possible_steps drinks2 2 r ((STR ''coin'')) i = {|(2, coin)|}"
+lemma possible_steps_2_coin:
+    "length i = 1 \<Longrightarrow> possible_steps drinks2 2 r ((STR ''coin'')) i = {|(2, coin)|}"
   apply (simp add: possible_steps_def drinks2_def transitions)
   by force
 
-lemma possible_steps_2_vend:   "r $ 2 = Some (Num n) \<Longrightarrow> n \<ge> 100 \<Longrightarrow> possible_steps drinks2 2 r ((STR ''vend'')) [] = {|(3, vend)|}"
+lemma possible_steps_2_vend:
+    "r $ 2 = Some (Num n) \<Longrightarrow> n \<ge> 100 \<Longrightarrow> possible_steps drinks2 2 r ((STR ''vend'')) [] = {|(3, vend)|}"
   apply (simp add: possible_steps_singleton drinks2_def)
   apply safe
   by (simp_all add: transitions apply_guards_def value_gt_def join_ir_def connectives)
 
-lemma accepts_first_select:   "accepts drinks 0 r ((aa, b) # as) \<Longrightarrow> aa = STR ''select'' \<and> length b = 1"
+lemma accepts_first_select:
+    "accepts drinks 0 r ((aa, b) # as) \<Longrightarrow> aa = STR ''select'' \<and> length b = 1"
   using accepts_must_be_possible_step[of drinks 0 r "(aa, b)" as]
   apply simp
   apply clarify
   by (metis first_step_select accepts_possible_steps_not_empty drinks_0_rejects fst_conv snd_conv)
 
-lemma drinks2_vend_insufficient:   "possible_steps drinks2 1 r ((STR ''vend'')) [] = {|(1, vend_nothing)|}"
+lemma drinks2_vend_insufficient:
+    "possible_steps drinks2 1 r ((STR ''vend'')) [] = {|(1, vend_nothing)|}"
   apply (simp add: possible_steps_def drinks2_def transitions)
   by force
 
-lemma drinks2_vend_insufficient2:   "r $ 2 = Some (Num x1) \<Longrightarrow> x1 < 100 \<Longrightarrow> possible_steps drinks2 2 r ((STR ''vend'')) [] = {|(2, vend_fail)|}"
+lemma drinks2_vend_insufficient2:
+    "r $ 2 = Some (Num x1) \<Longrightarrow> x1 < 100 \<Longrightarrow> possible_steps drinks2 2 r ((STR ''vend'')) [] = {|(2, vend_fail)|}"
   apply (simp add: possible_steps_singleton drinks2_def)
   apply safe
   by (simp_all add: transitions apply_guards_def value_gt_def join_ir_def connectives)
@@ -90,7 +97,8 @@ next
     by (metis accepts.simps drinks_1_rejects_trace fBexE old.prod.exhaust)
 qed
 
-lemma drinks_reject_0_2: "\<nexists>i. a = (STR ''select'', [i]) \<Longrightarrow> possible_steps drinks 0 r (fst a) (snd a) = {||}"
+lemma drinks_reject_0_2:
+  "\<nexists>i. a = (STR ''select'', [i]) \<Longrightarrow> possible_steps drinks 0 r (fst a) (snd a) = {||}"
   apply (rule drinks_0_rejects)
   by (cases a, case_tac "snd a", auto)
 
@@ -130,7 +138,8 @@ next
     done
 qed
 
-lemma input_simulation_1_1: "input_simulation drinks 1 (<>(2 := Num 0, 1 := i ! 0)) drinks2 1 (<>(2 := Num 0, 1 := i ! 0)) t"
+lemma input_simulation_1_1:
+  "input_simulation drinks 1 (<>(2 := Num 0, 1 := i ! 0)) drinks2 1 (<>(2 := Num 0, 1 := i ! 0)) t"
 proof(induction rule: input_simulation_induct)
   case (1 l i t)
   then show ?case
@@ -162,7 +171,8 @@ lemma acceptance:   "accepts_trace drinks t \<Longrightarrow> accepts_trace drin
   using input_simulation input_simulates_accepts_trace
   by simp
 
-lemma purchase_coke:   "observe_trace drinks2 0 <> [((STR ''select''), [Str ''coke'']), ((STR ''coin''), [Num 50]), ((STR ''coin''), [Num 50]), ((STR ''vend''), [])] =
+lemma purchase_coke:
+    "observe_trace drinks2 0 <> [((STR ''select''), [Str ''coke'']), ((STR ''coin''), [Num 50]), ((STR ''coin''), [Num 50]), ((STR ''vend''), [])] =
                        [[], [Some (Num 50)], [Some (Num 100)], [Some (Str ''coke'')]]"
   apply (rule observe_trace_possible_step)
      apply (simp add: possible_steps_0)
@@ -190,7 +200,8 @@ lemma drinks2_0_invalid:   "\<not> (aa = (STR ''select'') \<and> length (b) = 1)
   apply (simp add: drinks2_def possible_steps_def transitions)
   by force
 
-lemma drinks2_vend_r2_none:   "r $ 2 = None \<Longrightarrow> possible_steps drinks2 2 r ((STR ''vend'')) [] = {||}"
+lemma drinks2_vend_r2_none:
+    "r $ 2 = None \<Longrightarrow> possible_steps drinks2 2 r ((STR ''vend'')) [] = {||}"
   apply (simp add: possible_steps_empty drinks2_def can_take_transition_def can_take_def transitions)
   by (simp add: value_gt_def)
 
@@ -217,7 +228,8 @@ lemma drinks2_1_invalid:   "\<not>(a = (STR ''coin'') \<and> length b = 1) \<Lon
   apply safe
   by (simp_all add: transitions can_take_transition_def can_take_def value_gt_def)
 
-lemma drinks2_vend_invalid:   "\<nexists>n. r $ 2 = Some (Num n) \<Longrightarrow> possible_steps drinks2 2 r (STR ''vend'') [] = {||}"
+lemma drinks2_vend_invalid:
+    "\<nexists>n. r $ 2 = Some (Num n) \<Longrightarrow> possible_steps drinks2 2 r (STR ''vend'') [] = {||}"
   apply (simp add: possible_steps_empty drinks2_def)
   apply safe
   by (simp_all add: transitions can_take_transition_def can_take_def value_gt_def MaybeBoolInt_not_num_1)
@@ -263,7 +275,8 @@ next
     by (simp add: drinks2_end)
 qed
 
-lemma equiv_1_1:   "observe_trace drinks 1 (<>(2 := Num 0, 1 := snd a ! 0)) t = observe_trace drinks2 1 (<>(2 := Num 0, 1 := snd a ! 0)) t"
+lemma equiv_1_1:
+    "observe_trace drinks 1 (<>(2 := Num 0, 1 := snd a ! 0)) t = observe_trace drinks2 1 (<>(2 := Num 0, 1 := snd a ! 0)) t"
 proof(induct t)
   case Nil
   then show ?case
@@ -313,5 +326,6 @@ proof (induct t)
 qed
 
 end
+
 
 
