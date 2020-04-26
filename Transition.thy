@@ -124,19 +124,29 @@ lemma apply_outputs_unupdated:
     shows "apply_outputs P j ! ia = apply_outputs (list_update P r v)j ! ia"
   by (metis apply_outputs_nth assms(1) assms(2) length_list_update nth_list_update_neq)
 
-primrec apply_updates :: "update_function list \<Rightarrow> vname datastate \<Rightarrow> registers \<Rightarrow> registers" where
-  "apply_updates [] _ new = new" |
-  "apply_updates (h#t) old new = (apply_updates t old new)(fst h $:= aval (snd h) old)"
+definition apply_updates :: "update_function list \<Rightarrow> vname datastate \<Rightarrow> registers \<Rightarrow> registers" where
+  "apply_updates u old = fold (\<lambda>h r. r(fst h $:= aval (snd h) old)) u"
 
-lemma apply_updates_foldr:
-  "apply_updates u old new = foldr (\<lambda>h r. r(fst h $:= aval (snd h) old)) u new"
-  by (induct u, auto)
+lemma apply_updates_cons: "ra \<noteq> r \<Longrightarrow>
+       apply_updates u (join_ir ia c) c $ ra = apply_updates ((r, a) # u) (join_ir ia c) c $ ra"
+proof(induct u rule: rev_induct)
+  case Nil
+  then show ?case
+    by (simp add: apply_updates_def)
+next
+  case (snoc u us)
+  then show ?case
+    apply (cases u)
+    apply (simp add: apply_updates_def)
+    by (case_tac "ra = aa", auto)
+qed
 
-lemma r_not_updated_stays_the_same:
-  assumes "r \<notin> fst ` set U"
-  shows "apply_updates U c d $ r = d $ r"
-  using assms
-  by (induct U, auto)
+lemma update_twice: "apply_updates [(r, a), (r, b)] s regs = regs (r $:= aval b s)"
+  by (simp add: apply_updates_def)
+
+lemma r_not_updated_stays_the_same: "r \<notin> fst ` set U \<Longrightarrow> apply_updates U c d $ r = d $ r"
+  using apply_updates_def
+  by (induct U rule: rev_induct, auto)
 
 definition rename_regs :: "(nat \<Rightarrow> nat) \<Rightarrow> transition \<Rightarrow> transition" where
   "rename_regs f t = t\<lparr>

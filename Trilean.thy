@@ -269,4 +269,16 @@ lemma not_true: "(x \<noteq> true) = (x = false \<or> x = invalid)"
 lemma pull_negation: "(x = \<not>\<^sub>? y) = (\<not>\<^sub>? x = y)"
   using maybe_double_negation by auto
 
+lemma comp_fun_commute_maybe_or: "comp_fun_commute maybe_or"
+  apply standard
+  apply (simp add: comp_def)
+  apply (rule ext)
+  by (simp add: add.left_commute)
+
+lemma comp_fun_commute_maybe_and: "comp_fun_commute maybe_and"
+  apply standard
+  apply (simp add: comp_def)
+  apply (rule ext)
+  by (metis add.left_commute de_morgans_2 maybe_not_eq)
+
 end

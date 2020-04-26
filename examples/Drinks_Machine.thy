@@ -120,14 +120,16 @@ lemma accepts_from_1a:
 "accepts drinks 1 (<>(1 := d, 2 := Num 50)) [(STR ''coin'', [Num 50]), (STR ''vend'', [])]"
   apply (rule accepts.step[of 1 coin])
    apply (simp add: possible_steps_1_coin)
-  by (simp add: coin_def join_ir_def input2state_def value_plus_def finfun_update_twist accepts_from_2)
+  apply (simp add: apply_updates_def coin_def finfun_update_twist value_plus_def)
+  using accepts_from_2 by auto
 
 lemma accepts_from_1:
-"accepts drinks 1 (<>(2 := Num 0, 1 := d))
+"accepts drinks 1 <2 $:= Some (Num 0), 1 $:= Some d>
      [(STR ''coin'', [Num 50]), (STR ''coin'', [Num 50]), (STR ''vend'', [])]"
   apply (rule accepts.step[of 1 coin])
    apply (simp add: possible_steps_1_coin)
-  by (simp add: coin_def join_ir_def input2state_def value_plus_def finfun_update_twist accepts_from_1a)
+  apply (simp add: apply_updates_def coin_def value_plus_def finfun_update_twist)
+  using accepts_from_1a by auto
 
 lemma purchase_coke:
 "observe_trace drinks 0 <> [(STR ''select'', [Str ''coke'']), (STR ''coin'', [Num 50]), (STR ''coin'', [Num 50]), (STR ''vend'', [])] =
@@ -139,19 +141,18 @@ lemma purchase_coke:
   apply (rule observe_trace_possible_step)
       apply (simp add: possible_steps_1_coin)
      apply (simp add: coin_def value_plus_def join_ir_def input2state_def accepts_from_1a)
-    apply (simp add: coin_def value_plus_def join_ir_def input2state_def apply_outputs_def)
-   apply (simp add: coin_def value_plus_def join_ir_def input2state_def)
+    apply (simp add: coin_def value_plus_def join_ir_def input2state_def apply_outputs_def apply_updates_def)
+   apply (simp add: coin_def value_plus_def join_ir_def input2state_def apply_updates_def)
   apply (rule observe_trace_possible_step)
       apply (simp add: possible_steps_1_coin)
      apply (simp add: coin_def value_plus_def join_ir_def input2state_def accepts_from_2)
     apply (simp add: coin_def value_plus_def join_ir_def input2state_def apply_outputs_def)
    apply (simp add: coin_def value_plus_def join_ir_def input2state_def)
   apply (rule observe_trace_possible_step)
-      apply (simp add: possible_steps_2_vend)
-     apply (simp add: accepts.base)
-    apply (simp add: vend_def join_ir_def apply_outputs_def)
+     apply (simp add: possible_steps_2_vend apply_updates_def value_plus_def finfun_update_twist input2state_def)
+    apply (simp add: vend_def apply_updates_def apply_outputs_def)
    apply simp
-  by simp
+  by (simp add: accepts.base)
 
 lemma rejects_input:
 "l \<noteq> STR ''coin'' \<Longrightarrow> l \<noteq> STR ''vend'' \<Longrightarrow> \<not> accepts drinks 1 d' [(l, i)]"

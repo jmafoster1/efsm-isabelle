@@ -150,7 +150,7 @@ proof(induction rule: input_simulation_induct)
      apply (simp add: possible_steps_1_coin possible_steps_1 input_simulation_1_2)
     apply (case_tac "l = STR ''vend'' \<and> i = []")
      apply (rule input_simulation.step)
-     apply (simp add: drinks_vend_insufficient drinks2_vend_insufficient transitions finfun_update_twist)
+     apply (simp add: drinks_vend_insufficient drinks2_vend_insufficient transitions finfun_update_twist apply_updates_def)
      apply (rule input_simulation.step)
     using drinks_1_rejects by auto
 qed
@@ -163,7 +163,9 @@ proof(induction rule: input_simulates_induct)
     apply (case_tac "l = STR ''select'' \<and> length i = 1")
      apply simp
      apply (rule input_simulation.step)
-     apply (simp add: possible_steps_0 Drinks_Machine.possible_steps_0 select_def input_simulation_1_1)
+     apply (simp add: possible_steps_0 Drinks_Machine.possible_steps_0 select_def apply_updates_def)
+    using input_simulation_1_1
+    apply (simp add: finfun_update_twist)
      apply (rule input_simulation.step)
     using drinks_0_rejects by auto
 qed
@@ -184,18 +186,17 @@ lemma purchase_coke:
       apply (simp add: possible_steps_1)
      apply (simp add: coin_def value_plus_def join_ir_def input2state_def)
   using accepts_1_2 accepts_from_1a
-    apply (simp add: coin_def value_plus_def join_ir_def input2state_def apply_outputs_def)
+    apply (simp add: coin_def value_plus_def join_ir_def input2state_def apply_outputs_def apply_updates_def)
    apply (simp add: coin_def value_plus_def join_ir_def input2state_def)
   apply (rule observe_trace_possible_step)
       apply (simp add: possible_steps_2_coin)
      apply (simp add: coin_def value_plus_def join_ir_def input2state_def accepts_from_2 accepts_1_2)
-    apply (simp add: coin_def value_plus_def join_ir_def input2state_def apply_outputs_def)
+    apply (simp add: coin_def value_plus_def join_ir_def input2state_def apply_outputs_def apply_updates_def)
    apply (simp add: coin_def value_plus_def join_ir_def input2state_def)
   apply (rule observe_trace_possible_step)
-      apply (simp add: possible_steps_2_vend)
-     apply (simp add: accepts.base)
-    apply (simp add: vend_def join_ir_def apply_outputs_def)
-   apply simp
+     apply (simp add: possible_steps_2_vend apply_updates_def value_plus_def input2state_def)
+    apply (simp add: apply_outputs_def vend_def apply_updates_def input2state_def)
+   apply (simp add: vend_def apply_updates_def)
   by simp
 
 lemma drinks2_0_invalid:
@@ -309,7 +310,7 @@ next
          apply (simp add: drinks_vend_insufficient)
         apply (simp add: drinks2_vend_insufficient)
        apply (simp add: vend_fail_def vend_nothing_def)+
-    by (simp add: datastate(1) finfun_update_twist)
+    by (simp add: datastate(1) finfun_update_twist apply_updates_def)
 qed
 
 (* Corresponds to Example 3 in Foster et. al. *)
@@ -328,10 +329,11 @@ proof (induct t)
           apply (simp add: Drinks_Machine.possible_steps_0)
          apply (simp add: possible_steps_0)
        apply simp+
-     apply (simp add: select_def join_ir_def input2state_nth equiv_1_1)
+     apply (simp add: select_def join_ir_def input2state_nth apply_updates_def)
+     apply (metis equiv_1_1 empty_None finfun_update_twist numeral_eq_one_iff semiring_norm(85))
      apply (rule observe_trace_no_possible_steps)
     using drinks_0_rejects apply blast
-    using drinks2_0_invalid by blast
+    using drinks2_0_invalid by auto
 qed
 
 end

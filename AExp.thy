@@ -18,7 +18,7 @@ limit ourselves to a simple arithmetic of plus and minus as a proof of concept.
 \<close>
 
 theory AExp
-  imports Value VName FinFun.FinFun "HOL-Library.Option_ord"
+  imports Value_Lexorder VName FinFun.FinFun "HOL-Library.Option_ord"
 begin
 
 declare One_nat_def [simp del]
@@ -54,18 +54,31 @@ lemma aval_plus_symmetry:
 "aval (Plus x y) s = aval (Plus y x) s"
   by (simp add: value_plus_symmetry)
 
+text \<open>A little syntax magic to write larger states compactly:\<close>
 abbreviation null_state ("<>") where
-  "null_state \<equiv> (K$ None)"
+  "null_state \<equiv> (K$ bot)"
 
-lemma default_empty:
-"infinite (UNIV ::
-'a set) \<Longrightarrow> finfun_default (<>::'a \<Rightarrow>f 'b option) = None"
-  by (simp add: finfun_default_def finfun_default_aux_def)
+no_notation finfun_update ("_'(_ $:= _')" [1000, 0, 0] 1000)
+nonterminal fupdbinds and fupdbind
 
-lemma finfun_to_list_empty:
-"infinite (UNIV ::
-'a set) \<Longrightarrow> finfun_to_list (<>::'a::linorder \<Rightarrow>f 'b option) = []"
-  by (simp add: finfun_to_list_const)
+syntax
+  "_fupdbind" :: "'a \<Rightarrow> 'a \<Rightarrow> fupdbind"             ("(2_ $:=/ _)")
+  ""         :: "fupdbind \<Rightarrow> fupdbinds"             ("_")
+  "_fupdbinds":: "fupdbind \<Rightarrow> fupdbinds \<Rightarrow> fupdbinds" ("_,/ _")
+  "_fUpdate"  :: "'a \<Rightarrow> fupdbinds \<Rightarrow> 'a"            ("_/'((_)')" [1000, 0] 900)
+
+translations
+  "_fUpdate f (_fupdbinds b bs)" \<rightleftharpoons> "_fUpdate (_fUpdate f b) bs"
+  "f(x$:=y)" \<rightleftharpoons> "CONST finfun_update f x y"
+
+syntax 
+  "_State" :: "fupdbinds => 'a" ("<_>")
+translations
+  "_State ms" == "_fUpdate <> ms"
+  "_State (_updbinds b bs)" <= "_fUpdate (_State b) bs"
+
+lemma empty_None [simp]: "<> = (K$ None)" 
+  by (simp add: bot_option_def)
 
 nonterminal maplets and maplet
 

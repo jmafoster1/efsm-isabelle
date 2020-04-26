@@ -13,14 +13,14 @@ lemma LTL_r2_not_always_gt_100:
 lemma possible_steps_select_wrong_arity:
 "a = STR ''select'' \<Longrightarrow>
        length b \<noteq> 1 \<Longrightarrow>
-       possible_steps drinks 0 <> a b = {||}"
+       possible_steps drinks 0 (K$ None) a b = {||}"
   apply (simp add: possible_steps_def ffilter_def fset_both_sides Abs_fset_inverse Set.filter_def drinks_def)
   apply safe
   by (simp_all add: select_def)
 
 lemma possible_steps_0_not_select:
 "a \<noteq> STR ''select'' \<Longrightarrow>
-       possible_steps drinks 0 <> a b = {||}"
+       possible_steps drinks 0 (K$ None) a b = {||}"
   apply (simp add: possible_steps_def ffilter_def fset_both_sides Abs_fset_inverse Set.filter_def drinks_def)
   apply safe
   by (simp_all add: select_def)
@@ -38,7 +38,7 @@ shows "possible_steps drinks 1 r a b = {||}"
 
 lemma apply_updates_vend:
 "apply_updates (Updates vend) (join_ir [] r) r = r"
-  by (simp add: vend_def)
+  by (simp add: vend_def apply_updates_def)
 
 lemma drinks_step_2_none:
 "ltl_step drinks (Some 2) r e = (None, [], r)"
@@ -138,8 +138,8 @@ proof(coinduction)
 qed
 
 lemma possible_steps_0_invalid:
-"\<not> (l = STR ''select'' \<and> length i = 1) \<Longrightarrow> possible_steps drinks 0 <> l i = {||}"
-  using possible_steps_0_not_select possible_steps_select_wrong_arity by blast
+"\<not> (l = STR ''select'' \<and> length i = 1) \<Longrightarrow> possible_steps drinks 0 (K$ None) l i = {||}"
+  using possible_steps_0_not_select possible_steps_select_wrong_arity by fastforce
 
 lemma costsMoney_aux:
   assumes "\<exists>p r i. j = (nxt (make_full_observation drinks (Some 1) r p) i)"
@@ -251,7 +251,7 @@ lemma LTL_neverReachS2:"(((((event_eq (''select'', [Str ''coke''])))
   apply simp
   apply (simp add: possible_steps_0 select_def)
   apply (case_tac "shd x2", clarify)
-  apply (simp add: possible_steps_1_coin coin_def value_plus_def finfun_update_twist)
+  apply (simp add: possible_steps_1_coin coin_def value_plus_def finfun_update_twist apply_updates_def)
   apply (case_tac "shd (stl x2)", clarify)
   by (simp add: drinks_vend_sufficient state_eq_def)
 
@@ -262,11 +262,11 @@ lemma ltl_step_not_select:
   by (cases e, case_tac b, auto)
 
 lemma ltl_step_select:
-"ltl_step drinks (Some 0) <> (STR ''select'', [i]) = (Some 1, [], <>(1 := i, 2 := Num 0))"
+"ltl_step drinks (Some 0) (K$ None) (STR ''select'', [i]) = (Some 1, [], <>(1 := i, 2 := Num 0))"
   apply (rule  ltl_step_some[of _ _ _ _ _ _ select])
     apply (simp add: possible_steps_0)
    apply (simp add: select_def)
-  by (simp add: select_def finfun_update_twist)
+  by (simp add: select_def finfun_update_twist apply_updates_def)
 
 lemma ltl_step_not_coin_or_vend:
 "\<nexists>i. e = (STR ''coin'', [i]) \<Longrightarrow>
@@ -309,18 +309,19 @@ lemma ltl_steps_1:
 proof-
   show ?thesis
     apply (case_tac "l = STR ''coin'' \<and> length i = 1")
-     apply (simp add: possible_steps_1_coin coin_def apply_outputs_def finfun_update_twist coin)
+     apply (simp add: possible_steps_1_coin coin_def apply_outputs_def finfun_update_twist apply_updates_def coin)
     apply (case_tac "l = STR ''vend'' \<and> i = []")
      apply (case_tac "r $ 2")
       apply (simp add: drinks_vend_invalid invalid)
      apply (case_tac a)
       apply (case_tac "x1 < 100")
-       apply (simp add: drinks_vend_insufficient vend_fail_def)
-       apply (metis vend_fail finfun_upd_triv)
-      apply (simp add: drinks_vend_sufficient vend_def apply_outputs_def)
-      apply (metis vend finfun_upd_triv not_le possible_steps_2_vend)
+       apply (simp add: drinks_vend_insufficient vend_fail_def apply_updates_def)
+       apply (metis finfun_upd_triv vend_fail)
+      apply (simp add: drinks_vend_sufficient vend_def apply_outputs_def apply_updates_def)
+      apply (metis finfun_upd_triv not_le possible_steps_2_vend vend)
      apply (simp add: drinks_vend_r2_String invalid)
     by (simp add: drinks_no_possible_steps_1 invalid)
+
 qed
 
 lemma drink_costs_money_aux:
