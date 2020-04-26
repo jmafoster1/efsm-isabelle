@@ -312,7 +312,7 @@ lemma exists_join_ir_ext: "\<exists>i r. join_ir i r v = s v"
    apply simp
    defer
    apply simp
-   apply (rule_tac x="<>(x2 := a)" in exI)
+   apply (rule_tac x="<x2 $:= Some a>" in exI)
    apply simp
   by (simp add: input2state_exists)
 

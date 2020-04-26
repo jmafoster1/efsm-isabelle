@@ -104,12 +104,12 @@ lemma possible_steps_2_vend: "\<exists>n. r $ 2 = Some (Num n) \<and> n \<ge> 10
   apply safe
   by (simp_all add: transitions apply_guards_def value_gt_def join_ir_def connectives)
 
-lemma accepts_from_2: "accepts drinks 1 (<>(1 := d, 2 := Num 100)) [(STR ''vend'', [])]"
+lemma accepts_from_2: "accepts drinks 1 <1 $:= d, 2 $:= Some (Num 100)> [(STR ''vend'', [])]"
   apply (rule accepts.step[of 2 vend])
    apply (simp add: possible_steps_2_vend)
   by (simp add: accepts.base)
 
-lemma accepts_from_1a: "accepts drinks 1 (<>(1 := d, 2 := Num 50)) [(STR ''coin'', [Num 50]), (STR ''vend'', [])]"
+lemma accepts_from_1a: "accepts drinks 1 <1 $:= d, 2 $:= Some (Num 50)> [(STR ''coin'', [Num 50]), (STR ''vend'', [])]"
   apply (rule accepts.step[of 1 coin])
    apply (simp add: possible_steps_1_coin)
   apply (simp add: apply_updates_def coin_def finfun_update_twist value_plus_def)
@@ -139,7 +139,7 @@ lemma purchase_coke: "observe_trace drinks 0 <> [(STR ''select'', [Str ''coke'']
     apply (simp add: coin_def value_plus_def join_ir_def input2state_def apply_outputs_def)
    apply (simp add: coin_def value_plus_def join_ir_def input2state_def)
   apply (rule observe_trace_possible_step)
-     apply (simp add: possible_steps_2_vendapply_updates_def value_plus_def finfun_update_twist input2state_def)
+     apply (simp add: possible_steps_2_vend apply_updates_def value_plus_def finfun_update_twist input2state_def)
     apply (simp add: vend_def apply_updates_def apply_outputs_def)
    apply simp
   by (simp add: accepts.base)
@@ -162,14 +162,14 @@ lemma rejects_termination: "observe_trace drinks 0 <> [(STR ''select'', [Str ''c
   by (simp add: possible_steps_empty drinks_def can_take_transition_def can_take_def transitions)
 
 (* Part of Example 2 in Foster et. al. *)
-lemma r2_0_vend: "can_take_transition vendi r \<Longrightarrow> \<exists>n. r $ 2 = Some (Num n) \<and> n \<ge> 100" (* You can't take vendimmediately after taking select *)
+lemma r2_0_vend: "can_take_transition vend i r \<Longrightarrow> \<exists>n. r $ 2 = Some (Num n) \<and> n \<ge> 100" (* You can't take vendimmediately after taking select *)
   apply (simp add: can_take_transition_def can_take_def vend_def apply_guards_def maybe_negate_true maybe_or_false connectives value_gt_def)
   using MaybeBoolInt.elims by force
 
 lemma drinks_vend_sufficient: "r $ 2 = Some (Num x1) \<Longrightarrow>
                 x1 \<ge> 100 \<Longrightarrow>
                 possible_steps drinks 1 r (STR ''vend'') [] = {|(2, vend)|}"
-  using possible_steps_2_vendby blast
+  using possible_steps_2_vend by blast
 
 lemma drinks_end: "possible_steps drinks 2 r a b = {||}"
   apply (simp add: possible_steps_def drinks_def transitions)
@@ -212,7 +212,7 @@ proof-
     apply (rule no_possible_steps_rejects)
     apply (simp add: possible_steps_empty drinks_def can_take_transition_def can_take_def transitions)
     apply (case_tac b)
-    using not_vendapply simp
+    using not_vend apply simp
     using not_coin by auto
 qed
 

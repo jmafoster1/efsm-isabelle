@@ -130,7 +130,7 @@ next
     done
 qed
 
-lemma input_simulation_1_1: "input_simulation drinks 1 (<>(2 := Num 0, 1 := i ! 0)) drinks2 1 (<>(2 := Num 0, 1 := i ! 0)) t"
+lemma input_simulation_1_1: "input_simulation drinks 1 <2 $:= Some (Num 0), 1 $:= i> drinks2 1 <2 $:= Some (Num 0), 1 $:= i> t"
 proof(induction rule: input_simulation_induct)
   case (1 l i t)
   then show ?case
@@ -180,7 +180,7 @@ lemma purchase_coke: "observe_trace drinks2 0 <> [((STR ''select''), [Str ''coke
     apply (simp add: coin_def value_plus_def join_ir_def input2state_def apply_outputs_def apply_updates_def)
    apply (simp add: coin_def value_plus_def join_ir_def input2state_def)
   apply (rule observe_trace_possible_step)
-     apply (simp add: possible_steps_2_vendapply_updates_def value_plus_def input2state_def)
+     apply (simp add: possible_steps_2_vend apply_updates_def value_plus_def input2state_def)
     apply (simp add: apply_outputs_def vend_def apply_updates_def input2state_def)
    apply (simp add: vend_def apply_updates_def)
   by simp
@@ -263,7 +263,7 @@ next
     by (simp add: drinks2_end)
 qed
 
-lemma equiv_1_1: "observe_trace drinks 1 (<>(2 := Num 0, 1 := snd a ! 0)) t = observe_trace drinks2 1 (<>(2 := Num 0, 1 := snd a ! 0)) t"
+lemma equiv_1_1: "observe_trace drinks 1 <2 $:= Some (Num 0), 1 $:= i> t = observe_trace drinks2 1 <2 $:= Some (Num 0), 1 $:= i> t"
 proof(induct t)
   case Nil
   then show ?case

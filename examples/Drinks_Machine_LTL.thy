@@ -2,8 +2,6 @@ theory Drinks_Machine_LTL
 imports "Drinks_Machine" "EFSM.EFSM_LTL"
 begin
 
-declare One_nat_def [simp del]
-
 lemma LTL_r2_not_always_gt_100: "not (alw (check_exp (Gt (V (Rg 2)) (L (Num 100))))) (watch drinks i)"
   apply (simp add: not_alw_iff watch_def)
   apply (rule ev.base)
