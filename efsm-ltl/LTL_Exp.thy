@@ -15,8 +15,8 @@ definition join_iro :: "value list \<Rightarrow> registers \<Rightarrow> outputs
     Op n \<Rightarrow> o ! n
   )"
 
-lemma join_iro_R [simp]:
-"join_iro i r o (Rg n) = r $ n"
+lemma join_iro_R [simp]: "join_iro i r o (Rg n) = r $ n"
   by (simp add: join_iro_def)
 
 end
+

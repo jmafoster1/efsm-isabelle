@@ -35,8 +35,7 @@ fun is_lit :: "'a aexp \<Rightarrow> bool" where
   "is_lit (L _) = True" |
   "is_lit _ = False"
 
-lemma aexp_induct_separate_V_cases:
-"(\<And>x. P (L x)) \<Longrightarrow>
+lemma aexp_induct_separate_V_cases: "(\<And>x. P (L x)) \<Longrightarrow>
     (\<And>x. P (V (I x))) \<Longrightarrow>
     (\<And>x. P (V (R x))) \<Longrightarrow>
     (\<And>x1a x2a. P x1a \<Longrightarrow> P x2a \<Longrightarrow> P (Plus x1a x2a)) \<Longrightarrow>
@@ -50,8 +49,7 @@ fun aval :: "'a aexp \<Rightarrow> 'a datastate \<Rightarrow> value option" wher
   "aval (Minus a\<^sub>1 a\<^sub>2) s = value_minus (aval a\<^sub>1 s) (aval a\<^sub>2 s)" |
   "aval (Times a\<^sub>1 a\<^sub>2) s = value_times (aval a\<^sub>1 s) (aval a\<^sub>2 s)"
 
-lemma aval_plus_symmetry:
-"aval (Plus x y) s = aval (Plus y x) s"
+lemma aval_plus_symmetry: "aval (Plus x y) s = aval (Plus y x) s"
   by (simp add: value_plus_symmetry)
 
 text \<open>A little syntax magic to write larger states compactly:\<close>
@@ -111,14 +109,12 @@ primrec input2state_prim :: "value list \<Rightarrow> nat \<Rightarrow> register
   "input2state_prim [] _ = (K$ None)" |
   "input2state_prim (v#t) k = (input2state_prim t (k+1))(k $:= Some v)"
 
-lemma input2state_append:
-"input2state (i @ [a]) = (input2state i)(length i $:= Some a)"
+lemma input2state_append: "input2state (i @ [a]) = (input2state i)(length i $:= Some a)"
   apply (simp add: eq_finfun_All_ext finfun_All_def finfun_All_except_def)
   apply clarify
   by (simp add: input2state_def enumerate_eq_zip)
 
-lemma input2state_out_of_bounds:
-"i \<ge> length ia \<Longrightarrow> input2state ia $ i = None"
+lemma input2state_out_of_bounds: "i \<ge> length ia \<Longrightarrow> input2state ia $ i = None"
 proof(induct ia rule: rev_induct)
   case Nil
   then show ?case
@@ -129,16 +125,13 @@ next
     by (simp add: input2state_def enumerate_eq_zip)
 qed
 
-lemma input2state_within_bounds:
-"input2state i $ x = Some a \<Longrightarrow> x < length i"
+lemma input2state_within_bounds: "input2state i $ x = Some a \<Longrightarrow> x < length i"
   by (metis input2state_out_of_bounds not_le_imp_less option.distinct(1))
 
-lemma input2state_empty:
-"input2state [] $ x1 = None"
+lemma input2state_empty: "input2state [] $ x1 = None"
   by (simp add: input2state_out_of_bounds)
 
-lemma input2state_nth:
-"i < length ia \<Longrightarrow> input2state ia $ i = Some (ia ! i)"
+lemma input2state_nth: "i < length ia \<Longrightarrow> input2state ia $ i = Some (ia ! i)"
 proof(induct ia rule: rev_induct)
   case Nil
   then show ?case
@@ -150,12 +143,10 @@ next
     by (simp add: finfun_upd_apply nth_append)
 qed
 
-lemma input2state_some:
-"i < length ia \<Longrightarrow> ia ! i = x \<Longrightarrow> input2state ia $ i = Some x"
+lemma input2state_some: "i < length ia \<Longrightarrow> ia ! i = x \<Longrightarrow> input2state ia $ i = Some x"
   by (simp add: input2state_nth)
 
-lemma input2state_take:
-  "x1 < A \<Longrightarrow>
+lemma input2state_take:   "x1 < A \<Longrightarrow>
    A \<le> length i \<Longrightarrow>
    x = vname.I x1 \<Longrightarrow>
    input2state i $ x1 = input2state (take A i) $ x1"
@@ -169,24 +160,20 @@ next
     by (simp add: input2state_nth)
 qed
 
-lemma input2state_not_None:
-"(input2state i $ x \<noteq> None) \<Longrightarrow> (x < length i)"
+lemma input2state_not_None: "(input2state i $ x \<noteq> None) \<Longrightarrow> (x < length i)"
   using input2state_within_bounds by blast
 
-lemma input2state_Some:
-"(\<exists>v. input2state i $ x = Some v) = (x < length i)"
+lemma input2state_Some: "(\<exists>v. input2state i $ x = Some v) = (x < length i)"
   apply standard
   using input2state_within_bounds apply blast
   by (simp add: input2state_nth)
 
-lemma input2state_cons:
-  "x1 > 0 \<Longrightarrow>
+lemma input2state_cons:   "x1 > 0 \<Longrightarrow>
    x1 < length ia \<Longrightarrow>
    input2state (a # ia) $ x1 = input2state ia $ (x1-1)"
   by (simp add: input2state_nth)
 
-lemma input2state_cons_shift:
-"input2state i $ x1 = Some a \<Longrightarrow> input2state (b # i) $ (Suc x1) = Some a"
+lemma input2state_cons_shift: "input2state i $ x1 = Some a \<Longrightarrow> input2state (b # i) $ (Suc x1) = Some a"
 proof(induct i rule: rev_induct)
   case Nil
   then show ?case
@@ -202,8 +189,7 @@ next
     by (metis finfun_upd_apply input2state_append input2state_nth length_Cons length_append_singleton lessI list.sel(3) nth_tl)
 qed
 
-lemma input2state_exists:
-"\<exists>i. input2state i $ x1 = Some a"
+lemma input2state_exists: "\<exists>i. input2state i $ x1 = Some a"
 proof(induct x1)
   case 0
   then show ?case
@@ -221,8 +207,7 @@ primrec repeat :: "nat \<Rightarrow> 'a \<Rightarrow> 'a list" where
   "repeat 0 _ = []" |
   "repeat (Suc m) a = a#(repeat m a)"
 
-lemma length_repeat:
-"length (repeat n a) = n"
+lemma length_repeat: "length (repeat n a) = n"
 proof(induct n)
   case 0
   then show ?case
@@ -233,16 +218,13 @@ next
     by simp
 qed
 
-lemma length_append_repeat:
-"length (i@(repeat a y)) \<ge> length i"
+lemma length_append_repeat: "length (i@(repeat a y)) \<ge> length i"
   by simp
 
-lemma length_input2state_repeat:
-"input2state i $ x = Some a \<Longrightarrow> y < length (i @ repeat y a)"
+lemma length_input2state_repeat: "input2state i $ x = Some a \<Longrightarrow> y < length (i @ repeat y a)"
   by (metis append.simps(1) append_eq_append_conv input2state_within_bounds length_append length_repeat list.size(3) neqE not_add_less2 zero_order(3))
 
-lemma input2state_double_exists:
-"\<exists>i. input2state i $ x = Some a \<and> input2state i $ y = Some a"
+lemma input2state_double_exists: "\<exists>i. input2state i $ x = Some a \<and> input2state i $ y = Some a"
   apply (insert input2state_exists[of x a])
   apply clarify
   apply (case_tac "x \<ge> y")
@@ -252,8 +234,7 @@ lemma input2state_double_exists:
   apply (simp add: not_le)
   by (metis length_input2state_repeat input2state_nth input2state_out_of_bounds le_trans length_append_repeat length_list_update not_le_imp_less nth_append nth_list_update_eq nth_list_update_neq option.distinct(1))
 
-lemma input2state_double_exists_2:
-"x \<noteq> y \<Longrightarrow> \<exists>i. input2state i $ x = Some a \<and> input2state i $ y = Some a'"
+lemma input2state_double_exists_2: "x \<noteq> y \<Longrightarrow> \<exists>i. input2state i $ x = Some a \<and> input2state i $ y = Some a'"
   apply (insert input2state_exists[of x a])
   apply clarify
   apply (case_tac "x \<ge> y")
@@ -273,20 +254,17 @@ definition join_ir :: "value list \<Rightarrow> registers \<Rightarrow> vname da
 
 lemmas datastate = join_ir_def input2state_def
 
-lemma join_ir_empty [simp]:
-"join_ir [] <> = (\<lambda>x. None)"
+lemma join_ir_empty [simp]: "join_ir [] <> = (\<lambda>x. None)"
   apply (rule ext)
   apply (simp add: join_ir_def)
   apply (case_tac x)
    apply (simp add: input2state_def)
   by simp
 
-lemma join_ir_R [simp]:
-"(join_ir i r) (R n) = r $ n"
+lemma join_ir_R [simp]: "(join_ir i r) (R n) = r $ n"
   by (simp add: join_ir_def)
 
-lemma join_ir_double_exists:
-"\<exists>i r. join_ir i r v = Some a \<and> join_ir i r v' = Some a"
+lemma join_ir_double_exists: "\<exists>i r. join_ir i r v = Some a \<and> join_ir i r v' = Some a"
 proof(cases v)
   case (I x1)
   then show ?thesis
@@ -303,8 +281,7 @@ next
     using input2state_double_exists by fastforce
 qed
 
-lemma join_ir_double_exists_2:
-"v \<noteq> v' \<Longrightarrow> \<exists>i r. join_ir i r v = Some a \<and> join_ir i r v' = Some a'"
+lemma join_ir_double_exists_2: "v \<noteq> v' \<Longrightarrow> \<exists>i r. join_ir i r v = Some a \<and> join_ir i r v' = Some a'"
 proof(cases v)
   case (I x1)
   assume "v \<noteq> v'"
@@ -326,8 +303,7 @@ next
     by simp
 qed
 
-lemma exists_join_ir_ext:
-"\<exists>i r. join_ir i r v = s v"
+lemma exists_join_ir_ext: "\<exists>i r. join_ir i r v = s v"
   apply (simp add: join_ir_def)
   apply (case_tac "s v")
    apply (cases v)
@@ -345,8 +321,7 @@ lemma exists_join_ir_ext:
    apply simp
   by (simp add: input2state_exists)
 
-lemma join_ir_nth [simp]:
-"i < length is \<Longrightarrow> join_ir is r (I i) = Some (is ! i)"
+lemma join_ir_nth [simp]: "i < length is \<Longrightarrow> join_ir is r (I i) = Some (is ! i)"
   by (simp add: join_ir_def input2state_nth)
 
 fun aexp_constrains :: "'a aexp \<Rightarrow> 'a aexp \<Rightarrow> bool" where
@@ -371,8 +346,7 @@ fun enumerate_aexp_inputs :: "vname aexp \<Rightarrow> nat set" where
   "enumerate_aexp_inputs (Minus v va) = enumerate_aexp_inputs v \<union> enumerate_aexp_inputs va" |
   "enumerate_aexp_inputs (Times v va) = enumerate_aexp_inputs v \<union> enumerate_aexp_inputs va"
 
-lemma enumerate_aexp_inputs_list:
-"\<exists>l. enumerate_aexp_inputs a = set l"
+lemma enumerate_aexp_inputs_list: "\<exists>l. enumerate_aexp_inputs a = set l"
 proof(induct a)
   case (L x)
   then show ?case
@@ -408,18 +382,15 @@ fun enumerate_regs :: "vname aexp \<Rightarrow> nat set" where
 lemma finite_enumerate_regs: "finite (enumerate_regs a)"
   by(induct a rule: aexp_induct_separate_V_cases, auto)
 
-lemma no_variables_aval:
-  "enumerate_aexp_inputs a = {} \<Longrightarrow>
+lemma no_variables_aval:   "enumerate_aexp_inputs a = {} \<Longrightarrow>
    enumerate_regs a = {} \<Longrightarrow>
    aval a s = aval a s'"
   by (induct a rule: aexp_induct_separate_V_cases, auto)
 
-lemma enumerate_aexp_inputs_not_empty:
-"(enumerate_aexp_inputs a \<noteq> {}) = (\<exists>b c. enumerate_aexp_inputs a = set (b#c))"
+lemma enumerate_aexp_inputs_not_empty: "(enumerate_aexp_inputs a \<noteq> {}) = (\<exists>b c. enumerate_aexp_inputs a = set (b#c))"
   using enumerate_aexp_inputs_list by fastforce
 
-lemma aval_ir_take:
-  "A \<le> length i \<Longrightarrow>
+lemma aval_ir_take:   "A \<le> length i \<Longrightarrow>
   enumerate_regs a = {} \<Longrightarrow>
   enumerate_aexp_inputs a \<noteq> {} \<Longrightarrow>
   Max (enumerate_aexp_inputs a) < A \<Longrightarrow>
@@ -472,12 +443,10 @@ definition max_input :: "vname aexp \<Rightarrow> nat option" where
 definition max_reg :: "vname aexp \<Rightarrow> nat option" where
   "max_reg g = (let regs = (enumerate_regs g) in if regs = {} then None else Some (Max regs))"
 
-lemma max_reg_V_I:
-"max_reg (V (I n)) = None"
+lemma max_reg_V_I: "max_reg (V (I n)) = None"
   by (simp add: max_reg_def)
 
-lemma max_reg_V_R:
-"max_reg (V (R n)) = Some n"
+lemma max_reg_V_R: "max_reg (V (R n)) = Some n"
   by (simp add: max_reg_def)
 
 lemmas max_reg_V = max_reg_V_I max_reg_V_R
@@ -524,52 +493,42 @@ next
   qed
 qed
 
-lemma enumerate_regs_empty_reg_unconstrained:
-  "enumerate_regs a = {} \<Longrightarrow> \<forall>r. \<not> aexp_constrains a (V (R r))"
+lemma enumerate_regs_empty_reg_unconstrained:   "enumerate_regs a = {} \<Longrightarrow> \<forall>r. \<not> aexp_constrains a (V (R r))"
   by (induct a rule: aexp_induct_separate_V_cases, auto)
 
-lemma enumerate_aexp_inputs_empty_input_unconstrained:
-  "enumerate_aexp_inputs a = {} \<Longrightarrow> \<forall>r. \<not> aexp_constrains a (V (I r))"
+lemma enumerate_aexp_inputs_empty_input_unconstrained:   "enumerate_aexp_inputs a = {} \<Longrightarrow> \<forall>r. \<not> aexp_constrains a (V (I r))"
   by (induct a rule: aexp_induct_separate_V_cases, auto)
 
-lemma input_unconstrained_aval_input_swap:
-  "\<forall>i. \<not> aexp_constrains a (V (I i)) \<Longrightarrow> aval a (join_ir i r) = aval a (join_ir i' r)"
+lemma input_unconstrained_aval_input_swap:   "\<forall>i. \<not> aexp_constrains a (V (I i)) \<Longrightarrow> aval a (join_ir i r) = aval a (join_ir i' r)"
   using join_ir_def
   by (induct a rule: aexp_induct_separate_V_cases, auto)
 
-lemma input_unconstrained_aval_register_swap:
-  "\<forall>i. \<not> aexp_constrains a (V (R i)) \<Longrightarrow> aval a (join_ir i r) = aval a (join_ir i r')"
+lemma input_unconstrained_aval_register_swap:   "\<forall>i. \<not> aexp_constrains a (V (R i)) \<Longrightarrow> aval a (join_ir i r) = aval a (join_ir i r')"
   using join_ir_def
   by (induct a rule: aexp_induct_separate_V_cases, auto)
 
-lemma unconstrained_variable_swap_aval:
-
+lemma unconstrained_variable_swap_aval: 
   "\<forall>i. \<not> aexp_constrains a (V (I i)) \<Longrightarrow>
    \<forall>r. \<not> aexp_constrains a (V (R r)) \<Longrightarrow>
    aval a s = aval a s'"
   by (induct a rule: aexp_induct_separate_V_cases, auto)
 
-lemma max_input_I:
-"max_input (V (vname.I i)) = Some i"
+lemma max_input_I: "max_input (V (vname.I i)) = Some i"
   by (simp add: max_input_def)
 
-lemma max_input_Plus:
-"max_input (Plus a1 a2) = max (max_input a1) (max_input a2)"
+lemma max_input_Plus: "max_input (Plus a1 a2) = max (max_input a1) (max_input a2)"
   apply (simp add: max_input_def Let_def max.commute max_absorb2)
   by (metis List.finite_set Max.union enumerate_aexp_inputs_list sup_Some sup_max)
 
-lemma max_input_Minus:
-"max_input (Minus a1 a2) = max (max_input a1) (max_input a2)"
+lemma max_input_Minus: "max_input (Minus a1 a2) = max (max_input a1) (max_input a2)"
   apply (simp add: max_input_def Let_def max.commute max_absorb2)
   by (metis List.finite_set Max.union enumerate_aexp_inputs_list sup_Some sup_max)
 
-lemma max_input_Times:
-"max_input (Times a1 a2) = max (max_input a1) (max_input a2)"
+lemma max_input_Times: "max_input (Times a1 a2) = max (max_input a1) (max_input a2)"
   apply (simp add: max_input_def Let_def max.commute max_absorb2)
   by (metis List.finite_set Max.union enumerate_aexp_inputs_list sup_Some sup_max)
 
-lemma aval_take:
-"max_input x < Some a \<Longrightarrow> aval x (join_ir i r) = aval x (join_ir (take a i) r)"
+lemma aval_take: "max_input x < Some a \<Longrightarrow> aval x (join_ir i r) = aval x (join_ir (take a i) r)"
 proof(induct x rule: aexp_induct_separate_V_cases)
   case (1 x)
   then show ?case 
@@ -596,8 +555,7 @@ next
     by (simp add: max_input_Times)
 qed
 
-lemma aval_no_reg_swap_regs:
-  "max_input x < Some a \<Longrightarrow>
+lemma aval_no_reg_swap_regs:   "max_input x < Some a \<Longrightarrow>
    max_reg x = None \<Longrightarrow>
    aval x (join_ir i ra) = aval x (join_ir (take a i) r)"
 proof(induct x)
@@ -655,3 +613,5 @@ definition eq_upto_rename :: "vname aexp \<Rightarrow> vname aexp \<Rightarrow> 
   "eq_upto_rename a1 a2 = (\<exists>f. bij f \<and> rename_regs f a1 = a2)"
 
 end
+
+

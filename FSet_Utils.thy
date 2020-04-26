@@ -40,8 +40,7 @@ lemma Abs_ffilter: "(ffilter f s = s') = ({e \<in> (fset s). f e} = (fset s'))"
 lemma ffilter_empty [simp]: "ffilter f {||} = {||}"
   by auto
 
-lemma ffilter_finsert:
-  "ffilter f (finsert a s) = (if f a then finsert a (ffilter f s) else (ffilter f s))"
+lemma ffilter_finsert:   "ffilter f (finsert a s) = (if f a then finsert a (ffilter f s) else (ffilter f s))"
   apply simp
   apply standard
    apply (simp add: ffilter_def fset_both_sides Abs_fset_inverse)
@@ -76,8 +75,7 @@ lemma fsubset_strict: "x2 |\<subset>| x1 \<Longrightarrow> \<exists>e. e |\<in>|
 lemma fsubset: "x2 |\<subset>| x1 \<Longrightarrow> \<nexists>e. e |\<in>| x2 \<and> e |\<notin>| x1"
   by auto
 
-lemma size_fsubset_elem:
-  assumes "\<exists>e. e |\<in>| x1 \<and> e |\<notin>| x2"
+lemma size_fsubset_elem:   assumes "\<exists>e. e |\<in>| x1 \<and> e |\<notin>| x2"
       and "\<nexists>e. e |\<in>| x2 \<and> e |\<notin>| x1"
     shows "size x2 < size x1"
   using assms
@@ -168,8 +166,7 @@ lemma exists_sorted_distinct_fset_of_list: "\<exists>l. sorted l \<and> distinct
 lemma fset_of_list_empty [simp]: "(fset_of_list l = {||}) = (l = [])"
   by (metis fset_of_list.rep_eq fset_of_list_simps(1) set_empty)
 
-lemma ffold_ord_cons:
-  assumes sorted: "sorted (h#t)"
+lemma ffold_ord_cons:   assumes sorted: "sorted (h#t)"
     and distinct: "distinct (h#t)"
   shows "ffold_ord f (fset_of_list (h#t)) b = ffold_ord f (fset_of_list t) (f h b)"
 proof-
@@ -182,8 +179,7 @@ proof-
     by (metis h_is_min remove_min fset_of_list_empty list.distinct(1))
 qed
 
-lemma sorted_distinct_ffold_ord:
-  assumes "sorted l"
+lemma sorted_distinct_ffold_ord:   assumes "sorted l"
       and "distinct l"
     shows "ffold_ord f (fset_of_list l) b = fold f l b"
   using assms
@@ -209,8 +205,7 @@ lemma fprod_empty_r: "a |\<times>| {||} = {||}"
 
 lemmas fprod_empty = fprod_empty_l fprod_empty_r
 
-lemma fprod_finsert:
-  "(finsert a as) |\<times>| (finsert b bs) =
+lemma fprod_finsert:   "(finsert a as) |\<times>| (finsert b bs) =
    finsert (a, b) (fimage (\<lambda>b. (a, b)) bs |\<union>| fimage (\<lambda>a. (a, b)) as |\<union>| (as |\<times>| bs))"
   apply (simp add: fprod_def fset_both_sides Abs_fset_inverse)
   by auto
@@ -245,3 +240,4 @@ lemma not_singleton_empty [simp]: "\<not> fis_singleton {||}"
 lemma fis_singleton_fthe_elem: "fis_singleton A \<longleftrightarrow> A = {|fthe_elem A|}"
   by (metis fis_singleton_alt fthe_felem_eq)
 end
+

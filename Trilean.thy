@@ -282,3 +282,4 @@ lemma comp_fun_commute_maybe_and: "comp_fun_commute maybe_and"
   by (metis add.left_commute de_morgans_2 maybe_not_eq)
 
 end
+
