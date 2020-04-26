@@ -21,7 +21,5 @@ instance
   using less_imp_not_less apply blast
   by (metis Pair_inject equality neqE)
 end
+
 end
-
-
-

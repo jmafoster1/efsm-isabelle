@@ -96,5 +96,3 @@ qed
 end
 
 end
-
-

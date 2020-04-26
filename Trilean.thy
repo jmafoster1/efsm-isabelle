@@ -32,8 +32,7 @@ abbreviation maybe_and :: "trilean \<Rightarrow> trilean \<Rightarrow> trilean" 
 abbreviation maybe_or :: "trilean \<Rightarrow> trilean \<Rightarrow> trilean" (infixl "\<or>\<^sub>?" 65) where
   "maybe_or x y \<equiv> x + y"
 
-lemma plus_trilean_assoc:
-  "a \<or>\<^sub>? b \<or>\<^sub>? c = a \<or>\<^sub>? (b \<or>\<^sub>? c)"
+lemma plus_trilean_assoc: "a \<or>\<^sub>? b \<or>\<^sub>? c = a \<or>\<^sub>? (b \<or>\<^sub>? c)"
 proof(induct a b  arbitrary: c rule: plus_trilean.induct)
 case (1 uu)
   then show ?case
@@ -98,8 +97,7 @@ qed
 lemma times_trilean_commutative: "a \<and>\<^sub>? b = b \<and>\<^sub>? a"
   by (metis (mono_tags) times_trilean.simps trilean.distinct(5) trilean.exhaust)
 
-lemma times_trilean_assoc:
-  "a \<and>\<^sub>? b \<and>\<^sub>? c = a \<and>\<^sub>? (b \<and>\<^sub>? c)"
+lemma times_trilean_assoc: "a \<and>\<^sub>? b \<and>\<^sub>? c = a \<and>\<^sub>? (b \<and>\<^sub>? c)"
 proof(induct a b  arbitrary: c rule: plus_trilean.induct)
   case (1 uu)
   then show ?case
@@ -130,8 +128,7 @@ case 5
     by (metis (full_types) times_trilean.simps(1) times_trilean.simps(6) times_trilean.simps(7) trilean.exhaust)
 qed
 
-lemma trilean_distributivity_1:
-  "(a \<or>\<^sub>? b) \<and>\<^sub>? c = a \<and>\<^sub>? c \<or>\<^sub>? b \<and>\<^sub>? c"
+lemma trilean_distributivity_1: "(a \<or>\<^sub>? b) \<and>\<^sub>? c = a \<and>\<^sub>? c \<or>\<^sub>? b \<and>\<^sub>? c"
 proof(induct a b rule: times_trilean.induct)
 case (1 uu)
   then show ?case
@@ -230,34 +227,28 @@ lemma maybe_and_not_true: "(x \<and>\<^sub>? y \<noteq> true) = (x \<noteq> true
 lemma negate_valid: "(\<not>\<^sub>? x \<noteq> invalid) = (x \<noteq> invalid)"
   by (metis maybe_double_negation maybe_not.simps(3))
 
-lemma maybe_and_valid:
-  "x \<and>\<^sub>? y \<noteq> invalid \<Longrightarrow> x \<noteq> invalid \<and> y \<noteq> invalid"
+lemma maybe_and_valid: "x \<and>\<^sub>? y \<noteq> invalid \<Longrightarrow> x \<noteq> invalid \<and> y \<noteq> invalid"
   using times_trilean.elims by blast
 
-lemma maybe_or_valid:
-  "x \<or>\<^sub>? y \<noteq> invalid \<Longrightarrow> x \<noteq> invalid \<and> y \<noteq> invalid"
+lemma maybe_or_valid: "x \<or>\<^sub>? y \<noteq> invalid \<Longrightarrow> x \<noteq> invalid \<and> y \<noteq> invalid"
   using plus_trilean.elims by blast
 
 lemma maybe_or_false: "(x \<or>\<^sub>? y = false) = (x = false \<and> y = false)"
   using plus_trilean.elims by blast
 
-lemma maybe_or_true:
-  "(x \<or>\<^sub>? y = true) = ((x = true \<or> y = true) \<and> x \<noteq> invalid \<and> y \<noteq> invalid)"
+lemma maybe_or_true: "(x \<or>\<^sub>? y = true) = ((x = true \<or> y = true) \<and> x \<noteq> invalid \<and> y \<noteq> invalid)"
   using plus_trilean.elims by blast
 
 lemma maybe_not_invalid: "(\<not>\<^sub>? x = invalid) = (x = invalid)"
   by (metis maybe_double_negation maybe_not.simps(3))
 
-lemma maybe_or_invalid:
-  "(x \<or>\<^sub>? y = invalid) = (x = invalid \<or> y = invalid)"
+lemma maybe_or_invalid: "(x \<or>\<^sub>? y = invalid) = (x = invalid \<or> y = invalid)"
   using plus_trilean.elims by blast
 
-lemma maybe_and_invalid:
-  "(x \<and>\<^sub>? y = invalid) = (x = invalid \<or> y = invalid)"
+lemma maybe_and_invalid: "(x \<and>\<^sub>? y = invalid) = (x = invalid \<or> y = invalid)"
   using times_trilean.elims by blast
 
-lemma maybe_and_false:
-  "(x \<and>\<^sub>? y = false) = ((x = false \<or> y = false) \<and> x \<noteq> invalid \<and> y \<noteq> invalid)"
+lemma maybe_and_false: "(x \<and>\<^sub>? y = false) = ((x = false \<or> y = false) \<and> x \<noteq> invalid \<and> y \<noteq> invalid)"
   using times_trilean.elims by blast
 
 lemma invalid_maybe_and: "invalid \<and>\<^sub>? x = invalid"
@@ -266,12 +257,10 @@ lemma invalid_maybe_and: "invalid \<and>\<^sub>? x = invalid"
 lemma maybe_not_eq: "(\<not>\<^sub>? x = \<not>\<^sub>? y) = (x = y)"
   by (metis maybe_double_negation)
 
-lemma de_morgans_1:
-  "\<not>\<^sub>? (a \<or>\<^sub>? b) = (\<not>\<^sub>?a) \<and>\<^sub>? (\<not>\<^sub>?b)"
+lemma de_morgans_1: "\<not>\<^sub>? (a \<or>\<^sub>? b) = (\<not>\<^sub>?a) \<and>\<^sub>? (\<not>\<^sub>?b)"
   by (metis (no_types, hide_lams) add.commute invalid_maybe_and maybe_and_idempotent maybe_and_one maybe_not.elims maybe_not.simps(1) maybe_not.simps(3) maybe_not_invalid maybe_or_zero plus_trilean.simps(1) plus_trilean.simps(4) times_trilean.simps(1) times_trilean_commutative trilean.exhaust trilean.simps(6))
 
-lemma de_morgans_2:
-  "\<not>\<^sub>? (a \<and>\<^sub>? b) = (\<not>\<^sub>?a) \<or>\<^sub>? (\<not>\<^sub>?b)"
+lemma de_morgans_2: "\<not>\<^sub>? (a \<and>\<^sub>? b) = (\<not>\<^sub>?a) \<or>\<^sub>? (\<not>\<^sub>?b)"
   by (metis de_morgans_1 maybe_double_negation)
 
 lemma not_true: "(x \<noteq> true) = (x = false \<or> x = invalid)"
@@ -293,5 +282,3 @@ lemma comp_fun_commute_maybe_and: "comp_fun_commute maybe_and"
   by (metis add.left_commute de_morgans_2 maybe_not_eq)
 
 end
-
-

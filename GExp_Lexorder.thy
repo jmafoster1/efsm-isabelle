@@ -156,7 +156,5 @@ instance proof
     unfolding less_eq_gexp_def using gexp_antisym by blast
 qed
 end
+
 end
-
-
-

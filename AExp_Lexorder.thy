@@ -134,5 +134,3 @@ instance proof
 end
 
 end
-
-

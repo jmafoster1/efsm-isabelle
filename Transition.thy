@@ -72,50 +72,46 @@ definition can_take :: "nat \<Rightarrow> vname gexp list \<Rightarrow> inputs \
 lemma can_take_empty [simp]: "length i = a \<Longrightarrow> can_take a [] i c"
   by (simp add: can_take_def)
 
-lemma can_take_subset_append:   assumes "set (Guards t) \<subseteq> set (Guards t')"
+lemma can_take_subset_append: assumes "set (Guards t) \<subseteq> set (Guards t')"
   shows "can_take a (Guards t @ Guards t') i c = can_take a (Guards t') i c"
   using assms
   by (simp add: apply_guards_subset_append can_take_def)
 
 definition "can_take_transition t i r = can_take (Arity t) (Guards t) i r"
 
-lemma can_take_transition_empty_guard:
-  "Guards t = [] \<Longrightarrow> \<exists>i. can_take_transition t i c"
+lemma can_take_transition_empty_guard: "Guards t = [] \<Longrightarrow> \<exists>i. can_take_transition t i c"
   by (simp add: can_take_transition_def can_take_def Ex_list_of_length)
 
-lemma valid_list_can_take:
-  "\<forall>g \<in> set (Guards t). valid g \<Longrightarrow> \<exists>i. can_take_transition t i c"
+lemma valid_list_can_take: "\<forall>g \<in> set (Guards t). valid g \<Longrightarrow> \<exists>i. can_take_transition t i c"
   by (simp add: can_take_transition_def can_take_def apply_guards_def valid_def Ex_list_of_length)
 
-lemma cant_take_if:
-    "\<exists>g \<in> set (Guards t). gval g (join_ir i r) \<noteq> true \<Longrightarrow> \<not> can_take_transition t i r"
+lemma cant_take_if: "\<exists>g \<in> set (Guards t). gval g (join_ir i r) \<noteq> true \<Longrightarrow> \<not> can_take_transition t i r"
   using apply_guards_cons apply_guards_rearrange can_take_def can_take_transition_def by blast
 
 definition apply_outputs :: "'a aexp list \<Rightarrow> 'a datastate \<Rightarrow> value option list" where
   "apply_outputs p s = map (\<lambda>p. aval p s) p"
 
-lemma apply_outputs_nth:
-    "i < length p \<Longrightarrow> apply_outputs p s ! i = aval (p ! i) s"
+lemma apply_outputs_nth: "i < length p \<Longrightarrow> apply_outputs p s ! i = aval (p ! i) s"
   by (simp add: apply_outputs_def)
 
 lemmas apply_outputs = datastate apply_outputs_def
 
-lemma apply_outputs_empty [simp]:   "apply_outputs [] s = []"
+lemma apply_outputs_empty [simp]: "apply_outputs [] s = []"
   by (simp add: apply_outputs_def)
 
-lemma apply_outputs_preserves_length:   "length (apply_outputs p s) = length p"
+lemma apply_outputs_preserves_length: "length (apply_outputs p s) = length p"
   by (simp add: apply_outputs_def)
 
-lemma apply_outputs_literal:   assumes "P ! r = L v"
+lemma apply_outputs_literal: assumes "P ! r = L v"
       and "r < length P"
     shows "apply_outputs P s ! r = Some v"
   by (simp add: assms apply_outputs_nth)
 
-lemma apply_outputs_register:   assumes "r < length P"
+lemma apply_outputs_register: assumes "r < length P"
   shows "apply_outputs (list_update P r (V (R p))) (join_ir i c) ! r = c $ p"
   by (metis apply_outputs_nth assms aval.simps(2) join_ir_R length_list_update nth_list_update_eq)
 
-lemma apply_outputs_unupdated:   assumes "ia \<noteq> r"
+lemma apply_outputs_unupdated: assumes "ia \<noteq> r"
       and "ia < length P"
     shows "apply_outputs P j ! ia = apply_outputs (list_update P r v)j ! ia"
   by (metis apply_outputs_nth assms(1) assms(2) length_list_update nth_list_update_neq)
@@ -137,12 +133,10 @@ next
     by (case_tac "ra = aa", auto)
 qed
 
-lemma update_twice:
-  "apply_updates [(r, a), (r, b)] s regs = regs (r $:= aval b s)"
+lemma update_twice: "apply_updates [(r, a), (r, b)] s regs = regs (r $:= aval b s)"
   by (simp add: apply_updates_def)
 
-lemma r_not_updated_stays_the_same:
-  "r \<notin> fst ` set U \<Longrightarrow> apply_updates U c d $ r = d $ r"
+lemma r_not_updated_stays_the_same: "r \<notin> fst ` set U \<Longrightarrow> apply_updates U c d $ r = d $ r"
   using apply_updates_def
   by (induct U rule: rev_induct, auto)
 
@@ -165,6 +159,3 @@ inductive eq_upto_rename :: "transition \<Rightarrow> transition \<Rightarrow> b
    eq_upto_rename t1 t2"
 
 end
-
-
-
