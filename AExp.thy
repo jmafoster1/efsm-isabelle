@@ -117,10 +117,6 @@ lemma input2state_append:
   apply clarify
   by (simp add: input2state_def enumerate_eq_zip)
 
-lemma fold_conv_foldr:
-"fold f xs = foldr f (rev xs)"
-  by (simp add: foldr_conv_fold)
-
 lemma input2state_out_of_bounds:
 "i \<ge> length ia \<Longrightarrow> input2state ia $ i = None"
 proof(induct ia rule: rev_induct)
@@ -326,7 +322,7 @@ next
      apply simp
     using R input2state_exists apply auto[1]
     apply (simp add: R)
-    apply (rule_tac x="(K$ None)(x2 $:= Some a)(x2a $:= Some a')" in exI)
+    apply (rule_tac x="<x2 $:= Some a,x2a $:= Some a'>" in exI)
     by simp
 qed
 
