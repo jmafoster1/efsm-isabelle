@@ -27,13 +27,13 @@ lemma statename_smap: "alw (nxt (state_eq (Some 2)) impl (state_eq (Some 1))) s 
 lemma drinks_no_possible_steps_1: assumes not_coin: "\<not> (a = STR ''coin'' \<and> length b = 1)"
       and not_vend: "\<not> (a = STR ''vend'' \<and> b = [])"
 shows "possible_steps drinks 1 r a b = {||}"
-  using drinks_1_rejects not_coin not_vendby auto
+  using drinks_1_rejects not_coin not_vend by auto
 
 lemma apply_updates_vend: "apply_updates (Updates vend) (join_ir [] r) r = r"
   by (simp add: vend_def apply_updates_def)
 
 lemma drinks_step_2_none: "ltl_step drinks (Some 2) r e = (None, [], r)"
-  by (simp add: drinks_endltl_step_none)
+  by (simp add: drinks_end ltl_step_none)
 
 lemma one_before_two_2: "alw (\<lambda>x. statename (shd (stl x)) = Some 2 \<longrightarrow> statename (shd x) = Some 1) (make_full_observation drinks (Some 2) r [r $ 1] x2a)"
 proof(coinduction)
@@ -41,7 +41,7 @@ proof(coinduction)
   then show ?case
     apply simp
     apply standard
-    apply (simp add: drinks_endltl_step_none)
+    apply (simp add: drinks_end ltl_step_none)
     apply (rule disjI2)
     apply (simp add: drinks_step_2_none)
     by (metis (mono_tags, lifting) alw_mono nxt.simps once_none_nxt_always_none option.simps(3) state_eq_def)
@@ -239,7 +239,7 @@ lemma ltl_step_not_select: "\<nexists>i. e = (STR ''select'', [i]) \<Longrightar
   apply (simp add: possible_steps_empty drinks_def can_take_transition_def can_take_def select_def)
   by (cases e, case_tac b, auto)
 
-lemma ltl_step_select: "ltl_step drinks (Some 0) (K$ None) (STR ''select'', [i]) = (Some 1, [], <>(1 := i, 2 := Num 0))"
+lemma ltl_step_select: "ltl_step drinks (Some 0) (K$ None) (STR ''select'', [i]) = (Some 1, [], <1 $:= Some i, 2 $:= Some (Num 0)>)"
   apply (rule  ltl_step_some[of _ _ _ _ _ _ select])
     apply (simp add: possible_steps_0)
    apply (simp add: select_def)
@@ -290,7 +290,7 @@ proof-
        apply (simp add: drinks_vend_insufficient vend_fail_def apply_updates_def)
        apply (metis finfun_upd_triv vend_fail)
       apply (simp add: drinks_vend_sufficient vend_def apply_outputs_def apply_updates_def)
-      apply (metis finfun_upd_triv not_le possible_steps_2_vendvend)
+      apply (metis finfun_upd_triv not_le possible_steps_2_vend vend)
      apply (simp add: drinks_vend_r2_String invalid)
     by (simp add: drinks_no_possible_steps_1 invalid)
 
