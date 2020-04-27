@@ -1,6 +1,6 @@
-theory 
+theory
 GExp_Lexorder
-imports 
+imports
   "GExp"
   "AExp_Lexorder"
   "HOL-Library.List_Lexorder"
@@ -39,7 +39,10 @@ lemma gexp_antisym: "(x::'a gexp) < y = (\<not>(y < x) \<and> (x \<noteq> y))"
     using aexp_antisym apply blast
     by auto
 
-lemma gexp_trans: "(x::'a gexp) < y \<Longrightarrow> y < z \<Longrightarrow> x < z"
+lemma gexp_trans:
+  "(x::'a gexp) < y \<Longrightarrow>
+   y < z \<Longrightarrow>
+   x < z"
 proof (induction x y arbitrary: z rule: less_gexp.induct)
 case (1 b1 b2)
   then show ?case
@@ -50,75 +53,75 @@ next
     by (cases z, auto)
 next
   case ("2_2" b1 v va)
-  then show ?case 
+  then show ?case
     by (cases z, auto)
 next
   case ("2_3" b1 v va)
-  then show ?case 
+  then show ?case
     by (cases z, auto)
 next
   case ("2_4" b1 v va)
-  then show ?case 
+  then show ?case
     by (cases z, auto)
 next
   case (3 e1 e2 b2)
-  then show ?case 
+  then show ?case
     by (cases z, auto)
 next
   case (4 e1 e2 e1' e2')
-  then show ?case 
+  then show ?case
     by (cases z, auto)
 next
   case ("5_1" e1 e2 v va)
-  then show ?case 
+  then show ?case
     by (cases z, auto)
 next
   case ("5_2" e1 e2 v va)
-  then show ?case 
+  then show ?case
     by (cases z, auto)
 next
   case ("5_3" e1 e2 v va)
-  then show ?case  
+  then show ?case
     by (cases z, auto)
 next
   case (6 e1 e2 b2)
-  then show ?case  
+  then show ?case
     by (cases z, auto)
 next
   case (7 e1 e2 e1' e2')
-  then show ?case  
+  then show ?case
     by (cases z, auto)
 next
   case (8 e1 e2 e1' e2')
-  then show ?case  
+  then show ?case
     by (cases z, auto)
 next
   case ("9_1" e1 e2 v va)
-  then show ?case  
+  then show ?case
     by (cases z, auto)
 next
   case ("9_2" e1 e2 v va)
-  then show ?case  
+  then show ?case
     by (cases z, auto)
 next
   case (10 vb vc v va)
-  then show ?case  
+  then show ?case
     by (cases z, auto)
 next
   case (11 vb vc v va)
-  then show ?case  
+  then show ?case
     by (cases z, auto)
 next
   case ("12_1" vb vc v)
-  then show ?case  
+  then show ?case
     by (cases z, auto)
 next
   case ("12_2" vb vc v va)
-  then show ?case  
+  then show ?case
     by (cases z, auto)
 next
   case ("12_3" vb vc v va)
-  then show ?case  
+  then show ?case
     by (cases z, auto)
 next
   case (13 g1 g2 g1' g2')
@@ -126,7 +129,7 @@ next
     by (cases z, auto)
 next
   case ("14_1" g1 g2 v)
-  then show ?case  
+  then show ?case
     by (cases z, auto)
 next
   case ("14_2" g1 g2 v va)
@@ -148,9 +151,13 @@ instance proof
     by (metis gexp_antisym less_eq_gexp_def)
   show "(x \<le> x)"
     by (simp add: less_eq_gexp_def)
-  show "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z"
+  show "x \<le> y \<Longrightarrow>
+   y \<le> z \<Longrightarrow>
+   x \<le> z"
     by (metis less_eq_gexp_def gexp_trans)
-  show "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = y"
+  show "x \<le> y \<Longrightarrow>
+   y \<le> x \<Longrightarrow>
+   x = y"
     unfolding less_eq_gexp_def using gexp_antisym by blast
   show "x \<le> y \<or> y \<le> x"
     unfolding less_eq_gexp_def using gexp_antisym by blast

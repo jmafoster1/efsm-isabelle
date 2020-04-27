@@ -72,26 +72,32 @@ definition can_take :: "nat \<Rightarrow> vname gexp list \<Rightarrow> inputs \
 lemma can_take_empty [simp]: "length i = a \<Longrightarrow> can_take a [] i c"
   by (simp add: can_take_def)
 
-lemma can_take_subset_append: assumes "set (Guards t) \<subseteq> set (Guards t')"
+lemma can_take_subset_append:
+  assumes "set (Guards t) \<subseteq> set (Guards t')"
   shows "can_take a (Guards t @ Guards t') i c = can_take a (Guards t') i c"
   using assms
   by (simp add: apply_guards_subset_append can_take_def)
 
 definition "can_take_transition t i r = can_take (Arity t) (Guards t) i r"
 
-lemma can_take_transition_empty_guard: "Guards t = [] \<Longrightarrow> \<exists>i. can_take_transition t i c"
+lemma can_take_transition_empty_guard:
+  "Guards t = [] \<Longrightarrow> \<exists>i. can_take_transition t i c"
   by (simp add: can_take_transition_def can_take_def Ex_list_of_length)
 
-lemma valid_list_can_take: "\<forall>g \<in> set (Guards t). valid g \<Longrightarrow> \<exists>i. can_take_transition t i c"
+lemma valid_list_can_take:
+  "\<forall>g \<in> set (Guards t). valid g \<Longrightarrow> \<exists>i. can_take_transition t i c"
   by (simp add: can_take_transition_def can_take_def apply_guards_def valid_def Ex_list_of_length)
 
-lemma cant_take_if: "\<exists>g \<in> set (Guards t). gval g (join_ir i r) \<noteq> true \<Longrightarrow> \<not> can_take_transition t i r"
+lemma cant_take_if:
+  "\<exists>g \<in> set (Guards t). gval g (join_ir i r) \<noteq> true \<Longrightarrow>
+   \<not> can_take_transition t i r"
   using apply_guards_cons apply_guards_rearrange can_take_def can_take_transition_def by blast
 
 definition apply_outputs :: "'a aexp list \<Rightarrow> 'a datastate \<Rightarrow> value option list" where
   "apply_outputs p s = map (\<lambda>p. aval p s) p"
 
-lemma apply_outputs_nth: "i < length p \<Longrightarrow> apply_outputs p s ! i = aval (p ! i) s"
+lemma apply_outputs_nth:
+  "i < length p \<Longrightarrow> apply_outputs p s ! i = aval (p ! i) s"
   by (simp add: apply_outputs_def)
 
 lemmas apply_outputs = datastate apply_outputs_def
@@ -133,10 +139,12 @@ next
     by (case_tac "ra = aa", auto)
 qed
 
-lemma update_twice: "apply_updates [(r, a), (r, b)] s regs = regs (r $:= aval b s)"
+lemma update_twice:
+  "apply_updates [(r, a), (r, b)] s regs = regs (r $:= aval b s)"
   by (simp add: apply_updates_def)
 
-lemma r_not_updated_stays_the_same: "r \<notin> fst ` set U \<Longrightarrow> apply_updates U c d $ r = d $ r"
+lemma r_not_updated_stays_the_same:
+  "r \<notin> fst ` set U \<Longrightarrow> apply_updates U c d $ r = d $ r"
   using apply_updates_def
   by (induct U rule: rev_induct, auto)
 
@@ -154,8 +162,11 @@ inductive eq_upto_rename :: "transition \<Rightarrow> transition \<Rightarrow> b
   "Label t1 = Label t2 \<Longrightarrow>
    Arity t2 = Arity t2 \<Longrightarrow>
    apply_guards (map (GExp.rename_regs f) (Guards t1)) = apply_guards (Guards t2) \<Longrightarrow>
+
    apply_outputs (map (AExp.rename_regs f) (Outputs t1)) = apply_outputs (Outputs t2) \<Longrightarrow>
+
    apply_updates (map (\<lambda>(r, u). (f r, AExp.rename_regs f u)) (Updates t1)) = apply_updates (Updates t2) \<Longrightarrow>
+
    eq_upto_rename t1 t2"
 
 end

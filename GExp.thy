@@ -46,25 +46,29 @@ definition gImplies :: "'a gexp \<Rightarrow> 'a gexp \<Rightarrow> 'a gexp" whe
 definition Lt :: "'a aexp \<Rightarrow> 'a aexp \<Rightarrow> 'a gexp" (*infix "<" 60*) where
   "Lt a b \<equiv> Gt b a"
 
-lemma gval_Lt [simp]: "gval (Lt a\<^sub>1 a\<^sub>2) s = value_gt (aval a\<^sub>2 s) (aval a\<^sub>1 s)"
+lemma gval_Lt [simp]:
+  "gval (Lt a\<^sub>1 a\<^sub>2) s = value_gt (aval a\<^sub>2 s) (aval a\<^sub>1 s)"
   by (simp add: Lt_def)
 
 definition Le :: "'a aexp \<Rightarrow> 'a aexp \<Rightarrow> 'a gexp" (*infix "\<le>" 60*) where
   "Le v va \<equiv> gNot (Gt v va)"
 
-lemma gval_Le [simp]: "gval (Le a\<^sub>1 a\<^sub>2) s = \<not>\<^sub>? (value_gt (aval a\<^sub>1 s) (aval a\<^sub>2 s))"
+lemma gval_Le [simp]:
+  "gval (Le a\<^sub>1 a\<^sub>2) s = \<not>\<^sub>? (value_gt (aval a\<^sub>1 s) (aval a\<^sub>2 s))"
   by (simp add: Le_def value_gt_def gNot_def maybe_or_idempotent)
 
 definition Ge :: "'a aexp \<Rightarrow> 'a aexp \<Rightarrow> 'a gexp" (*infix "\<ge>" 60*) where
   "Ge v va \<equiv> gNot (Lt v va)"
 
-lemma gval_Ge [simp]: "gval (Ge a\<^sub>1 a\<^sub>2) s = \<not>\<^sub>? (value_gt (aval a\<^sub>2 s) (aval a\<^sub>1 s))"
+lemma gval_Ge [simp]:
+  "gval (Ge a\<^sub>1 a\<^sub>2) s = \<not>\<^sub>? (value_gt (aval a\<^sub>2 s) (aval a\<^sub>1 s))"
   by (simp add: Ge_def value_gt_def gNot_def maybe_or_idempotent)
 
 definition Ne :: "'a aexp \<Rightarrow> 'a aexp \<Rightarrow> 'a gexp" (*infix "\<noteq>" 60*) where
   "Ne v va \<equiv> gNot (Eq v va)"
 
-lemma gval_Ne [simp]: "gval (Ne a\<^sub>1 a\<^sub>2) s = \<not>\<^sub>? (value_eq (aval a\<^sub>2 s) (aval a\<^sub>1 s))"
+lemma gval_Ne [simp]:
+  "gval (Ne a\<^sub>1 a\<^sub>2) s = \<not>\<^sub>? (value_eq (aval a\<^sub>2 s) (aval a\<^sub>1 s))"
   by (simp add: Ne_def value_gt_def gNot_def maybe_or_idempotent)
 
 lemmas connectives = gAnd_def gOr_def gNot_def Lt_def Le_def Ge_def Ne_def
@@ -75,7 +79,8 @@ lemma gval_gOr [simp]: "gval (gOr x y) r = (gval x r) \<or>\<^sub>? (gval y r)"
 lemma gval_gNot [simp]: "gval (gNot x) s = \<not>\<^sub>? (gval x s)"
   by (simp add: maybe_or_idempotent gNot_def)
 
-lemma gval_gAnd [simp]: "gval (gAnd g1 g2) s = (gval g1 s) \<and>\<^sub>? (gval g2 s)"
+lemma gval_gAnd [simp]:
+  "gval (gAnd g1 g2) s = (gval g1 s) \<and>\<^sub>? (gval g2 s)"
   by (simp add: de_morgans_1 maybe_double_negation maybe_or_idempotent gAnd_def)
 
 lemma gAnd_commute: "gval (gAnd a b) s = gval (gAnd b a) s"
@@ -84,7 +89,8 @@ lemma gAnd_commute: "gval (gAnd a b) s = gval (gAnd b a) s"
 lemma gOr_commute: "gval (gOr a b) s = gval (gOr b a) s"
   by (simp add: plus_trilean_commutative gOr_def)
 
-lemma gval_gAnd_True: "(gval (gAnd g1 g2) s = true) = ((gval g1 s = true) \<and> gval g2 s = true)"
+lemma gval_gAnd_True:
+  "(gval (gAnd g1 g2) s = true) = ((gval g1 s = true) \<and> gval g2 s = true)"
   by (simp add: maybe_and_true)
 
 lemma nor_equiv: "gval (gNot (gOr a b)) s = gval (Nor a b) s"
@@ -127,7 +133,8 @@ fun gexp_same_structure :: "'a gexp \<Rightarrow> 'a gexp \<Rightarrow> bool" wh
   "gexp_same_structure (In v l) (In v' l') = (v = v' \<and> l = l')" |
   "gexp_same_structure _ _ = False"
 
-lemma gval_foldr_true: "(gval (foldr gAnd G (Bc True)) s = true) = (\<forall>g \<in> set G. gval g s = true)"
+lemma gval_foldr_true:
+  "(gval (foldr gAnd G (Bc True)) s = true) = (\<forall>g \<in> set G. gval g s = true)"
 proof(induct G)
   case Nil
   then show ?case
@@ -175,7 +182,8 @@ definition max_input :: "vname gexp \<Rightarrow> nat option" where
 definition max_input_list :: "vname gexp list \<Rightarrow> nat option" where
   "max_input_list g = fold max (map (\<lambda>g. max_input g) g) None"
 
-lemma max_input_list_cons: "max_input_list (a # G) = max (max_input a) (max_input_list G)"
+lemma max_input_list_cons:
+  "max_input_list (a # G) = max (max_input a) (max_input_list G)"
   apply (simp add: max_input_list_def)
   apply (cases "max_input a")
    apply (simp add: max_def_raw)
@@ -209,7 +217,8 @@ lemma max_reg_Nor: "max_reg (Nor a b) = max (max_reg a) (max_reg b)"
   apply (simp add: max_reg_def AExp.max_reg_def Let_def max_absorb2)
   by (metis GExp.finite_enumerate_regs Max.union bot_option_def max_bot2 sup_Some sup_max)
 
-lemma gval_In_cons: "gval (In v (a # as)) s = (gval (Eq (V v) (L a)) s \<or>\<^sub>? gval (In v as) s)"
+lemma gval_In_cons:
+  "gval (In v (a # as)) s = (gval (Eq (V v) (L a)) s \<or>\<^sub>? gval (In v as) s)"
   by (cases "s v", auto)
 
 lemma possible_to_be_in: "s \<noteq> [] \<Longrightarrow> satisfiable (In v s)"
@@ -228,15 +237,18 @@ qed
 definition max_reg_list :: "vname gexp list \<Rightarrow> nat option" where
   "max_reg_list g = (fold max (map (\<lambda>g. max_reg g) g) None)"
 
-lemma max_reg_list_cons: "max_reg_list (a # G) = max (max_reg a) (max_reg_list G)"
+lemma max_reg_list_cons:
+  "max_reg_list (a # G) = max (max_reg a) (max_reg_list G)"
   apply (simp add: max_reg_list_def)
   by (metis (no_types, lifting) List.finite_set Max.insert Max.set_eq_fold fold.simps(1) id_apply list.simps(15) max.assoc set_empty)
 
-lemma max_reg_list_append_singleton: "max_reg_list (as@[bs]) = max (max_reg_list as) (max_reg_list [bs])"
+lemma max_reg_list_append_singleton:
+  "max_reg_list (as@[bs]) = max (max_reg_list as) (max_reg_list [bs])"
   apply (simp add: max_reg_list_def)
   by (metis max.commute sup_None_2 sup_max)
 
-lemma max_reg_list_append: "max_reg_list (as@bs) = max (max_reg_list as) (max_reg_list bs)"
+lemma max_reg_list_append:
+  "max_reg_list (as@bs) = max (max_reg_list as) (max_reg_list bs)"
 proof(induct bs rule: rev_induct)
   case Nil
   then show ?case
@@ -256,16 +268,20 @@ lemma apply_guards_singleton[simp]: "(apply_guards [g] s) = (gval g s = true)"
 lemma apply_guards_empty [simp]: "apply_guards [] s"
   by (simp add: apply_guards_def)
 
-lemma apply_guards_cons: "apply_guards (a # G) c = (gval a c = true \<and> apply_guards G c)"
+lemma apply_guards_cons:
+  "apply_guards (a # G) c = (gval a c = true \<and> apply_guards G c)"
   by (simp add: apply_guards_def)
 
-lemma apply_guards_double_cons: "apply_guards (y # x # G) s = (gval (gAnd y x) s = true \<and> apply_guards G s)"
+lemma apply_guards_double_cons:
+  "apply_guards (y # x # G) s = (gval (gAnd y x) s = true \<and> apply_guards G s)"
   using apply_guards_cons gval_gAnd_True by blast
 
-lemma apply_guards_append: "apply_guards (a@a') s = (apply_guards a s \<and> apply_guards a' s)"
+lemma apply_guards_append:
+  "apply_guards (a@a') s = (apply_guards a s \<and> apply_guards a' s)"
   using apply_guards_def by auto
 
-lemma apply_guards_foldr: "apply_guards G s = (gval (foldr gAnd G (Bc True)) s = true)"
+lemma apply_guards_foldr:
+  "apply_guards G s = (gval (foldr gAnd G (Bc True)) s = true)"
 proof(induct G)
   case Nil
   then show ?case
@@ -279,17 +295,21 @@ qed
 lemma rev_apply_guards: "apply_guards (rev G) s = apply_guards G s"
   by (simp add: apply_guards_def)
 
-lemma apply_guards_fold: "apply_guards G s = (gval (fold gAnd G (Bc True)) s = true)"
+lemma apply_guards_fold:
+  "apply_guards G s = (gval (fold gAnd G (Bc True)) s = true)"
   using rev_apply_guards[symmetric]
   by (simp add: foldr_conv_fold apply_guards_foldr)
 
-lemma fold_apply_guards: "(gval (fold gAnd G (Bc True)) s = true) = apply_guards G s"
+lemma fold_apply_guards:
+  "(gval (fold gAnd G (Bc True)) s = true) = apply_guards G s"
   by (simp add: apply_guards_fold)
 
-lemma foldr_apply_guards: "(gval (foldr gAnd G (Bc True)) s = true) = apply_guards G s"
+lemma foldr_apply_guards:
+  "(gval (foldr gAnd G (Bc True)) s = true) = apply_guards G s"
   by (simp add: apply_guards_foldr)
 
-lemma apply_guards_subset: "set g' \<subseteq> set g \<Longrightarrow> apply_guards g c \<longrightarrow> apply_guards g' c"
+lemma apply_guards_subset:
+  "set g' \<subseteq> set g \<Longrightarrow> apply_guards g c \<longrightarrow> apply_guards g' c"
 proof(induct g)
   case Nil
   then show ?case
@@ -300,31 +320,37 @@ next
     using apply_guards_def by auto
 qed
 
-lemma apply_guards_subset_append: "set G \<subseteq> set G' \<Longrightarrow> apply_guards (G @ G') s = apply_guards (G') s"
+lemma apply_guards_subset_append:
+  "set G \<subseteq> set G' \<Longrightarrow> apply_guards (G @ G') s = apply_guards (G') s"
   using apply_guards_append apply_guards_subset by blast
 
-lemma apply_guards_rearrange: "x \<in> set G \<Longrightarrow> apply_guards G s = apply_guards (x#G) s"
+lemma apply_guards_rearrange:
+  "x \<in> set G \<Longrightarrow> apply_guards G s = apply_guards (x#G) s"
   using apply_guards_def by auto
 
 lemma max_input_Bc: "max_input (Bc x) = None"
   by (simp add: max_input_def)
 
-lemma max_input_Eq: "max_input (Eq a1 a2) = max (AExp.max_input a1) (AExp.max_input a2)"
+lemma max_input_Eq:
+  "max_input (Eq a1 a2) = max (AExp.max_input a1) (AExp.max_input a2)"
   apply (simp add: AExp.max_input_def max_input_def Let_def max_absorb2)
   by (metis List.finite_set Max.union bot_option_def enumerate_aexp_inputs_not_empty max_bot2 sup_Some sup_max)
 
-lemma max_input_Gt: "max_input (Gt a1 a2) = max (AExp.max_input a1) (AExp.max_input a2)"
+lemma max_input_Gt:
+  "max_input (Gt a1 a2) = max (AExp.max_input a1) (AExp.max_input a2)"
   apply (simp add: AExp.max_input_def max_input_def Let_def max_absorb2)
   by (metis List.finite_set Max.union bot_option_def enumerate_aexp_inputs_not_empty max_bot2 sup_Some sup_max)
 
-lemma gexp_max_input_Nor: "max_input (Nor g1 g2) = max (max_input g1) (max_input g2)"
+lemma gexp_max_input_Nor:
+  "max_input (Nor g1 g2) = max (max_input g1) (max_input g2)"
   apply (simp add: AExp.max_input_def max_input_def Let_def max_absorb2)
   by (metis List.finite_set Max.union enumerate_gexp_inputs_list less_eq_option_Some_None max_def sup_Some sup_max)
 
 lemma gexp_max_input_In: "max_input (In v l) = AExp.max_input (V v)"
   by (simp add: AExp.max_input_def GExp.max_input_def)
 
-lemma gval_foldr_gOr_invalid: "(gval (fold gOr l g) s = invalid) = (\<exists>g' \<in> (set (g#l)). gval g' s = invalid)"
+lemma gval_foldr_gOr_invalid:
+  "(gval (fold gOr l g) s = invalid) = (\<exists>g' \<in> (set (g#l)). gval g' s = invalid)"
 proof(induct l rule: rev_induct)
   case Nil
   then show ?case
@@ -335,7 +361,8 @@ next
     by (simp, metis gval_gOr maybe_or_invalid)
 qed
 
-lemma gval_foldr_gOr_true: "(gval (fold gOr l g) s = true) = ((\<exists>g' \<in> (set (g#l)). gval g' s = true) \<and> (\<forall>g' \<in> (set (g#l)). gval g' s \<noteq> invalid))"
+lemma gval_foldr_gOr_true:
+  "(gval (fold gOr l g) s = true) = ((\<exists>g' \<in> (set (g#l)). gval g' s = true) \<and> (\<forall>g' \<in> (set (g#l)). gval g' s \<noteq> invalid))"
 proof(induct l rule: rev_induct)
   case Nil
   then show ?case
@@ -347,7 +374,8 @@ next
     using gval_foldr_gOr_invalid by auto
 qed
 
-lemma gval_foldr_gOr_false: "(gval (fold gOr l g) s = false) = (\<forall>g' \<in> (set (g#l)). gval g' s = false)"
+lemma gval_foldr_gOr_false:
+  "(gval (fold gOr l g) s = false) = (\<forall>g' \<in> (set (g#l)). gval g' s = false)"
 proof(induct l rule: rev_induct)
   case Nil
   then show ?case
@@ -368,10 +396,12 @@ lemma gval_fold_gOr_rev: "gval (fold gOr (rev l) g) s = gval (fold gOr l g) s"
 lemma gval_fold_gOr_foldr: "gval (fold gOr l g) s = gval (foldr gOr l g) s"
   by (simp add: foldr_conv_fold gval_fold_gOr_rev)
 
-lemma gval_fold_gOr: "gval (fold gOr (a # l) g) s = (gval a s \<or>\<^sub>? gval (fold gOr l g) s)"
+lemma gval_fold_gOr:
+  "gval (fold gOr (a # l) g) s = (gval a s \<or>\<^sub>? gval (fold gOr l g) s)"
   by (simp only: gval_fold_gOr_foldr foldr.simps comp_def gval_gOr)
 
-lemma gval_In_fold: "gval (In v l) s = gval (fold gOr (map (\<lambda>x. Eq (V v) (L x)) l) (Bc False)) s"
+lemma gval_In_fold:
+  "gval (In v l) s = gval (fold gOr (map (\<lambda>x. Eq (V v) (L x)) l) (Bc False)) s"
 proof(induct l)
   case Nil
   then show ?case
@@ -399,7 +429,8 @@ next
     by (metis fold_simps(2) maybe_or_valid)
 qed
 
-lemma fold_maybe_or_true_base_never_false: "fold (\<or>\<^sub>?) l true \<noteq> false"
+lemma fold_maybe_or_true_base_never_false:
+  "fold (\<or>\<^sub>?) l true \<noteq> false"
 proof(induct l)
   case Nil
   then show ?case
@@ -410,7 +441,9 @@ next
     by (metis fold_maybe_or_invalid_base fold_simps(2) maybe_not.cases maybe_or_valid plus_trilean.simps(4) plus_trilean.simps(6))
 qed
 
-lemma fold_true_fold_false_not_invalid: "fold (\<or>\<^sub>?) l true = true \<Longrightarrow> fold (\<or>\<^sub>?) (rev l) false \<noteq> invalid"
+lemma fold_true_fold_false_not_invalid:
+  "fold (\<or>\<^sub>?) l true = true \<Longrightarrow>
+   fold (\<or>\<^sub>?) (rev l) false \<noteq> invalid"
 proof(induct l)
   case Nil
   then show ?case
@@ -422,7 +455,9 @@ next
     by (metis fold_maybe_or_invalid_base maybe_or_invalid maybe_or_true)
 qed
 
-lemma fold_true_invalid_fold_rev_false_invalid: "fold (\<or>\<^sub>?) l true = invalid \<Longrightarrow> fold (\<or>\<^sub>?) (rev l) false = invalid"
+lemma fold_true_invalid_fold_rev_false_invalid:
+  "fold (\<or>\<^sub>?) l true = invalid \<Longrightarrow>
+   fold (\<or>\<^sub>?) (rev l) false = invalid"
 proof(induct l)
   case Nil
   then show ?case
@@ -434,7 +469,8 @@ next
     by (metis maybe_or_true maybe_or_valid)
 qed
 
-lemma fold_maybe_or_rev: "fold (\<or>\<^sub>?) l b = fold (\<or>\<^sub>?) (rev l) b"
+lemma fold_maybe_or_rev:
+  "fold (\<or>\<^sub>?) l b = fold (\<or>\<^sub>?) (rev l) b"
 proof(induct l)
   case Nil
   then show ?case
@@ -482,10 +518,12 @@ next
   qed
 qed
 
-lemma fold_maybe_or_cons: "fold (\<or>\<^sub>?) (a#l) b = a \<or>\<^sub>? (fold (\<or>\<^sub>?) l b)"
+lemma fold_maybe_or_cons:
+  "fold (\<or>\<^sub>?) (a#l) b = a \<or>\<^sub>? (fold (\<or>\<^sub>?) l b)"
   by (metis fold_maybe_or_rev foldr.simps(2) foldr_conv_fold o_apply)
 
-lemma gval_fold_gOr_map: "gval (fold gOr l (Bc False)) s = fold (\<or>\<^sub>?) (map (\<lambda>g. gval g s) l) (false)"
+lemma gval_fold_gOr_map:
+  "gval (fold gOr l (Bc False)) s = fold (\<or>\<^sub>?) (map (\<lambda>g. gval g s) l) (false)"
 proof(induct l)
   case Nil
   then show ?case
@@ -496,7 +534,8 @@ next
     by (metis fold_maybe_or_cons gval_fold_gOr list.simps(9))
 qed
 
-lemma gval_unfold_first: "gval (fold gOr (map (\<lambda>x. Eq (V v) (L x)) ls) (Eq (V v) (L l))) s =
+lemma gval_unfold_first:
+  "gval (fold gOr (map (\<lambda>x. Eq (V v) (L x)) ls) (Eq (V v) (L l))) s =
        gval (fold gOr (map (\<lambda>x. Eq (V v) (L x)) (l#ls)) (Bc False)) s"
 proof(induct ls)
   case Nil
@@ -515,10 +554,12 @@ next
   qed
 qed
 
-lemma fold_Eq_true: "\<forall>v. fold (\<or>\<^sub>?) (map (\<lambda>x. if v = x then true else false) vs) true = true"
+lemma fold_Eq_true:
+  "\<forall>v. fold (\<or>\<^sub>?) (map (\<lambda>x. if v = x then true else false) vs) true = true"
   by(induct vs, auto)
 
-lemma gval_fold_In_hd: "s v = Some a \<Longrightarrow> gval (fold_In v (a # l)) s = true"
+lemma gval_fold_In_hd:
+  "s v = Some a \<Longrightarrow> gval (fold_In v (a # l)) s = true"
 proof(induct l)
   case Nil
   then show ?case
@@ -530,7 +571,9 @@ next
     by (simp add: comp_def fold_Eq_true)
 qed
 
-lemma x_in_set_fold_eq: "x \<in> set ll \<Longrightarrow> fold (\<or>\<^sub>?) (map (\<lambda>xa. if x = xa then true else false) ll) false = true"
+lemma x_in_set_fold_eq:
+  "x \<in> set ll \<Longrightarrow>
+   fold (\<or>\<^sub>?) (map (\<lambda>xa. if x = xa then true else false) ll) false = true"
 proof(induct ll)
   case Nil
   then show ?case
@@ -544,7 +587,8 @@ next
     by auto
 qed
 
-lemma gval_fold_In_true_if: "s v \<in> Some ` set l \<Longrightarrow> gval (fold_In v l) s = true"
+lemma gval_fold_In_true_if:
+  "s v \<in> Some ` set l \<Longrightarrow> gval (fold_In v l) s = true"
 proof(induct l)
   case Nil
   then show ?case
@@ -565,10 +609,13 @@ next
     qed
   qed
 
-lemma x_not_in_set_fold_eq: "s v \<notin> Some ` set ll \<Longrightarrow> false = fold (\<or>\<^sub>?) (map (\<lambda>x. if s v = Some x then true else false) ll) false"
+lemma x_not_in_set_fold_eq:
+  "s v \<notin> Some ` set ll \<Longrightarrow>
+   false = fold (\<or>\<^sub>?) (map (\<lambda>x. if s v = Some x then true else false) ll) false"
   by(induct ll, auto)
 
-lemma gval_fold_In_false_if: "s v \<notin> Some ` set l \<longrightarrow> false = gval (fold_In v l) s"
+lemma gval_fold_In_false_if:
+  "s v \<notin> Some ` set l \<longrightarrow> false = gval (fold_In v l) s"
 proof(induct l)
   case Nil
   then show ?case
@@ -621,15 +668,18 @@ next
     using aval_take by fastforce
 qed
 
-lemma gval_fold_gAnd_append_singleton: "gval (fold gAnd (a @ [G]) (Bc True)) s = gval (fold gAnd a (Bc True)) s \<and>\<^sub>? gval G s"
+lemma gval_fold_gAnd_append_singleton:
+  "gval (fold gAnd (a @ [G]) (Bc True)) s = gval (fold gAnd a (Bc True)) s \<and>\<^sub>? gval G s"
   apply simp
   using times_trilean_commutative by blast
 
-lemma gval_fold_rev_true: "gval (fold gAnd (rev G) (Bc True)) s = true \<Longrightarrow>
+lemma gval_fold_rev_true:
+  "gval (fold gAnd (rev G) (Bc True)) s = true \<Longrightarrow>
    gval (fold gAnd G (Bc True)) s = true"
   by (metis foldr_conv_fold gval_foldr_true rev_rev_ident set_rev)
 
-lemma gval_fold_not_invalid_all_valid_contra: "\<exists>g \<in> set G. gval g s = invalid \<Longrightarrow>
+lemma gval_fold_not_invalid_all_valid_contra:
+  "\<exists>g \<in> set G. gval g s = invalid \<Longrightarrow>
    gval (fold gAnd G (Bc True)) s = invalid"
 proof(induct G rule: rev_induct)
   case Nil
@@ -643,14 +693,17 @@ next
     using maybe_and_valid by blast
 qed
 
-lemma gval_fold_not_invalid_all_valid: "gval (fold gAnd G (Bc True)) s \<noteq> invalid \<Longrightarrow>
+lemma gval_fold_not_invalid_all_valid:
+  "gval (fold gAnd G (Bc True)) s \<noteq> invalid \<Longrightarrow>
    \<forall>g \<in> set G. gval g s \<noteq> invalid"
   using gval_fold_not_invalid_all_valid_contra by blast
 
-lemma all_gval_not_false: "(\<forall>g \<in> set G. gval g s \<noteq> false) = (\<forall>g \<in> set G. gval g s = true) \<or> (\<exists>g \<in> set G. gval g s = invalid)"
+lemma all_gval_not_false:
+  "(\<forall>g \<in> set G. gval g s \<noteq> false) = (\<forall>g \<in> set G. gval g s = true) \<or> (\<exists>g \<in> set G. gval g s = invalid)"
   using trilean.exhaust by auto
 
-lemma must_have_one_false_contra: "\<forall>g \<in> set G. gval g s \<noteq> false \<Longrightarrow>
+lemma must_have_one_false_contra:
+  "\<forall>g \<in> set G. gval g s \<noteq> false \<Longrightarrow>
    gval (fold gAnd G (Bc True)) s \<noteq> false"
   using all_gval_not_false[of G s]
   apply simp
@@ -658,40 +711,55 @@ lemma must_have_one_false_contra: "\<forall>g \<in> set G. gval g s \<noteq> fal
   apply (metis (full_types) foldr_conv_fold gval_fold_rev_true gval_foldr_true not_true)
   by (simp add: gval_fold_not_invalid_all_valid_contra)
 
-lemma must_have_one_false: "gval (fold gAnd G (Bc True)) s = false \<Longrightarrow>
+lemma must_have_one_false:
+  "gval (fold gAnd G (Bc True)) s = false \<Longrightarrow>
    \<exists>g \<in> set G. gval g s = false"
   using must_have_one_false_contra by blast
 
-lemma all_valid_fold: "\<forall>g \<in> set G. gval g s \<noteq> invalid \<Longrightarrow> gval (fold gAnd G (Bc True)) s \<noteq> invalid"
+lemma all_valid_fold:
+  "\<forall>g \<in> set G. gval g s \<noteq> invalid \<Longrightarrow>
+   gval (fold gAnd G (Bc True)) s \<noteq> invalid"
   apply (induct G rule: rev_induct)
    apply simp
   by (simp add: maybe_and_invalid)
 
-lemma one_false_all_valid_false: "\<exists>g\<in>set G. gval g s = false \<Longrightarrow> \<forall>g\<in>set G. gval g s \<noteq> invalid \<Longrightarrow> gval (fold gAnd G (Bc True)) s = false"
+lemma one_false_all_valid_false:
+  "\<exists>g\<in>set G. gval g s = false \<Longrightarrow>
+   \<forall>g\<in>set G. gval g s \<noteq> invalid \<Longrightarrow>
+   gval (fold gAnd G (Bc True)) s = false"
   by (metis (full_types) all_valid_fold foldr_conv_fold gval_foldr_true not_true rev_rev_ident set_rev)
 
-lemma gval_fold_rev_false: "gval (fold gAnd (rev G) (Bc True)) s = false \<Longrightarrow> gval (fold gAnd G (Bc True)) s = false"
+lemma gval_fold_rev_false:
+  "gval (fold gAnd (rev G) (Bc True)) s = false \<Longrightarrow>
+   gval (fold gAnd G (Bc True)) s = false"
   using must_have_one_false[of "rev G" s]
         gval_fold_not_invalid_all_valid[of "rev G" s]
   by (simp add: one_false_all_valid_false)
 
-lemma fold_invalid_means_one_invalid: "gval (fold gAnd G (Bc True)) s = invalid \<Longrightarrow> \<exists>g \<in> set G. gval g s = invalid"
+lemma fold_invalid_means_one_invalid:
+  "gval (fold gAnd G (Bc True)) s = invalid \<Longrightarrow>
+   \<exists>g \<in> set G. gval g s = invalid"
   using all_valid_fold by blast
 
-lemma gval_fold_rev_invalid: "gval (fold gAnd (rev G) (Bc True)) s = invalid \<Longrightarrow> gval (fold gAnd G (Bc True)) s = invalid"
+lemma gval_fold_rev_invalid:
+  "gval (fold gAnd (rev G) (Bc True)) s = invalid \<Longrightarrow>
+   gval (fold gAnd G (Bc True)) s = invalid"
   using fold_invalid_means_one_invalid[of "rev G" s]
   by (simp add: gval_fold_not_invalid_all_valid_contra)
 
-lemma gval_fold_rev_equiv_fold: "gval (fold gAnd (rev G) (Bc True)) s =  gval (fold gAnd G (Bc True)) s"
+lemma gval_fold_rev_equiv_fold:
+  "gval (fold gAnd (rev G) (Bc True)) s =  gval (fold gAnd G (Bc True)) s"
   apply (cases "gval (fold gAnd (rev G) (Bc True)) s")
     apply (simp add: gval_fold_rev_true)
    apply (simp add: gval_fold_rev_false)
   by (simp add: gval_fold_rev_invalid)
 
-lemma gval_fold_equiv_fold_rev: "gval (fold gAnd G (Bc True)) s = gval (fold gAnd (rev G) (Bc True)) s"
+lemma gval_fold_equiv_fold_rev:
+  "gval (fold gAnd G (Bc True)) s = gval (fold gAnd (rev G) (Bc True)) s"
   by (simp add: gval_fold_rev_equiv_fold)
 
-lemma gval_fold_equiv_gval_foldr: "gval (fold gAnd G (Bc True)) s = gval (foldr gAnd G (Bc True)) s"
+lemma gval_fold_equiv_gval_foldr:
+  "gval (fold gAnd G (Bc True)) s = gval (foldr gAnd G (Bc True)) s"
 proof -
   have "gval (fold gAnd G (Bc True)) s = gval (fold gAnd (rev G) (Bc True)) s"
     using gval_fold_equiv_fold_rev by force
@@ -699,10 +767,12 @@ proof -
   by (simp add: foldr_conv_fold)
 qed
 
-lemma gval_foldr_equiv_gval_fold: "gval (foldr gAnd G (Bc True)) s = gval (fold gAnd G (Bc True)) s"
+lemma gval_foldr_equiv_gval_fold:
+  "gval (foldr gAnd G (Bc True)) s = gval (fold gAnd G (Bc True)) s"
   by (simp add: gval_fold_equiv_gval_foldr)
 
-lemma gval_fold_cons: "gval (fold gAnd (g # gs) (Bc True)) s = gval g s \<and>\<^sub>? gval (fold gAnd gs (Bc True)) s"
+lemma gval_fold_cons:
+  "gval (fold gAnd (g # gs) (Bc True)) s = gval g s \<and>\<^sub>? gval (fold gAnd gs (Bc True)) s"
   apply (simp only: apply_guards_fold gval_fold_equiv_gval_foldr)
   by (simp only: foldr.simps comp_def gval_gAnd)
 
@@ -775,10 +845,12 @@ definition restricted_once :: "'a \<Rightarrow> 'a gexp list \<Rightarrow> bool"
 definition not_restricted :: "'a \<Rightarrow> 'a gexp list \<Rightarrow> bool" where
   "not_restricted v G = (length (filter (\<lambda>g. gexp_constrains g (V v)) G) = 0)"
 
-lemma restricted_once_cons: "restricted_once v (g#gs) = ((gexp_constrains g (V v) \<and> not_restricted v gs) \<or> ((\<not> gexp_constrains g (V v)) \<and> restricted_once v gs))"
+lemma restricted_once_cons:
+  "restricted_once v (g#gs) = ((gexp_constrains g (V v) \<and> not_restricted v gs) \<or> ((\<not> gexp_constrains g (V v)) \<and> restricted_once v gs))"
   by (simp add: restricted_once_def not_restricted_def)
 
-lemma not_restricted_cons: "not_restricted v (g#gs) = ((\<not> gexp_constrains g (V v)) \<and> not_restricted v gs)"
+lemma not_restricted_cons:
+  "not_restricted v (g#gs) = ((\<not> gexp_constrains g (V v)) \<and> not_restricted v gs)"
   by (simp add: not_restricted_def)
 
 definition enumerate_vars :: "vname gexp \<Rightarrow> vname list" where

@@ -40,7 +40,8 @@ lemma Abs_ffilter: "(ffilter f s = s') = ({e \<in> (fset s). f e} = (fset s'))"
 lemma ffilter_empty [simp]: "ffilter f {||} = {||}"
   by auto
 
-lemma ffilter_finsert: "ffilter f (finsert a s) = (if f a then finsert a (ffilter f s) else (ffilter f s))"
+lemma ffilter_finsert:
+  "ffilter f (finsert a s) = (if f a then finsert a (ffilter f s) else (ffilter f s))"
   apply simp
   apply standard
    apply (simp add: ffilter_def fset_both_sides Abs_fset_inverse)
@@ -54,7 +55,8 @@ lemma fset_equiv: "(f1 = f2) = (fset f1 = fset f2)"
 lemma finsert_equiv: "(finsert e f = f') = (insert e (fset f) = (fset f'))"
   by (simp add: finsert_def fset_both_sides Abs_fset_inverse)
 
-lemma filter_elements: "x |\<in>| Abs_fset (Set.filter f (fset s)) = (x \<in> (Set.filter f (fset s)))"
+lemma filter_elements:
+  "x |\<in>| Abs_fset (Set.filter f (fset s)) = (x \<in> (Set.filter f (fset s)))"
   by (metis ffilter.rep_eq fset_inverse notin_fset)
 
 lemma sorted_list_of_fempty [simp]: "sorted_list_of_fset {||} = []"
@@ -66,16 +68,20 @@ lemma fmember_implies_member: "e |\<in>| f \<Longrightarrow> e \<in> fset f"
 lemma fold_union_ffUnion: "fold (|\<union>|) l {||} = ffUnion (fset_of_list l)"
 by(induct l rule: rev_induct, auto)
 
-lemma filter_filter: "ffilter P (ffilter Q xs) = ffilter (\<lambda>x. Q x \<and> P x) xs"
+lemma filter_filter:
+  "ffilter P (ffilter Q xs) = ffilter (\<lambda>x. Q x \<and> P x) xs"
   by auto
 
-lemma fsubset_strict: "x2 |\<subset>| x1 \<Longrightarrow> \<exists>e. e |\<in>| x1 \<and> e |\<notin>| x2"
+lemma fsubset_strict:
+  "x2 |\<subset>| x1 \<Longrightarrow> \<exists>e. e |\<in>| x1 \<and> e |\<notin>| x2"
   by auto
 
-lemma fsubset: "x2 |\<subset>| x1 \<Longrightarrow> \<nexists>e. e |\<in>| x2 \<and> e |\<notin>| x1"
+lemma fsubset:
+  "x2 |\<subset>| x1 \<Longrightarrow> \<nexists>e. e |\<in>| x2 \<and> e |\<notin>| x1"
   by auto
 
-lemma size_fsubset_elem: assumes "\<exists>e. e |\<in>| x1 \<and> e |\<notin>| x2"
+lemma size_fsubset_elem:
+  assumes "\<exists>e. e |\<in>| x1 \<and> e |\<notin>| x2"
       and "\<nexists>e. e |\<in>| x2 \<and> e |\<notin>| x1"
     shows "size x2 < size x1"
   using assms
@@ -88,7 +94,8 @@ lemma size_fsubset: "x2 |\<subset>| x1 \<Longrightarrow> size x2 < size x1"
 definition fremove :: "'a \<Rightarrow> 'a fset \<Rightarrow> 'a fset"
   where [code_abbrev]: "fremove x A = A - {|x|}"
 
-lemma arg_cong_ffilter: "\<forall>e |\<in>| f. p e = p' e \<Longrightarrow> ffilter p f = ffilter p' f"
+lemma arg_cong_ffilter:
+  "\<forall>e |\<in>| f. p e = p' e \<Longrightarrow> ffilter p f = ffilter p' f"
   by auto
 
 lemma ffilter_singleton: "f e \<Longrightarrow> ffilter f {|e|} = {|e|}"
@@ -101,13 +108,17 @@ lemma fset_eq_alt: "(x = y) = (x |\<subseteq>| y \<and> size x = size y)"
 lemma ffold_empty [simp]: "ffold f b {||} = b"
   by (simp add: ffold_def)
 
-lemma sorted_list_of_fset_sort: "sorted_list_of_fset (fset_of_list l) = sort (remdups l)"
+lemma sorted_list_of_fset_sort:
+  "sorted_list_of_fset (fset_of_list l) = sort (remdups l)"
   by (simp add: fset_of_list.rep_eq sorted_list_of_fset.rep_eq sorted_list_of_set_sort_remdups)
 
 lemma fMin_Min: "fMin (fset_of_list l) = Min (set l)"
   by (simp add: fMin.F.rep_eq fset_of_list.rep_eq)
 
-lemma sorted_hd_Min: "sorted l \<Longrightarrow> l \<noteq> [] \<Longrightarrow> hd l = Min (set l)"
+lemma sorted_hd_Min:
+  "sorted l \<Longrightarrow>
+   l \<noteq> [] \<Longrightarrow>
+   hd l = Min (set l)"
   by (metis List.finite_set Min_eqI eq_iff hd_Cons_tl insertE list.set_sel(1) list.simps(15) sorted.simps(2))
 
 lemma hd_sort_Min: "l \<noteq> [] \<Longrightarrow> hd (sort l) = Min (set l)"
@@ -119,17 +130,20 @@ lemma hd_sort_remdups: "hd (sort (remdups l)) = hd (sort l)"
 lemma exists_fset_of_list: "\<exists>l. f = fset_of_list l"
   using exists_fset_of_list by fastforce
 
-lemma hd_sorted_list_of_fset: "s \<noteq> {||} \<Longrightarrow> hd (sorted_list_of_fset s) = (fMin s)"
+lemma hd_sorted_list_of_fset:
+  "s \<noteq> {||} \<Longrightarrow> hd (sorted_list_of_fset s) = (fMin s)"
   apply (insert exists_fset_of_list[of s])
   apply (erule exE)
   apply simp
   apply (simp add: sorted_list_of_fset_sort fMin_Min hd_sort_remdups)
   by (metis fset_of_list_simps(1) hd_sort_Min)
 
-lemma fminus_filter_singleton: "fset_of_list l |-| {|x|} = fset_of_list (filter (\<lambda>e. e \<noteq> x) l)"
+lemma fminus_filter_singleton:
+  "fset_of_list l |-| {|x|} = fset_of_list (filter (\<lambda>e. e \<noteq> x) l)"
   by auto
 
-lemma card_minus_fMin: "s \<noteq> {||} \<Longrightarrow> card (fset s - {fMin s}) < card (fset s)"
+lemma card_minus_fMin:
+  "s \<noteq> {||} \<Longrightarrow> card (fset s - {fMin s}) < card (fset s)"
   by (metis Min_in bot_fset.rep_eq card_Diff1_less fMin.F.rep_eq finite_fset fset_equiv)
 
 (* Provides a deterministic way to fold fsets similar to List.fold that works with the code generator *)
@@ -150,17 +164,23 @@ termination
    apply simp
   by (simp add: card_minus_fMin)
 
-lemma sorted_list_of_fset_Cons: "\<exists>h t. (sorted_list_of_fset (finsert s ss)) = h#t"
+lemma sorted_list_of_fset_Cons:
+  "\<exists>h t. (sorted_list_of_fset (finsert s ss)) = h#t"
   apply (simp add: sorted_list_of_fset_def)
   by (cases "insort s (sorted_list_of_set (fset ss - {s}))", auto)
 
-lemma list_eq_hd_tl: "l \<noteq> [] \<Longrightarrow> hd l = h \<Longrightarrow> tl l = t \<Longrightarrow> l = (h#t)"
+lemma list_eq_hd_tl:
+  "l \<noteq> [] \<Longrightarrow>
+   hd l = h \<Longrightarrow>
+   tl l = t \<Longrightarrow>
+   l = (h#t)"
   by auto
 
 lemma fset_of_list_sort: "fset_of_list l = fset_of_list (sort l)"
   by (simp add: fset_of_list.abs_eq)
 
-lemma exists_sorted_distinct_fset_of_list: "\<exists>l. sorted l \<and> distinct l \<and> f = fset_of_list l"
+lemma exists_sorted_distinct_fset_of_list:
+  "\<exists>l. sorted l \<and> distinct l \<and> f = fset_of_list l"
   by (metis distinct_sorted_list_of_set sorted_list_of_fset.rep_eq sorted_list_of_fset_simps(2) sorted_sorted_list_of_set)
 
 lemma fset_of_list_empty [simp]: "(fset_of_list l = {||}) = (l = [])"
@@ -193,7 +213,7 @@ lemma ffold_ord_fold_sorted: "ffold_ord f s b = fold f (sorted_list_of_fset s) b
 context includes fset.lifting begin
   lift_definition fprod  :: "'a fset \<Rightarrow> 'b fset \<Rightarrow> ('a \<times> 'b) fset " (infixr "|\<times>|" 80) is "\<lambda>a b. fset a \<times> fset b"
     by simp
-  
+
   lift_definition fis_singleton :: "'a fset \<Rightarrow> bool" is "\<lambda>A. is_singleton (fset A)".
 end
 
@@ -210,21 +230,27 @@ lemma fprod_finsert: "(finsert a as) |\<times>| (finsert b bs) =
   apply (simp add: fprod_def fset_both_sides Abs_fset_inverse)
   by auto
 
-lemma fprod_member: "x |\<in>| xs \<Longrightarrow> y |\<in>| ys \<Longrightarrow> (x, y) |\<in>| xs |\<times>| ys"
+lemma fprod_member:
+  "x |\<in>| xs \<Longrightarrow>
+   y |\<in>| ys \<Longrightarrow>
+   (x, y) |\<in>| xs |\<times>| ys"
   by (simp add: fmember_def fprod_def Abs_fset_inverse)
 
-lemma fprod_subseteq: "x |\<subseteq>| x' \<and> y |\<subseteq>| y' \<Longrightarrow> x |\<times>| y |\<subseteq>| x' |\<times>| y'"
+lemma fprod_subseteq:
+  "x |\<subseteq>| x' \<and> y |\<subseteq>| y' \<Longrightarrow> x |\<times>| y |\<subseteq>| x' |\<times>| y'"
   apply (simp add: fprod_def less_eq_fset_def Abs_fset_inverse)
   by auto
 
-lemma fimage_fprod: "(a, b) |\<in>| A |\<times>| B \<Longrightarrow> f a b |\<in>| (\<lambda>(x, y). f x y) |`| (A |\<times>| B)"
+lemma fimage_fprod:
+  "(a, b) |\<in>| A |\<times>| B \<Longrightarrow> f a b |\<in>| (\<lambda>(x, y). f x y) |`| (A |\<times>| B)"
   by force
 
 lemma fprod_singletons: "{|a|} |\<times>| {|b|} = {|(a, b)|}"
   apply (simp add: fprod_def)
   by (metis fset_inverse fset_simps(1) fset_simps(2))
 
-lemma fprod_equiv: "(fset (f |\<times>| f') = s) = (((fset f) \<times> (fset f')) = s)"
+lemma fprod_equiv:
+  "(fset (f |\<times>| f') = s) = (((fset f) \<times> (fset f')) = s)"
   by (simp add: fprod_def Abs_fset_inverse)
 
 lemma fis_singleton_alt: "fis_singleton f = (\<exists>e. f = {|e|})"
@@ -237,6 +263,7 @@ lemma not_singleton_empty [simp]: "\<not> fis_singleton {||}"
   apply (simp add: fis_singleton_def)
   by (simp add: is_singleton_altdef)
 
-lemma fis_singleton_fthe_elem: "fis_singleton A \<longleftrightarrow> A = {|fthe_elem A|}"
+lemma fis_singleton_fthe_elem:
+  "fis_singleton A \<longleftrightarrow> A = {|fthe_elem A|}"
   by (metis fis_singleton_alt fthe_felem_eq)
 end

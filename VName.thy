@@ -67,7 +67,9 @@ next
   qed
 next
   fix x y z::vname
-  show "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z"
+  show "x \<le> y \<Longrightarrow>
+   y \<le> z \<Longrightarrow>
+   x \<le> z"
   proof (induct x)
     case (I x)
     then show ?case
@@ -99,7 +101,9 @@ next
   qed
 next
   fix x y:: vname
-  show "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = y"
+  show "x \<le> y \<Longrightarrow>
+   y \<le> x \<Longrightarrow>
+   x = y"
   proof (induct x)
     case (I x)
     then show ?case

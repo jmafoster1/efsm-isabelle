@@ -34,7 +34,9 @@ instance proof
     apply (cases x)
     by auto
   fix x y z::"value"
-  show "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z"
+  show "x \<le> y \<Longrightarrow>
+   y \<le> z \<Longrightarrow>
+   x \<le> z"
   proof (induct x)
     case (Num n)
     then show ?case
@@ -66,7 +68,9 @@ instance proof
   qed
 next
   fix x y :: "value"
-  show "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = y"
+  show "x \<le> y \<Longrightarrow>
+   y \<le> x \<Longrightarrow>
+   x = y"
   proof (induct x)
     case (Num x)
     then show ?case

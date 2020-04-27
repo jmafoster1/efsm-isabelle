@@ -40,7 +40,10 @@ definition less_eq_aexp :: "'a aexp \<Rightarrow> 'a aexp \<Rightarrow> bool"
 lemma aexp_antisym: "(x::'a aexp) < y = (\<not>(y < x) \<and> (x \<noteq> y))"
   by (induction x y rule: less_aexp.induct) auto
 
-lemma aexp_trans: "(x::'a aexp) < y \<Longrightarrow> y < z \<Longrightarrow> x < z"
+lemma aexp_trans:
+  "(x::'a aexp) < y \<Longrightarrow>
+   y < z \<Longrightarrow>
+   x < z"
   proof (induction x y arbitrary: z rule: less_aexp.induct)
     case (1 l1 l2)
     then show ?case by (cases z, auto)
@@ -124,9 +127,13 @@ instance proof
       by (metis aexp_antisym less_eq_aexp_def)
     show "(x \<le> x)"
       by (simp add: less_eq_aexp_def)
-    show "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z"
+    show "x \<le> y \<Longrightarrow>
+   y \<le> z \<Longrightarrow>
+   x \<le> z"
       using aexp_trans by (metis less_eq_aexp_def)
-    show "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = y"
+    show "x \<le> y \<Longrightarrow>
+   y \<le> x \<Longrightarrow>
+   x = y"
       unfolding less_eq_aexp_def using aexp_antisym by blast
     show "x \<le> y \<or> y \<le> x"
       unfolding less_eq_aexp_def using aexp_antisym by blast

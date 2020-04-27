@@ -1,4 +1,4 @@
-theory EFSM_LTL                                                     
+theory EFSM_LTL
 imports "../EFSM" "HOL-Library.Linear_Temporal_Logic_on_Streams"
 begin
 
@@ -25,7 +25,8 @@ fun ltl_step :: "transition_matrix \<Rightarrow> nat option \<Rightarrow> regist
                      (Some s', (apply_outputs (Outputs t) (join_ir i r)), (apply_updates (Updates t) (join_ir i r) r))
                   )"
 
-lemma ltl_step_alt: "ltl_step e (Some s) r t = (let possibilities = possible_steps e s r (fst t) (snd t) in
+lemma ltl_step_alt:
+  "ltl_step e (Some s) r t = (let possibilities = possible_steps e s r (fst t) (snd t) in
                    if possibilities = {||} then (None, [], r)
                    else
                      let (s', t') = Eps (\<lambda>x. x |\<in>| possibilities) in
@@ -34,7 +35,9 @@ lemma ltl_step_alt: "ltl_step e (Some s) r t = (let possibilities = possible_ste
   apply (case_tac t)
   by (simp add: Let_def)
 
-lemma ltl_step_none: "possible_steps e s r (fst ie) (snd ie) = {||} \<Longrightarrow> ltl_step e (Some s) r ie = (None, [], r)"
+lemma ltl_step_none:
+  "possible_steps e s r (fst ie) (snd ie) = {||} \<Longrightarrow>
+   ltl_step e (Some s) r ie = (None, [], r)"
   by (simp add: ltl_step_alt)
 
 lemma ltl_step_some: assumes "possible_steps e s r l i = {|(s', t)|}"
@@ -72,7 +75,8 @@ lemma state_eq_holds: "state_eq s = holds (\<lambda>x. statename x = s)"
   apply (rule ext)
   by (simp add: state_eq_def holds_def)
 
-lemma state_eq_None_not_Some: "state_eq None s \<Longrightarrow> \<not> state_eq (Some n) s"
+lemma state_eq_None_not_Some:
+  "state_eq None s \<Longrightarrow> \<not> state_eq (Some n) s"
   by (simp add: state_eq_def)
 
 definition label_eq :: "string \<Rightarrow> state stream \<Rightarrow> bool" where
@@ -95,10 +99,12 @@ definition output_eq :: "value option list \<Rightarrow> state stream \<Rightarr
 lemma shd_state_is_none: "(state_eq None) (make_full_observation e None r p t)"
   by (simp add: state_eq_def)
 
-lemma unfold_observe_none: "make_full_observation e None d p t = (\<lparr>statename = None, datastate = d, event=(shd t), output = p\<rparr>##(make_full_observation e None d [] (stl t)))"
+lemma unfold_observe_none:
+  "make_full_observation e None d p t = (\<lparr>statename = None, datastate = d, event=(shd t), output = p\<rparr>##(make_full_observation e None d [] (stl t)))"
   by (simp add: stream.expand)
 
-lemma once_none_always_none: "alw (state_eq None) (make_full_observation e None r p t)"
+lemma once_none_always_none:
+  "alw (state_eq None) (make_full_observation e None r p t)"
 proof -
   obtain ssa :: "((String.literal \<times> value list) stream \<Rightarrow> state stream) \<Rightarrow> (String.literal \<times> value list) stream" where
       "\<forall>f p s. f (stl (ssa f)) \<noteq> stl (f (ssa f)) \<or> alw p (f s) = alw (\<lambda>s. p (f s)) s"
@@ -109,7 +115,8 @@ proof -
     by (metis (no_types) alw.simps shd_state_is_none stream.sel(2) unfold_observe_none)
 qed
 
-lemma once_none_nxt_always_none: "alw (nxt (state_eq None)) (make_full_observation e None r p t)"
+lemma once_none_nxt_always_none:
+  "alw (nxt (state_eq None)) (make_full_observation e None r p t)"
 proof(coinduction)
   case alw
   then show ?case
@@ -117,7 +124,8 @@ proof(coinduction)
     by (metis alw_iff_sdrop nxt.simps once_none_always_none sdrop_simps(2) shd_state_is_none)
 qed
 
-lemma no_output_none: "nxt (alw (output_eq [])) (make_full_observation e None r p t)"
+lemma no_output_none:
+  "nxt (alw (output_eq [])) (make_full_observation e None r p t)"
 proof -
   obtain ss :: "((String.literal \<times> value list) stream \<Rightarrow> state stream) \<Rightarrow> (String.literal \<times> value list) stream" where
     "\<forall>f p s. f (stl (ss f)) \<noteq> stl (f (ss f)) \<or> alw p (f s) = alw (\<lambda>s. p (f s)) s"
@@ -126,13 +134,16 @@ proof -
     by (simp add: output_eq_def all_imp_alw)
 qed
 
-lemma no_output_none_nxt: "alw (nxt (output_eq [])) (make_full_observation e None r p t)"
+lemma no_output_none_nxt:
+  "alw (nxt (output_eq [])) (make_full_observation e None r p t)"
   by (metis alw_inv alw_mono no_output_none nxt.simps)
 
-lemma no_output_none_if_empty: "alw (output_eq []) (make_full_observation e None r [] t)"
+lemma no_output_none_if_empty:
+  "alw (output_eq []) (make_full_observation e None r [] t)"
   by (metis alw_nxt make_full_observation.sel(1) no_output_none output_eq_def state.select_convs(4))
 
-lemma no_updates_none: "alw (\<lambda>x. datastate (shd x) = r) (make_full_observation e None r p t)"
+lemma no_updates_none:
+  "alw (\<lambda>x. datastate (shd x) = r) (make_full_observation e None r p t)"
 proof -
   have "alw (\<lambda>x. datastate (shd x) = r) (make_full_observation e None r [] (stl t))"
     proof -
@@ -150,17 +161,22 @@ proof -
     qed
   qed
 
-lemma event_components: "(label_eq l aand input_eq i) s = (event (shd s) = (String.implode l, i))"
+lemma event_components:
+  "(label_eq l aand input_eq i) s = (event (shd s) = (String.implode l, i))"
   apply (simp add: label_eq_def input_eq_def)
   by (metis fst_conv prod.collapse snd_conv)
 
-lemma alw_not_some: "alw (\<lambda>xs. statename (shd xs) \<noteq> Some s) (make_full_observation e None r p t)"
+lemma alw_not_some:
+  "alw (\<lambda>xs. statename (shd xs) \<noteq> Some s) (make_full_observation e None r p t)"
   by (metis (mono_tags, lifting) alw_mono once_none_always_none option.distinct(1) state_eq_def)
 
-lemma state_none: "((state_eq None) impl nxt (state_eq None)) (make_full_observation e s r p t)"
+lemma state_none:
+  "((state_eq None) impl nxt (state_eq None)) (make_full_observation e s r p t)"
   by (simp add: state_eq_def)
 
-lemma state_none_2: "(state_eq None) (make_full_observation e s r p t) \<Longrightarrow> (state_eq None) (make_full_observation e s r p (stl t))"
+lemma state_none_2:
+  "(state_eq None) (make_full_observation e s r p t) \<Longrightarrow>
+   (state_eq None) (make_full_observation e s r p (stl t))"
   by (simp add: state_eq_def)
 
 lemma decompose_pair: "e \<noteq> (l, i) = (\<not> (fst e =l \<and> snd e = i))"
@@ -186,10 +202,14 @@ definition check_exp :: "ltl_gexp \<Rightarrow> state stream \<Rightarrow> bool"
 lemma alw_ev: "alw f = not (ev (\<lambda>s. \<not>f s))"
   by simp
 
-lemma stream_eq_scons: "shd x = h \<Longrightarrow> stl x = t \<Longrightarrow> x = h##t"
+lemma stream_eq_scons:
+  "shd x = h \<Longrightarrow>
+   stl x = t \<Longrightarrow>
+   x = h##t"
   by auto
 
-lemma alw_state_eq_smap: "alw (state_eq s) ss = alw (\<lambda>ss. shd ss = s) (smap statename ss)"
+lemma alw_state_eq_smap:
+  "alw (state_eq s) ss = alw (\<lambda>ss. shd ss = s) (smap statename ss)"
   apply standard
    apply (simp add: alw_iff_sdrop state_eq_def)
   by (simp add: alw_mono alw_smap state_eq_def)
@@ -208,11 +228,14 @@ lemma snth_sconst: "(\<forall>i. s !! i = h) = (s = sconst h)"
 lemma alw_sconst: "(alw (\<lambda>xs. shd xs = h) t) = (t = sconst h)"
   by (simp add: snth_sconst[symmetric] alw_iff_sdrop)
 
-lemma smap_statename_None: "smap statename (make_full_observation e None r p i) = sconst None"
+lemma smap_statename_None:
+  "smap statename (make_full_observation e None r p i) = sconst None"
   by (meson EFSM_LTL.alw_sconst alw_state_eq_smap once_none_always_none)
 
 (* Out of interest, Nitpick finds a spurious counterexample to this *)
-lemma sdrop_if_suntil: "(p suntil q) \<omega> \<Longrightarrow> \<exists>j. q (sdrop j \<omega>) \<and> (\<forall>k < j. p (sdrop k \<omega>))"
+lemma sdrop_if_suntil:
+  "(p suntil q) \<omega> \<Longrightarrow>
+   \<exists>j. q (sdrop j \<omega>) \<and> (\<forall>k < j. p (sdrop k \<omega>))"
 proof(induction rule: suntil.induct)
   case (base \<omega>)
 then show ?case
@@ -226,13 +249,18 @@ next
     using ev_at_imp_snth less_Suc_eq_0_disj by auto
 qed
 
-lemma suntil_implies_until: "(\<phi> suntil \<psi>) \<omega> \<Longrightarrow> (\<phi> until \<psi>) \<omega>"
+lemma suntil_implies_until:
+  "(\<phi> suntil \<psi>) \<omega> \<Longrightarrow> (\<phi> until \<psi>) \<omega>"
   by (simp add: UNTIL.base UNTIL.step suntil_induct_strong)
 
-lemma alw_implies_until: "alw \<phi> \<omega> \<Longrightarrow> (\<phi> until \<psi>) \<omega>"
+lemma alw_implies_until:
+  "alw \<phi> \<omega> \<Longrightarrow> (\<phi> until \<psi>) \<omega>"
   by (metis until_false until_mono)
 
-lemma until_ev_suntil: "ev \<psi> \<omega> \<Longrightarrow> (\<phi> until \<psi>) \<omega> \<Longrightarrow> (\<phi> suntil \<psi>) \<omega>"
+lemma until_ev_suntil:
+  "ev \<psi> \<omega> \<Longrightarrow>
+   (\<phi> until \<psi>) \<omega> \<Longrightarrow>
+   (\<phi> suntil \<psi>) \<omega>"
 proof(induction rule: ev.induct)
   case (base xs)
   then show ?case
@@ -243,13 +271,20 @@ next
     by (metis UNTIL.cases suntil.base suntil.step)
 qed
 
-lemma suntil_as_until: "(\<phi> suntil \<psi>) \<omega> = ((\<phi> until \<psi>) \<omega> \<and> ev \<psi> \<omega>)"
+lemma suntil_as_until:
+  "(\<phi> suntil \<psi>) \<omega> = ((\<phi> until \<psi>) \<omega> \<and> ev \<psi> \<omega>)"
   using ev_suntil suntil_implies_until until_ev_suntil by blast
 
-lemma not_relesased_yet: "(\<phi> until \<psi>) \<omega> \<Longrightarrow> \<not> \<psi> \<omega> \<Longrightarrow> \<phi> \<omega>"
+lemma not_relesased_yet:
+  "(\<phi> until \<psi>) \<omega> \<Longrightarrow>
+   \<not> \<psi> \<omega> \<Longrightarrow>
+   \<phi> \<omega>"
   using UNTIL.cases by auto
 
-lemma until_must_release: "ev (not \<phi>) \<omega> \<Longrightarrow> (\<phi> until \<psi>) \<omega> \<Longrightarrow> ev \<psi> \<omega>"
+lemma until_must_release:
+  "ev (not \<phi>) \<omega> \<Longrightarrow>
+   (\<phi> until \<psi>) \<omega> \<Longrightarrow>
+   ev \<psi> \<omega>"
 proof(induction rule: ev.induct)
   case (base xs)
   then show ?case
@@ -260,10 +295,12 @@ next
     using UNTIL.cases by blast
 qed
 
-lemma until_as_suntil: "(\<phi> until \<psi>) \<omega> = ((\<phi> suntil \<psi>) or (alw \<phi>)) \<omega>"
+lemma until_as_suntil:
+  "(\<phi> until \<psi>) \<omega> = ((\<phi> suntil \<psi>) or (alw \<phi>)) \<omega>"
   using alw_implies_until not_alw_iff suntil_implies_until until_ev_suntil until_must_release by blast
 
-lemma not_suntil: "(\<not> (p suntil q) \<omega>) = (\<not> (p until q) \<omega> \<or> alw (not q) \<omega>)"
+lemma not_suntil:
+  "(\<not> (p suntil q) \<omega>) = (\<not> (p until q) \<omega> \<or> alw (not q) \<omega>)"
   by (simp add: suntil_as_until alw_iff_sdrop ev_iff_sdrop)
 
 lemma "(p until q) \<omega> = (q \<omega> \<or> (p \<omega> \<and> (p until q) (stl \<omega>)))"
@@ -272,10 +309,14 @@ lemma "(p until q) \<omega> = (q \<omega> \<or> (p \<omega> \<and> (p until q) (
 lemma stl_as_sdrop: "stl s = sdrop 1 s"
   by simp
 
-lemma less_suc: "(\<forall>k<Suc j. p (sdrop k \<omega>)) = ((\<forall>k< j. p (sdrop k \<omega>)) \<and> p (sdrop j \<omega>))"
+lemma less_suc:
+  "(\<forall>k<Suc j. p (sdrop k \<omega>)) = ((\<forall>k< j. p (sdrop k \<omega>)) \<and> p (sdrop j \<omega>))"
   using less_Suc_eq by auto
 
-lemma sdrop_until: "q (sdrop j \<omega>) \<Longrightarrow> \<forall>k<j. p (sdrop k \<omega>) \<Longrightarrow> (p until q) \<omega>"
+lemma sdrop_until:
+  "q (sdrop j \<omega>) \<Longrightarrow>
+   \<forall>k<j. p (sdrop k \<omega>) \<Longrightarrow>
+   (p until q) \<omega>"
 proof(induct j arbitrary: \<omega>)
   case 0
   then show ?case
@@ -286,13 +327,17 @@ next
     by (metis Suc_mono UNTIL.simps sdrop.simps(1) sdrop.simps(2) zero_less_Suc)
 qed
 
-lemma sdrop_suntil: "q (sdrop j \<omega>) \<Longrightarrow> (\<forall>k < j. p (sdrop k \<omega>)) \<Longrightarrow> (p suntil q) \<omega>"
+lemma sdrop_suntil:
+  "q (sdrop j \<omega>) \<Longrightarrow>
+   (\<forall>k < j. p (sdrop k \<omega>)) \<Longrightarrow>
+   (p suntil q) \<omega>"
   apply (simp add: suntil_as_until conj_commute)
   apply standard
    apply (simp add: nxt_ev nxt_sdrop)
   by (simp add: sdrop_until)
 
-lemma sdrop_iff_suntil: "(p suntil q) \<omega> = (\<exists>j. q (sdrop j \<omega>) \<and> (\<forall>k < j. p (sdrop k \<omega>)))"
+lemma sdrop_iff_suntil:
+  "(p suntil q) \<omega> = (\<exists>j. q (sdrop j \<omega>) \<and> (\<forall>k < j. p (sdrop k \<omega>)))"
   using sdrop_if_suntil sdrop_suntil by blast
 
 end
