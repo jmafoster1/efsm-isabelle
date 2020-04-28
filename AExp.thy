@@ -106,6 +106,14 @@ translations
   "_Map (_Maplets ms1 ms2)"     \<leftharpoondown> "_MapUpd (_Map ms1) ms2"
   "_Maplets ms1 (_Maplets ms2 ms3)" \<leftharpoondown> "_Maplets (_Maplets ms1 ms2) ms3"
 
+fun replace_reg :: "vname aexp \<Rightarrow> nat \<Rightarrow> vname aexp" where
+  "replace_reg (L v) _ = L v" |
+  "replace_reg (V (I i)) _ = V (I i)" |
+  "replace_reg (V (R r)) r' = V (R r')" |
+  "replace_reg (Plus a b) r' = Plus (replace_reg a r') (replace_reg b r')" |
+  "replace_reg (Minus a b) r' = Minus (replace_reg a r') (replace_reg b r')" |
+  "replace_reg (Times a b) r' = Times (replace_reg a r') (replace_reg b r')"
+
 definition input2state :: "value list \<Rightarrow> registers" where
   "input2state n = fold (\<lambda>(k, v) f. f(k $:= Some v)) (enumerate 0 n) (K$ None)"
 
