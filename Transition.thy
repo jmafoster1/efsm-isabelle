@@ -31,9 +31,6 @@ definition same_structure :: "transition \<Rightarrow> transition \<Rightarrow> 
     length (Outputs t1) = length (Outputs t2)
   )"
 
-definition finfun_as_list :: "('a::linorder \<Rightarrow>f 'b) \<Rightarrow> ('a \<times> 'b) list" where
-  "finfun_as_list f = map (\<lambda>x. (x, f $ x)) (finfun_to_list f)"
-
 definition enumerate_inputs :: "transition \<Rightarrow> nat set" where
   "enumerate_inputs t = (\<Union> (set (map enumerate_gexp_inputs (Guards t)))) \<union>
                         (\<Union> (set (map enumerate_aexp_inputs (Outputs t)))) \<union>
