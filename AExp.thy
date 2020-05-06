@@ -35,20 +35,14 @@ fun is_lit :: "'a aexp \<Rightarrow> bool" where
   "is_lit (L _) = True" |
   "is_lit _ = False"
 
-lemma aexp_induct_separate_V_cases: "(\<And>x. P (L x)) \<Longrightarrow>
-    (\<And>x. P (V (I x))) \<Longrightarrow>
-    (\<And>x. P (V (R x))) \<Longrightarrow>
-    (\<And>x1a x2a. P x1a \<Longrightarrow>
-   P x2a \<Longrightarrow>
-   P (Plus x1a x2a)) \<Longrightarrow>
-
-    (\<And>x1a x2a. P x1a \<Longrightarrow>
-   P x2a \<Longrightarrow>
-   P (Minus x1a x2a)) \<Longrightarrow>
-   (\<And>x1a x2a. P x1a \<Longrightarrow>
-   P x2a \<Longrightarrow>
-   P (Times x1a x2a)) \<Longrightarrow>
-   P aexp"
+lemma aexp_induct_separate_V_cases  [case_names L I R Plus Minus Times]:
+  "(\<And>x. P (L x)) \<Longrightarrow>
+   (\<And>x. P (V (I x))) \<Longrightarrow>
+   (\<And>x. P (V (R x))) \<Longrightarrow>
+   (\<And>x1a x2a. P x1a \<Longrightarrow> P x2a \<Longrightarrow> P (Plus x1a x2a)) \<Longrightarrow>
+   (\<And>x1a x2a. P x1a \<Longrightarrow> P x2a \<Longrightarrow> P (Minus x1a x2a)) \<Longrightarrow>
+   (\<And>x1a x2a. P x1a \<Longrightarrow> P x2a \<Longrightarrow> P (Times x1a x2a)) \<Longrightarrow>
+   P a"
   by (metis aexp.induct vname.exhaust)
 
 fun aval :: "'a aexp \<Rightarrow> 'a datastate \<Rightarrow> value option" where
@@ -87,32 +81,7 @@ translations
 lemma empty_None [simp]: "<> = (K$ None)"
   by (simp add: bot_option_def)
 
-nonterminal maplets and maplet
 
-(* TODO: get the <1 := L (Num x)> kind of syntax back *)
-syntax
-  "_maplet"  :: "['a, 'a] \<Rightarrow> maplet"             ("_ /:=/ _")
-  "_maplets" :: "['a, 'a] \<Rightarrow> maplet"             ("_ /[:=]/ _")
-  ""         :: "maplet \<Rightarrow> maplets"             ("_")
-  "_Maplets" :: "[maplet, maplets] \<Rightarrow> maplets" ("_,/ _")
-  "_MapUpd"  :: "['a \<rightharpoonup> 'b, maplets] \<Rightarrow> 'a \<rightharpoonup> 'b" ("_/'(_')" [900, 0] 900)
-  "_Map"     :: "maplets \<Rightarrow> 'a \<rightharpoonup> 'b"            ("(1[_])")
-  "_Map"     :: "maplets \<Rightarrow> 'a \<rightharpoonup> 'b"            ("(1<_>)")
-
-translations
-  "_MapUpd m (_Maplets xy ms)"  \<rightleftharpoons> "_MapUpd (_MapUpd m xy) ms"
-  "_MapUpd m (_maplet  x y)"    \<rightleftharpoons> "m(x $:= CONST Some y)"
-  "_Map ms"                     \<rightleftharpoons> "_MapUpd (CONST empty) ms"
-  "_Map (_Maplets ms1 ms2)"     \<leftharpoondown> "_MapUpd (_Map ms1) ms2"
-  "_Maplets ms1 (_Maplets ms2 ms3)" \<leftharpoondown> "_Maplets (_Maplets ms1 ms2) ms3"
-
-fun replace_reg :: "vname aexp \<Rightarrow> nat \<Rightarrow> vname aexp" where
-  "replace_reg (L v) _ = L v" |
-  "replace_reg (V (I i)) _ = V (I i)" |
-  "replace_reg (V (R r)) r' = V (R r')" |
-  "replace_reg (Plus a b) r' = Plus (replace_reg a r') (replace_reg b r')" |
-  "replace_reg (Minus a b) r' = Minus (replace_reg a r') (replace_reg b r')" |
-  "replace_reg (Times a b) r' = Times (replace_reg a r') (replace_reg b r')"
 
 definition input2state :: "value list \<Rightarrow> registers" where
   "input2state n = fold (\<lambda>(k, v) f. f(k $:= Some v)) (enumerate 0 n) (K$ None)"
@@ -571,27 +540,27 @@ lemma aval_take:
   "max_input x < Some a \<Longrightarrow>
    aval x (join_ir i r) = aval x (join_ir (take a i) r)"
 proof(induct x rule: aexp_induct_separate_V_cases)
-  case (1 x)
+  case (L x)
   then show ?case
     by simp
 next
-  case (2 x)
+  case (I x)
   then show ?case
     by (metis aval.simps(2) input2state_take join_ir_def le_cases less_option_Some max_input_I take_all vname.simps(5))
 next
-  case (3 x)
+  case (R x)
   then show ?case
     by (simp add: join_ir_def)
 next
-  case (4 x1a x2a)
+  case (Plus x1a x2a)
   then show ?case
     by (simp add: max_input_Plus)
 next
-  case (5 x1a x2a)
+  case (Minus x1a x2a)
   then show ?case
     by (simp add: max_input_Minus)
 next
-  case (6 x1a x2a)
+  case (Times x1a x2a)
   then show ?case
     by (simp add: max_input_Times)
 qed

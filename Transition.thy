@@ -61,7 +61,7 @@ definition enumerate_ints :: "transition \<Rightarrow> int set" where
                       (\<Union> (set (map (\<lambda>(r, _). enumerate_aexp_ints (V (R r))) (Updates t))))"
 
 definition valid_transition :: "transition \<Rightarrow> bool" where
-  "valid_transition t = (case max_input t of None \<Rightarrow> Arity t = 0 | Some x \<Rightarrow> x < Arity t)"
+  "valid_transition t = (\<forall>i \<in> enumerate_inputs t. i < Arity t)"
 
 definition can_take :: "nat \<Rightarrow> vname gexp list \<Rightarrow> inputs \<Rightarrow> registers \<Rightarrow> bool" where
   "can_take a g i r = (length i = a \<and> apply_guards g (join_ir i r))"
