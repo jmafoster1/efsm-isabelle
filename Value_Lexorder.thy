@@ -3,100 +3,33 @@ imports Value
 begin
 
 instantiation "value" :: linorder begin
-fun less_eq_value :: "value \<Rightarrow> value \<Rightarrow> bool" where
-  "less_eq_value (Num n) (Str s) = True" |
-  "less_eq_value (Str s) (Num n) = False" |
-  "less_eq_value (Str n) (Str s) = less_eq n s" |
-  "less_eq_value (Num n) (Num s) = less_eq n s"
-
+text_raw\<open>\snip{valueorder}{1}{2}{%\<close>
 fun less_value :: "value \<Rightarrow> value \<Rightarrow> bool" where
-  "less_value (Num n) (Str s) = True" |
-  "less_value (Str s) (Num n) = False" |
-  "less_value (Str n) (Str s) = less n s" |
-  "less_value (Num n) (Num s) = less n s"
+  "(Num n) < (Str s) = True" |
+  "(Str s) < (Num n) = False" |
+  "(Str s1) < (Str s2) = (s1 < s2)" |
+  "(Num n1) < (Num n2) = (n1 < n2)"
+text_raw\<open>}%endsnip\<close>
 
-instance proof
-  fix x y::"value"
-  show "(x < y) = (x \<le> y \<and> \<not> y \<le> x)"
-  proof (induct x)
-    case (Num x)
-    then show ?case
-      apply (cases y)
-      by auto
-  next
-    case (Str x)
-    then show ?case
-      apply (cases y)
-      by auto
-  qed
-  fix x :: "value"
-  show "x \<le> x"
-    apply (cases x)
-    by auto
-  fix x y z::"value"
-  show "x \<le> y \<Longrightarrow>
-   y \<le> z \<Longrightarrow>
-   x \<le> z"
-  proof (induct x)
-    case (Num n)
-    then show ?case
-    proof (induct y)
-      case (Num x)
-      then show ?case
-        apply (cases z)
-        by auto
-    next
-      case (Str x)
-      then show ?case
-        apply (cases z)
-        by auto
-    qed
-  next
-    case (Str s)
-    then show ?case
-    proof (induct y)
-      case (Num x)
-      then show ?case
-        apply (cases z)
-        by auto
-    next
-      case (Str x)
-      then show ?case
-        apply (cases z)
-        by auto
-    qed
-  qed
-next
-  fix x y :: "value"
-  show "x \<le> y \<Longrightarrow>
-   y \<le> x \<Longrightarrow>
-   x = y"
-  proof (induct x)
-    case (Num x)
-    then show ?case
-      apply (cases y)
-      by auto
-  next
-    case (Str x)
-    then show ?case
-      apply (cases y)
-      by auto
-  qed
-next
-  fix x y::"value"
-  show "x \<le> y \<or> y \<le> x"
-  proof (induct x)
-    case (Num x)
-    then show ?case
-      apply (cases y)
-      by auto
-  next
-    case (Str x)
-    then show ?case
-      apply (cases y)
-      by auto
-  qed
-qed
+definition less_eq_value :: "value \<Rightarrow> value \<Rightarrow> bool" where
+  "less_eq_value v1 v2 = (v1 < v2 \<or> v1 = v2)"
+declare less_eq_value_def [simp]
+
+instance
+  apply standard
+      apply (simp, metis less_imp_not_less less_value.elims(2) less_value.simps(3) less_value.simps(4))
+     apply simp
+  subgoal for x y z
+    apply (induct x y rule: less_value.induct)
+       apply (metis less_eq_value_def less_value.elims(3) less_value.simps(2) value.simps(4))
+      apply simp
+     apply (metis dual_order.strict_trans less_eq_value_def less_value.elims(2) less_value.simps(3) value.distinct(1))
+    by (cases z, auto)
+   apply (metis less_eq_value_def less_imp_not_less less_value.elims(2) less_value.simps(3) less_value.simps(4))
+  subgoal for x y
+    by (induct x y rule: less_value.induct, auto)
+  done
+
 end
 
 end

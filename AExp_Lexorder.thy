@@ -2,142 +2,164 @@ theory AExp_Lexorder
 imports AExp Value_Lexorder
 begin
 
+fun height :: "'a aexp \<Rightarrow> nat"  where
+  "height (L l2) = 1" |
+  "height (V v2) = 1" |
+  "height (Plus e1 e2) = 1 + max (height e1) (height e2)" |
+  "height (Minus e1 e2) = 1 + max (height e1) (height e2)" |
+  "height (Times e1 e2) = 1 + max (height e1) (height e2)"
+
 instantiation aexp :: (linorder) linorder begin
-fun less_aexp :: "'a aexp \<Rightarrow> 'a aexp \<Rightarrow> bool"  where
-  "less_aexp (L l1) (L l2) = (l1 < l2)" |
-  "less_aexp (L l1) (V v2) = True" |
-  "less_aexp (L l1) (Plus e1 e2) = True" |
-  "less_aexp (L l1) (Minus e1 e2) = True" |
-  "less_aexp (L l1) (Times e1 e2) = True" |
+fun less_aexp_aux :: "'a aexp \<Rightarrow> 'a aexp \<Rightarrow> bool"  where
+  "less_aexp_aux (L l1) (L l2) = (l1 < l2)" |
+  "less_aexp_aux (L l1) _ = True" |
 
-  "less_aexp (V v1) (L l1) = False" |
-  "less_aexp (V v1) (V v2) = (v1 < v2)" |
-  "less_aexp (V v1) (Plus e1 e2) = True" |
-  "less_aexp (V v1) (Minus e1 e2) = True" |
-  "less_aexp (V v1) (Times e1 e2) = True" |
+  "less_aexp_aux (V v1) (L l1) = False" |
+  "less_aexp_aux (V v1) (V v2) = (v1 < v2)" |
+  "less_aexp_aux (V v1) _ = True" |
 
-  "less_aexp (Plus e1 e2) (L l2) = False" |
-  "less_aexp (Plus e1 e2) (V v2) = False" |
-  "less_aexp (Plus e1 e2) (Plus e1' e2') = ((less_aexp e1 e1') \<or> ((e1 = e1') \<and> (less_aexp e2 e2')))" |
-  "less_aexp (Plus e1 e2) (Minus e1' e2') = True" |
-  "less_aexp (Plus e1 e2) (Times e1' e2') = True" |
+  "less_aexp_aux (Plus e1 e2) (L l2) = False" |
+  "less_aexp_aux (Plus e1 e2) (V v2) = False" |
+  "less_aexp_aux (Plus e1 e2) (Plus e1' e2') = ((less_aexp_aux e1 e1') \<or> ((e1 = e1') \<and> (less_aexp_aux e2 e2')))"|
+  "less_aexp_aux (Plus e1 e2) _ = True" |
 
-  "less_aexp (Minus e1 e2) (L l2) = False" |
-  "less_aexp (Minus e1 e2) (V v2) = False" |
-  "less_aexp (Minus e1 e2) (Plus e1' e2') = False" |
-  "less_aexp (Minus e1 e2) (Minus e1' e2') = ((less_aexp e1 e1') \<or> ((e1 = e1') \<and> (less_aexp e2 e2')))" |
-  "less_aexp (Minus e1 e2) (Times e1' e2') = True" |
+  "less_aexp_aux (Minus e1 e2) (Minus e1' e2') =  ((less_aexp_aux e1 e1') \<or> ((e1 = e1') \<and> (less_aexp_aux e2 e2')))" |
+  "less_aexp_aux (Minus e1 e2) (Times e1' e2') = True" |
+  "less_aexp_aux (Minus e1 e2) _ = False" |
 
-  "less_aexp (Times e1 e2) (L l2) = False" |
-  "less_aexp (Times e1 e2) (V v2) = False" |
-  "less_aexp (Times e1 e2) (Plus e1' e2') = False" |
-  "less_aexp (Times e1 e2) (Minus e1' e2') = False" |
-  "less_aexp (Times e1 e2) (Times e1' e2') = ((less_aexp e1 e1') \<or> ((e1 = e1') \<and> (less_aexp e2 e2')))"
+  "less_aexp_aux (Times e1 e2) (Times e1' e2') =  ((less_aexp_aux e1 e1') \<or> ((e1 = e1') \<and> (less_aexp_aux e2 e2')))" |
+  "less_aexp_aux (Times e1 e2) _ = False"
+
+definition less_aexp :: "'a aexp \<Rightarrow> 'a aexp \<Rightarrow> bool" where
+  "less_aexp a1 a2 = (
+    let
+      h1 = height a1;
+      h2 = height a2
+    in
+    if h1 = h2 then
+      less_aexp_aux a1 a2
+    else
+      h1 < h2
+  )"
 
 definition less_eq_aexp :: "'a aexp \<Rightarrow> 'a aexp \<Rightarrow> bool"
   where "less_eq_aexp e1 e2 \<equiv> (e1 < e2) \<or> (e1 = e2)"
 
-lemma aexp_antisym: "(x::'a aexp) < y = (\<not>(y < x) \<and> (x \<noteq> y))"
-  by (induction x y rule: less_aexp.induct) auto
+declare less_aexp_def [simp]
 
-lemma aexp_trans:
-  "(x::'a aexp) < y \<Longrightarrow>
-   y < z \<Longrightarrow>
-   x < z"
-  proof (induction x y arbitrary: z rule: less_aexp.induct)
-    case (1 l1 l2)
-    then show ?case by (cases z, auto)
-  next
-    case (2 l1 v2)
-    then show ?case by (cases z, auto)
-  next
-    case (3 l1 e1 e2)
-    then show ?case by (cases z, auto)
-  next
-    case (4 l1 e1 e2)
-    then show ?case by (cases z, auto)
-  next
-    case (5 l1 e1 e2)
-    then show ?case by (cases z, auto)
-  next
-    case (6 v1 l1)
-    then show ?case by (cases z, auto)
-  next
-    case (7 v1 v2)
-    then show ?case by (cases z, auto)
-  next
-    case (8 v1 e1 e2)
-    then show ?case by (cases z, auto)
-  next
-    case (9 v1 e1 e2)
-    then show ?case by (cases z, auto)
-  next
-    case (10 v1 e1 e2)
-    then show ?case by (cases z, auto)
-  next
-    case (11 e1 e2 l2)
-    then show ?case by (cases z, auto)
-  next
-    case (12 e1 e2 v2)
-    then show ?case by (cases z, auto)
-  next
-    case (13 e1 e2 e1' e2')
-    then show ?case by (cases z, auto)
-  next
-    case (14 e1 e2 e1' e2')
-    then show ?case by (cases z, auto)
-  next
-    case (15 e1 e2 e1' e2')
-    then show ?case by (cases z, auto)
-  next
-    case (16 e1 e2 l2)
-    then show ?case by (cases z, auto)
-  next
-    case (17 e1 e2 v2)
-    then show ?case by (cases z, auto)
-  next
-    case (18 e1 e2 e1' e2')
-    then show ?case by (cases z, auto)
-  next
-    case (19 e1 e2 e1' e2')
-    then show ?case by (cases z, auto)
-  next
-    case (20 e1 e2 e1' e2')
-    then show ?case by (cases z, auto)
-  next
-    case (21 e1 e2 l2)
-    then show ?case by (cases z, auto)
-  next
-    case (22 e1 e2 v2)
-    then show ?case by (cases z, auto)
-  next
-    case (23 e1 e2 e1' e2')
-    then show ?case by (cases z, auto)
-  next
-    case (24 e1 e2 e1' e2')
-    then show ?case by (cases z, auto)
-  next
-    case (25 e1 e2 e1' e2')
-    then show ?case by (cases z, auto)
-  qed
+lemma less_aexp_aux_antisym: "less_aexp_aux x  y = (\<not>(less_aexp_aux y x) \<and> (x \<noteq> y))"
+  by (induct x y rule: less_aexp_aux.induct, auto)
 
+lemma less_aexp_antisym: "(x::'a aexp) < y = (\<not>(y < x) \<and> (x \<noteq> y))"
+  apply (simp add: Let_def)
+  apply standard
+  using less_aexp_aux_antisym apply blast
+  apply (simp add: not_less)
+  apply clarify
+  by (induct x, auto)
+
+lemma less_aexp_aux_trans: "less_aexp_aux x y \<Longrightarrow> less_aexp_aux y z \<Longrightarrow> less_aexp_aux x z"
+proof (induct x y arbitrary: z rule: less_aexp_aux.induct)
+  case (1 l1 l2)
+  then show ?case by (cases z, auto)
+next
+  case ("2_1" l1 v)
+  then show ?case by (cases z, auto)
+next
+  case ("2_2" l1 v va)
+  then show ?case by (cases z, auto)
+next
+  case ("2_3" l1 v va)
+  then show ?case by (cases z, auto)
+next
+  case ("2_4" l1 v va)
+  then show ?case by (cases z, auto)
+next
+  case (3 v1 l1)
+  then show ?case by (cases z, auto)
+next
+  case (4 v1 v2)
+  then show ?case by (cases z, auto)
+next
+  case ("5_1" v1 v va)
+  then show ?case by (cases z, auto)
+next
+  case ("5_2" v1 v va)
+  then show ?case by (cases z, auto)
+next
+  case ("5_3" v1 v va)
+  then show ?case by (cases z, auto)
+next
+  case (6 e1 e2 l2)
+  then show ?case by (cases z, auto)
+next
+  case (7 e1 e2 v2)
+  then show ?case by (cases z, auto)
+next
+  case (8 e1 e2 e1' e2')
+  then show ?case by (cases z, auto)
+next
+  case ("9_1" e1 e2 v va)
+  then show ?case by (cases z, auto)
+next
+  case ("9_2" e1 e2 v va)
+  then show ?case by (cases z, auto)
+next
+  case (10 e1 e2 e1' e2')
+  then show ?case by (cases z, auto)
+next
+  case (11 e1 e2 e1' e2')
+  then show ?case by (cases z, auto)
+next
+  case ("12_1" e1 e2 v)
+  then show ?case by (cases z, auto)
+next
+  case ("12_2" e1 e2 v)
+  then show ?case by (cases z, auto)
+next
+  case ("12_3" e1 e2 v va)
+  then show ?case by (cases z, auto)
+next
+  case (13 e1 e2 e1' e2')
+  then show ?case by (cases z, auto)
+next
+  case ("14_1" e1 e2 v)
+  then show ?case by (cases z, auto)
+next
+  case ("14_2" e1 e2 v)
+  then show ?case by (cases z, auto)
+next
+  case ("14_3" e1 e2 v va)
+  then show ?case by (cases z, auto)
+next
+  case ("14_4" e1 e2 v va)
+  then show ?case by (cases z, auto)
+qed
+
+
+
+lemma less_aexp_trans: "(x::'a aexp) < y \<Longrightarrow> y < z \<Longrightarrow> x < z"
+  apply (simp add: Let_def)
+  apply standard
+   apply (metis AExp_Lexorder.less_aexp_aux_trans dual_order.asym)
+  by presburger
+    
 instance proof
     fix x y z :: "'a aexp"
     show "(x < y) = (x \<le> y \<and> \<not> y \<le> x)"
-      by (metis aexp_antisym less_eq_aexp_def)
+      by (metis less_aexp_antisym less_eq_aexp_def)
     show "(x \<le> x)"
       by (simp add: less_eq_aexp_def)
-    show "x \<le> y \<Longrightarrow>
-   y \<le> z \<Longrightarrow>
-   x \<le> z"
-      using aexp_trans by (metis less_eq_aexp_def)
-    show "x \<le> y \<Longrightarrow>
-   y \<le> x \<Longrightarrow>
-   x = y"
-      unfolding less_eq_aexp_def using aexp_antisym by blast
+    show "x \<le> y \<Longrightarrow> y \<le> z \<Longrightarrow> x \<le> z"
+      by (metis less_aexp_trans less_eq_aexp_def)
+    show "x \<le> y \<Longrightarrow> y \<le> x \<Longrightarrow> x = y"
+      unfolding less_eq_aexp_def using less_aexp_antisym by blast
     show "x \<le> y \<or> y \<le> x"
-      unfolding less_eq_aexp_def using aexp_antisym by blast
+      unfolding less_eq_aexp_def using less_aexp_antisym by blast
   qed
 end
+
+lemma smaller_height: "height a1 < height a2 \<Longrightarrow> a1 < a2"
+  by simp
 
 end

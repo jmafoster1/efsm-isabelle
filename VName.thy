@@ -13,32 +13,32 @@ datatype vname = I nat | R nat
 text_raw\<open>}%endsnip\<close>
 
 instantiation vname :: linorder begin
-fun less_eq_vname :: "vname \<Rightarrow> vname \<Rightarrow> bool" where
-  "less_eq_vname (I n1) (R n2) = True" |
-  "less_eq_vname (R n1) (I n2) = False" |
-  "less_eq_vname (I n1) (I n2) = less_eq n1 n2" |
-  "less_eq_vname (R n1) (R n2) = less_eq n1 n2"
-
+text_raw\<open>\snip{vnameorder}{1}{2}{%\<close>
 fun less_vname :: "vname \<Rightarrow> vname \<Rightarrow> bool" where
-  "less_vname (I n1) (R n2) = True" |
-  "less_vname (R n1) (I n2) = False" |
-  "less_vname (I n1) (I n2) = less n1 n2" |
-  "less_vname (R n1) (R n2) = less n1 n2"
+  "(I n1) < (R n2) = True" |
+  "(R n1) < (I n2) = False" |
+  "(I n1) < (I n2) = (n1 < n2)" |
+  "(R n1) < (R n2) = (n1 < n2)"
+text_raw\<open>}%endsnip\<close>
+
+definition less_eq_vname :: "vname \<Rightarrow> vname \<Rightarrow> bool" where
+  "less_eq_vname v1 v2 = (v1 < v2 \<or> v1 = v2)"
+declare less_eq_vname_def [simp]
 
 instance
   apply standard
-  subgoal for x y
-    by(induct x y rule: less_vname.induct, auto)
-  using less_eq_vname.elims(3) apply fastforce
+      apply (metis (full_types) dual_order.asym less_eq_vname_def less_vname.simps(2) less_vname.simps(3) less_vname.simps(4) vname.exhaust)
+     apply simp
   subgoal for x y z
-    apply(induct x y rule: less_vname.induct)
-       apply (metis less_eq_vname.elims(2) less_eq_vname.simps(1) vname.simps(4))
+    apply (induct x y rule: less_vname.induct)
+       apply (metis less_eq_vname_def less_vname.elims(2) less_vname.elims(3) vname.simps(4))
       apply simp
-    using less_eq_vname.elims(3) order_trans apply fastforce
-    by (metis le_trans less_eq_vname.elims(2) less_eq_vname.simps(4) vname.simps(4))
-  subgoal for x y
-    by(induct x y rule: less_vname.induct, auto)
-  by (metis less_eq_vname.elims(3) less_eq_vname.simps(3) less_eq_vname.simps(4) linear)
+     apply (metis less_eq_vname_def less_trans less_vname.elims(3) less_vname.simps(3) vname.simps(4))
+    by (metis le_less_trans less_eq_vname_def less_imp_le_nat less_vname.elims(2) less_vname.simps(4) vname.simps(4))
+   apply (metis dual_order.asym less_eq_vname_def less_vname.elims(2) less_vname.simps(3) less_vname.simps(4))
+   subgoal for x y
+     by (induct x y rule: less_vname.induct, auto)
+   done
 end
 
 end
