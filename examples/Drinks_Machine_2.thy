@@ -111,22 +111,22 @@ lemma drinks_reject_0_2:
   by (cases a, case_tac "snd a", auto)
 
 (*Here's the lemma for which
-proof(induction t rule: input_simulation_induct arbitrary: r)
+proof(induction t rule: execution_equivalence_induct arbitrary: r)
 breaks
 *)
 
-lemma input_simulation_1_2: "input_simulation drinks 1 r drinks2 2 r t"
+lemma execution_equivalence_1_2: "execution_equivalence drinks 1 r drinks2 2 r t"
 proof(induction t arbitrary: r)
   case Nil
   then show ?case
-    by (simp add: input_simulation.base)
+    by (simp add: execution_equivalence.base)
 next
   case (Cons a t)
   then show ?case
     apply (cases a, clarify)
     apply simp
     subgoal for l i
-      apply (rule input_simulation.step)
+      apply (rule execution_equivalence.step)
       apply (case_tac "l = STR ''coin'' \<and> length i = 1")
        apply (simp add: possible_steps_1_coin possible_steps_2_coin coin_def)
       apply (case_tac "a=(STR ''vend'', [])")
@@ -137,47 +137,47 @@ next
          apply (clarify, simp add: drinks_vend_insufficient drinks2_vend_insufficient2)
         apply (clarify, simp add: drinks_vend_sufficient drinks2_vend_sufficient)
         apply (induct t)
-         apply (simp add: input_simulation.base)
+         apply (simp add: execution_equivalence.base)
         apply (case_tac aa, clarify)
-        apply (rule input_simulation.step)
+        apply (rule execution_equivalence.step)
         apply (simp add: drinks_end)
       using drinks_vend_invalid apply simp
       using drinks_1_rejects by auto
     done
 qed
 
-lemma input_simulation_1_1:
-  "input_simulation drinks 1 <2 $:= Some (Num 0), 1 $:= i> drinks2 1 <2 $:= Some (Num 0), 1 $:= i> t"
-proof(induction rule: input_simulation_induct)
+lemma execution_equivalence_1_1:
+  "execution_equivalence drinks 1 <2 $:= Some (Num 0), 1 $:= i> drinks2 1 <2 $:= Some (Num 0), 1 $:= i> t"
+proof(induction rule: execution_equivalence_induct)
   case (1 l i t)
   then show ?case
     apply (case_tac "l = STR ''coin'' \<and> length i = 1")
-     apply (rule input_simulation.step)
-     apply (simp add: possible_steps_1_coin possible_steps_1 input_simulation_1_2)
+     apply (rule execution_equivalence.step)
+     apply (simp add: possible_steps_1_coin possible_steps_1 execution_equivalence_1_2)
     apply (case_tac "l = STR ''vend'' \<and> i = []")
-     apply (rule input_simulation.step)
+     apply (rule execution_equivalence.step)
      apply (simp add: drinks_vend_insufficient drinks2_vend_insufficient transitions finfun_update_twist apply_updates_def)
-     apply (rule input_simulation.step)
+     apply (rule execution_equivalence.step)
     using drinks_1_rejects by auto
 qed
 
-lemma input_simulation: "input_simulates drinks drinks2"
-proof(induction rule: input_simulates_induct)
+lemma execution_equivalence: "execution_equivalent drinks drinks2"
+proof(induction rule: execution_equivalent_induct)
   case (1 l i t)
   then show ?case
     apply (case_tac "l = STR ''select'' \<and> length i = 1")
      apply simp
-     apply (rule input_simulation.step)
+     apply (rule execution_equivalence.step)
      apply (simp add: possible_steps_0 Drinks_Machine.possible_steps_0 select_def apply_updates_def)
-    using input_simulation_1_1
+    using execution_equivalence_1_1
     apply (simp add: finfun_update_twist)
-     apply (rule input_simulation.step)
+     apply (rule execution_equivalence.step)
     using drinks_0_rejects by auto
 qed
 
 lemma acceptance:
   "accepts_trace drinks t \<Longrightarrow> accepts_trace drinks2 t"
-  using input_simulation input_simulates_accepts_trace
+  using execution_equivalence execution_equivalent_accepts_trace
   by simp
 
 lemma purchase_coke:

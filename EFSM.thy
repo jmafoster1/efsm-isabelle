@@ -19,15 +19,16 @@ type_synonym cfstate = nat
 type_synonym inputs = "value list"
 type_synonym outputs = "value option list"
 
-type_synonym event = "(label \<times> inputs)"
-type_synonym execution = "event list"
+type_synonym action = "(label \<times> inputs)"
+type_synonym execution = "action list"
 type_synonym observation = "outputs list"
 type_synonym transition_matrix = "((cfstate \<times> cfstate) \<times> transition) fset"
 
 no_notation relcomp (infixr "O" 75) and comp (infixl "o" 55)
 
 (* An execution represents a run of the software and has the form [(label, inputs, outputs)]*)
-type_synonym trace = "(label \<times> inputs \<times> value list) list"
+type_synonym event = "(label \<times> inputs \<times> value list)"
+type_synonym trace = "event list"
 type_synonym log = "trace list"
 
 definition Str :: "string \<Rightarrow> value" where
@@ -171,23 +172,23 @@ lemma accepts_must_be_possible_step:
    \<exists>aa ba. (aa, ba) |\<in>| possible_steps e s r (fst h) (snd h)"
   using accepts_step_equiv by fastforce
 
-inductive input_simulation :: "transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
-  base: "input_simulation e1 s1 r1 e2 s2 r2 []" |
+inductive execution_equivalence :: "transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
+  base: "execution_equivalence e1 s1 r1 e2 s2 r2 []" |
   step: "\<forall>(s1', t1) |\<in>| possible_steps e1 s1 r1 l i.
            \<exists>(s2', t2) |\<in>| possible_steps e2 s2 r2 l i.
-            input_simulation e1 s1' (apply_updates (Updates t1) (join_ir i r1) r1) e2 s2' (apply_updates (Updates t2) (join_ir i r2) r2) es \<Longrightarrow>
+            execution_equivalence e1 s1' (apply_updates (Updates t1) (join_ir i r1) r1) e2 s2' (apply_updates (Updates t2) (join_ir i r2) r2) es \<Longrightarrow>
 
-         input_simulation e1 s1 r1 e2 s2 r2 ((l, i)#es)"
+         execution_equivalence e1 s1 r1 e2 s2 r2 ((l, i)#es)"
 
-lemma input_simulation_induct:
-  "(\<And>l i t. input_simulation e1 s1 r1 e2 s2 r2 t \<Longrightarrow>
-   input_simulation e1 s1 r1 e2 s2 r2 ((l, i) # t)) \<Longrightarrow>
+lemma execution_equivalence_induct:
+  "(\<And>l i t. execution_equivalence e1 s1 r1 e2 s2 r2 t \<Longrightarrow>
+   execution_equivalence e1 s1 r1 e2 s2 r2 ((l, i) # t)) \<Longrightarrow>
 
-input_simulation e1 s1 r1 e2 s2 r2 t"
-  using input_simulation.base by (induct t, auto)
+execution_equivalence e1 s1 r1 e2 s2 r2 t"
+  using execution_equivalence.base by (induct t, auto)
 
-lemma input_simulation_acceptance:
-  "input_simulation e1 s1 r1 e2 s2 r2 t \<Longrightarrow>
+lemma execution_equivalence_acceptance:
+  "execution_equivalence e1 s1 r1 e2 s2 r2 t \<Longrightarrow>
    accepts e1 s1 r1 t \<Longrightarrow>
    accepts e2 s2 r2 t"
 proof(induct t arbitrary: s1 r1 s2 r2)
@@ -199,7 +200,7 @@ next
   then show ?case
     apply (cases a, clarify)
     apply simp
-    apply (rule input_simulation.cases)
+    apply (rule execution_equivalence.cases)
        apply simp
       apply simp
     apply (simp add: no_possible_steps_rejects)
@@ -216,22 +217,22 @@ next
     by simp
 qed
 
-definition input_simulates :: "transition_matrix \<Rightarrow> transition_matrix \<Rightarrow> bool" where
-  "input_simulates e1 e2 \<equiv> \<forall>t. input_simulation e1 0 <> e2 0 <> t"
+definition execution_equivalent :: "transition_matrix \<Rightarrow> transition_matrix \<Rightarrow> bool" where
+  "execution_equivalent e1 e2 \<equiv> \<forall>t. execution_equivalence e1 0 <> e2 0 <> t"
 
-lemma input_simulates_induct:
-  "(\<And>l i t. input_simulation e1 0 <> e2 0 <> t \<Longrightarrow>
-   input_simulation e1 0 <> e2 0 <> ((l, i) # t)) \<Longrightarrow>
+lemma execution_equivalent_induct:
+  "(\<And>l i t. execution_equivalence e1 0 <> e2 0 <> t \<Longrightarrow>
+   execution_equivalence e1 0 <> e2 0 <> ((l, i) # t)) \<Longrightarrow>
 
-input_simulates e1 e2"
-  using input_simulates_def input_simulation_induct by blast
+execution_equivalent e1 e2"
+  using execution_equivalent_def execution_equivalence_induct by blast
 
-lemma input_simulates_accepts_trace:
-  "input_simulates e1 e2 \<Longrightarrow>
+lemma execution_equivalent_accepts_trace:
+  "execution_equivalent e1 e2 \<Longrightarrow>
    accepts_trace e1 t \<Longrightarrow>
    accepts_trace e2 t"
-  apply (simp add: input_simulates_def)
-  using input_simulation_acceptance by blast
+  apply (simp add: execution_equivalent_def)
+  using execution_equivalence_acceptance by blast
 
 definition random_member :: "'a fset \<Rightarrow> 'a option" where
   "random_member f = (if f = {||} then None else Some (Eps (\<lambda>x. x |\<in>| f)))"
@@ -507,23 +508,22 @@ definition rename_regs :: "(nat \<Rightarrow> nat) \<Rightarrow> transition_matr
 definition eq_upto_rename_strong :: "transition_matrix \<Rightarrow> transition_matrix \<Rightarrow> bool" where
   "eq_upto_rename_strong e1 e2 = (\<exists>f. bij f \<and> rename_regs f e1 = e2)"
 
-inductive output_simulation :: "transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
-  base: "output_simulation e1 s1 r1 e2 s2 r2 []" |
+inductive trace_equivalence :: "transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
+  base: "trace_equivalence e1 s1 r1 e2 s2 r2 []" |
   step: "\<forall>(s1', t1) |\<in>| possible_steps e1 s1 r1 l i.
            \<exists>(s2', t2) |\<in>| possible_steps e2 s2 r2 l i.
             apply_outputs (Outputs t1) (join_ir i r1) = apply_outputs (Outputs t2) (join_ir i r2) \<and>
-            output_simulation e1 s1' (apply_updates (Updates t1) (join_ir i r1) r1) e2 s2' (apply_updates (Updates t2) (join_ir i r2) r2) es \<Longrightarrow>
+            trace_equivalence e1 s1' (apply_updates (Updates t1) (join_ir i r1) r1) e2 s2' (apply_updates (Updates t2) (join_ir i r2) r2) es \<Longrightarrow>
 
-         output_simulation e1 s1 r1 e2 s2 r2 ((l, i)#es)"
+         trace_equivalence e1 s1 r1 e2 s2 r2 ((l, i)#es)"
 
-definition output_simulates :: "transition_matrix \<Rightarrow> transition_matrix \<Rightarrow> bool" where
-  "output_simulates e1 e2 \<equiv> \<forall>t. output_simulation e1 0 <> e2 0 <> t"
+definition trace_equivalent :: "transition_matrix \<Rightarrow> transition_matrix \<Rightarrow> bool" where
+  "trace_equivalent e1 e2 \<equiv> \<forall>t. trace_equivalence e1 0 <> e2 0 <> t"
 
 lemma observe_trace_first_outputs_equiv:
   "observe_trace e1 s1 r1 ((l, i) # ts) = observe_trace e2 s2 r2 ((l, i) # ts) \<Longrightarrow>
-
-    step e1 s1 r1 l i = Some (t, s', p, r') \<Longrightarrow>
-    \<exists>(s2', t2)|\<in>|possible_steps e2 s2 r2 l i. apply_outputs (Outputs t2) (join_ir i r2) = p"
+   step e1 s1 r1 l i = Some (t, s', p, r') \<Longrightarrow>
+   \<exists>(s2', t2)|\<in>|possible_steps e2 s2 r2 l i. apply_outputs (Outputs t2) (join_ir i r2) = p"
   apply (simp add: observe_trace_def)
   apply (case_tac "step e2 s2 r2 l i")
    apply simp

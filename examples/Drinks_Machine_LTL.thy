@@ -226,15 +226,15 @@ lemma implode_vend: "String.implode ''vend'' = STR ''vend''"
 lemmas implode_labels = implode_select implode_coin implode_vend(* neverReachS2: THEOREM drinks |- label=select AND I(1) = STR(String_coke) AND
                                 X(label=coin AND I(1) = NUM(100)) AND
                                 X(X(label=vendAND I=InputSequence !empty)) => X(X(X(cfstate=State_2)));;*)
-lemma LTL_neverReachS2:"(((((event_eq (''select'', [Str ''coke''])))
+lemma LTL_neverReachS2:"(((((action_eq (''select'', [Str ''coke''])))
                     aand
-                    (nxt ((event_eq (''coin'', [Num 100])))))
+                    (nxt ((action_eq (''coin'', [Num 100])))))
                     aand
                     (nxt (nxt((label_eq ''vend'' aand (input_eq []))))))
                     impl
                     (nxt (nxt (nxt (state_eq (Some 2))))))
                     (watch drinks i)"
-  apply (simp add: watch_def event_eq implode_labels)
+  apply (simp add: watch_def action_eq implode_labels)
   apply (cases i)
   apply clarify
   apply simp

@@ -5,18 +5,18 @@ begin
 record state =
   statename :: "nat option"
   datastate :: registers
-  event :: event
+  action :: action
   "output" :: outputs
 
 type_synonym property = "state stream \<Rightarrow> bool"
 
 abbreviation label :: "state \<Rightarrow> String.literal" where
-  "label s \<equiv> fst (event s)"
+  "label s \<equiv> fst (action s)"
 
 abbreviation inputs :: "state \<Rightarrow> value list" where
-  "inputs s \<equiv> snd (event s)"
+  "inputs s \<equiv> snd (action s)"
 
-fun ltl_step :: "transition_matrix \<Rightarrow> nat option \<Rightarrow> registers \<Rightarrow> event \<Rightarrow> (nat option \<times> outputs \<times> registers)" where
+fun ltl_step :: "transition_matrix \<Rightarrow> nat option \<Rightarrow> registers \<Rightarrow> action \<Rightarrow> (nat option \<times> outputs \<times> registers)" where
   "ltl_step _ None r _ = (None, [], r)" |
   "ltl_step e (Some s) r (l, i) = (let possibilities = possible_steps e s r l i in
                    if possibilities = {||} then (None, [], r)
@@ -59,13 +59,13 @@ lemma ltl_step_cases: assumes invalid: "P (None, [], r)"
   apply (simp add: fBall_def Ball_def fmember_def)
   by (metis (mono_tags, lifting) fst_conv prod.case_eq_if snd_conv someI_ex)
 
-primcorec make_full_observation :: "transition_matrix \<Rightarrow> nat option \<Rightarrow> registers \<Rightarrow> outputs \<Rightarrow> event stream \<Rightarrow> state stream" where
+primcorec make_full_observation :: "transition_matrix \<Rightarrow> nat option \<Rightarrow> registers \<Rightarrow> outputs \<Rightarrow> action stream \<Rightarrow> state stream" where
   "make_full_observation e s d p i = (
     let (s', o', d') = ltl_step e s d (shd i) in
-    \<lparr>statename = s, datastate = d, event=(shd i), output = p\<rparr>##(make_full_observation e s' d' o' (stl i))
+    \<lparr>statename = s, datastate = d, action=(shd i), output = p\<rparr>##(make_full_observation e s' d' o' (stl i))
   )"
 
-definition watch :: "transition_matrix \<Rightarrow> event stream \<Rightarrow> state stream" where
+definition watch :: "transition_matrix \<Rightarrow> action stream \<Rightarrow> state stream" where
   "watch e i \<equiv> (make_full_observation e (Some 0) <> [] i)"
 
 definition state_eq :: "nat option \<Rightarrow> state stream \<Rightarrow> bool" where
@@ -80,7 +80,7 @@ lemma state_eq_None_not_Some:
   by (simp add: state_eq_def)
 
 definition label_eq :: "string \<Rightarrow> state stream \<Rightarrow> bool" where
-  "label_eq v s \<equiv> fst (event (shd s)) = (String.implode v)"
+  "label_eq v s \<equiv> fst (action (shd s)) = (String.implode v)"
 
 lemma watch_label: "label_eq l (watch e t) = (fst (shd t) = String.implode l)"
   by (simp add: label_eq_def watch_def)
@@ -88,10 +88,10 @@ lemma watch_label: "label_eq l (watch e t) = (fst (shd t) = String.implode l)"
 definition input_eq :: "value list \<Rightarrow> state stream \<Rightarrow> bool" where
   "input_eq v s \<equiv> inputs (shd s) = v"
 
-definition event_eq :: "(string \<times> inputs) \<Rightarrow> state stream \<Rightarrow> bool" where
-  "event_eq e = label_eq (fst e) aand input_eq (snd e)"
+definition action_eq :: "(string \<times> inputs) \<Rightarrow> state stream \<Rightarrow> bool" where
+  "action_eq e = label_eq (fst e) aand input_eq (snd e)"
 
-lemmas event_eq = event_eq_def label_eq_def input_eq_def
+lemmas action_eq = action_eq_def label_eq_def input_eq_def
 
 definition output_eq :: "value option list \<Rightarrow> state stream \<Rightarrow> bool" where
   "output_eq v s \<equiv> output (shd s) = v"
@@ -100,7 +100,7 @@ lemma shd_state_is_none: "(state_eq None) (make_full_observation e None r p t)"
   by (simp add: state_eq_def)
 
 lemma unfold_observe_none:
-  "make_full_observation e None d p t = (\<lparr>statename = None, datastate = d, event=(shd t), output = p\<rparr>##(make_full_observation e None d [] (stl t)))"
+  "make_full_observation e None d p t = (\<lparr>statename = None, datastate = d, action=(shd t), output = p\<rparr>##(make_full_observation e None d [] (stl t)))"
   by (simp add: stream.expand)
 
 lemma once_none_always_none:
@@ -161,8 +161,8 @@ proof -
     qed
   qed
 
-lemma event_components:
-  "(label_eq l aand input_eq i) s = (event (shd s) = (String.implode l, i))"
+lemma action_components:
+  "(label_eq l aand input_eq i) s = (action (shd s) = (String.implode l, i))"
   apply (simp add: label_eq_def input_eq_def)
   by (metis fst_conv prod.collapse snd_conv)
 
@@ -197,7 +197,7 @@ lemma join_iro_R [simp]: "join_iro i r p (Rg n) = r $ n"
   by (simp add: join_iro_def)
 
 definition check_exp :: "ltl_gexp \<Rightarrow> state stream \<Rightarrow> bool" where
-  "check_exp g s = (gval g (join_iro (snd (event (shd s))) (datastate (shd s)) (output (shd s))) = trilean.true)"
+  "check_exp g s = (gval g (join_iro (snd (action (shd s))) (datastate (shd s)) (output (shd s))) = trilean.true)"
 
 lemma alw_ev: "alw f = not (ev (\<lambda>s. \<not>f s))"
   by simp
