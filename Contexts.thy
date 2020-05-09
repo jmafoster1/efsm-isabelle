@@ -67,7 +67,7 @@ lemma bad_outputs:
 lemma transition_subsumes_self: "subsumes t c t"
   by (simp add: subsumes_def)
 
-primrec accepting_sequence :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> trace \<Rightarrow> (transition \<times> cfstate \<times> outputs \<times> registers) list \<Rightarrow> (transition \<times> cfstate \<times> outputs \<times> registers) list option" where
+primrec accepting_sequence :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> (transition \<times> cfstate \<times> outputs \<times> registers) list \<Rightarrow> (transition \<times> cfstate \<times> outputs \<times> registers) list option" where
   "accepting_sequence _ _ r [] obs = Some (rev obs)" |
   "accepting_sequence e s r (a#t) obs = (let
     poss = possible_steps e s r (fst a) (snd a);
@@ -79,7 +79,7 @@ primrec accepting_sequence :: "transition_matrix \<Rightarrow> cfstate \<Rightar
       accepting_sequence e s' r' t ((T, s', (apply_outputs (Outputs T) (join_ir (snd a) r)), r')#obs)
   )"
 
-definition posterior_sequence :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> trace \<Rightarrow> registers option" where
+definition posterior_sequence :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> registers option" where
   "posterior_sequence e s r t = (case accepting_sequence e s r t [] of
     None \<Rightarrow> None |
     Some seq \<Rightarrow>
@@ -89,7 +89,7 @@ definition posterior_sequence :: "transition_matrix \<Rightarrow> cfstate \<Righ
         (_, _, _, r') = last seq in Some r'
   )"
 
-abbreviation anterior_context :: "transition_matrix \<Rightarrow> trace \<Rightarrow> registers option" where
+abbreviation anterior_context :: "transition_matrix \<Rightarrow> execution \<Rightarrow> registers option" where
   "anterior_context e t \<equiv> posterior_sequence e 0 <> t"
 
 lemma anterior_context_empty: "anterior_context e [] = Some <>"

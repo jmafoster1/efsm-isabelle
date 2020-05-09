@@ -20,15 +20,15 @@ type_synonym inputs = "value list"
 type_synonym outputs = "value option list"
 
 type_synonym event = "(label \<times> inputs)"
-type_synonym trace = "event list"
+type_synonym execution = "event list"
 type_synonym observation = "outputs list"
 type_synonym transition_matrix = "((cfstate \<times> cfstate) \<times> transition) fset"
 
 no_notation relcomp (infixr "O" 75) and comp (infixl "o" 55)
 
 (* An execution represents a run of the software and has the form [(label, inputs, outputs)]*)
-type_synonym execution = "(label \<times> value list \<times> value list) list"
-type_synonym log = "execution list"
+type_synonym trace = "(label \<times> inputs \<times> value list) list"
+type_synonym log = "trace list"
 
 definition Str :: "string \<Rightarrow> value" where
   "Str s \<equiv> value.Str (String.implode s)"
@@ -106,7 +106,7 @@ lemma singleton_dest: assumes "fis_singleton (possible_steps e s r aa b)"
   apply (simp add: fis_singleton_fthe_elem)
   using possible_steps_alt_aux by force
 
-inductive accepts :: "transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> trace \<Rightarrow> bool" where
+inductive accepts :: "transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
   base: "accepts e s d []" |
   step: "(s', t) |\<in>| possible_steps e s r l i \<Longrightarrow>
          accepts e s' (apply_updates (Updates t) (join_ir i r) r) ts \<Longrightarrow>
@@ -114,7 +114,7 @@ inductive accepts :: "transition_matrix \<Rightarrow> nat \<Rightarrow> register
 
 abbreviation "rejects e s d t \<equiv> \<not> accepts e s d t"
 
-abbreviation accepts_trace :: "transition_matrix \<Rightarrow> trace \<Rightarrow> bool" where
+abbreviation accepts_trace :: "transition_matrix \<Rightarrow> execution \<Rightarrow> bool" where
   "accepts_trace e t \<equiv> accepts e 0 <> t"
 
 lemma no_possible_steps_rejects:
@@ -129,7 +129,7 @@ lemma accepts_step_equiv: "accepts e s d ((l, i)#t) =
    apply auto[1]
   using accepts.step by blast
 
-fun accepts_prim :: "transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> trace \<Rightarrow> bool" where
+fun accepts_prim :: "transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
   "accepts_prim e s d [] = True" |
   "accepts_prim e s d ((l, i)#t) = (
     let poss_steps = possible_steps e s d l i in
@@ -171,7 +171,7 @@ lemma accepts_must_be_possible_step:
    \<exists>aa ba. (aa, ba) |\<in>| possible_steps e s r (fst h) (snd h)"
   using accepts_step_equiv by fastforce
 
-inductive input_simulation :: "transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> trace \<Rightarrow> bool" where
+inductive input_simulation :: "transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
   base: "input_simulation e1 s1 r1 e2 s2 r2 []" |
   step: "\<forall>(s1', t1) |\<in>| possible_steps e1 s1 r1 l i.
            \<exists>(s2', t2) |\<in>| possible_steps e2 s2 r2 l i.
@@ -281,7 +281,7 @@ lemma no_possible_steps_1:
   "possible_steps e s r l i = {||} \<Longrightarrow> step e s r l i = None"
   by (simp add: step_def random_member_def)
 
-primrec observe_all :: "transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> trace \<Rightarrow> (transition \<times> nat \<times> outputs \<times> registers) list" where
+primrec observe_all :: "transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> (transition \<times> nat \<times> outputs \<times> registers) list" where
   "observe_all _ _ _ [] = []" |
   "observe_all e s r (h#t)  =
     (case (step e s r (fst h) (snd h)) of
@@ -292,7 +292,7 @@ primrec observe_all :: "transition_matrix \<Rightarrow> nat \<Rightarrow> regist
 definition state :: "(transition \<times> nat \<times> outputs \<times> vname datastate) \<Rightarrow> nat" where
   "state x \<equiv> fst (snd x)"
 
-definition observe_trace :: "transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> trace \<Rightarrow> observation" where
+definition observe_trace :: "transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> observation" where
   "observe_trace e s r t \<equiv> map (\<lambda>(t,x,y,z). y) (observe_all e s r t)"
 
 lemma observe_trace_empty [simp]: "observe_trace e s r [] = []"
@@ -319,7 +319,7 @@ lemma observe_trace_no_possible_step:
    observe_trace e s r (h#es) = []"
   by (simp add: observe_trace_def step_def random_member_def)
 
-definition observably_equivalent :: "transition_matrix \<Rightarrow> transition_matrix \<Rightarrow> trace \<Rightarrow> bool" where
+definition observably_equivalent :: "transition_matrix \<Rightarrow> transition_matrix \<Rightarrow> execution \<Rightarrow> bool" where
   "observably_equivalent e1 e2 t = ((observe_trace e1 0 <> t) = (observe_trace e2 0 <> t))"
 
 lemma observe_trace_no_possible_steps:
@@ -447,7 +447,7 @@ lemma prefix_closure: "accepts e s d (t@t') \<Longrightarrow> accepts e s d t"
 lemma accepts_head: "accepts e s d (h#t) \<Longrightarrow> accepts e s d [h]"
   by (metis accepts.simps accepts_must_be_possible_step prod.exhaust_sel)
 
-inductive gets_us_to :: "cfstate \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> trace \<Rightarrow> bool" where
+inductive gets_us_to :: "cfstate \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
   base: "s = target \<Longrightarrow> gets_us_to target _ s _ []" |
   step_some: "\<exists>(s', T) |\<in>| possible_steps e s d (fst h) (snd h). gets_us_to target e s' (apply_updates (Updates T) (join_ir i r) r) t \<Longrightarrow>
    gets_us_to target e s r (h#t)" |
@@ -507,7 +507,7 @@ definition rename_regs :: "(nat \<Rightarrow> nat) \<Rightarrow> transition_matr
 definition eq_upto_rename_strong :: "transition_matrix \<Rightarrow> transition_matrix \<Rightarrow> bool" where
   "eq_upto_rename_strong e1 e2 = (\<exists>f. bij f \<and> rename_regs f e1 = e2)"
 
-inductive output_simulation :: "transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> trace \<Rightarrow> bool" where
+inductive output_simulation :: "transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
   base: "output_simulation e1 s1 r1 e2 s2 r2 []" |
   step: "\<forall>(s1', t1) |\<in>| possible_steps e1 s1 r1 l i.
            \<exists>(s2', t2) |\<in>| possible_steps e2 s2 r2 l i.
