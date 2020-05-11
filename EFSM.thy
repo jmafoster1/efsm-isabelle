@@ -306,10 +306,7 @@ primrec observe_all :: "transition_matrix \<Rightarrow> nat \<Rightarrow> regist
       _ \<Rightarrow> []
     )"
 
-definition state :: "(transition \<times> nat \<times> outputs \<times> vname datastate) \<Rightarrow> nat" where
-  "state x \<equiv> fst (snd x)"
-
-fun observe_execution :: "transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> outputs list" where
+fun observe_execution :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> outputs list" where
   "observe_execution _ _ _ [] = []" |
   "observe_execution e s r ((l, i)#as)  = (
     let viable = possible_steps e s r l i in

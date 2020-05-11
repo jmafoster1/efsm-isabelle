@@ -136,23 +136,23 @@ lemma accepts_from_1: "accepts drinks 1 <2 $:= Some (Num 0), 1 $:= Some d>
   using accepts_from_1a by auto
 
 lemma purchase_coke:
-  "observe_trace drinks 0 <> [(STR ''select'', [Str ''coke'']), (STR ''coin'', [Num 50]), (STR ''coin'', [Num 50]), (STR ''vend'', [])] =
+  "observe_execution drinks 0 <> [(STR ''select'', [Str ''coke'']), (STR ''coin'', [Num 50]), (STR ''coin'', [Num 50]), (STR ''vend'', [])] =
                        [[], [Some (Num 50)], [Some (Num 100)], [Some (Str ''coke'')]]"
-  apply (rule observe_trace_possible_step)
+  apply (rule observe_execution_possible_step)
      apply (simp add: possible_steps_0)
      apply (simp add: select_def join_ir_def input2state_def accepts_from_1)
     apply (simp add: select_def)
-  apply (rule observe_trace_possible_step)
+  apply (rule observe_execution_possible_step)
       apply (simp add: possible_steps_1_coin)
      apply (simp add: coin_def value_plus_def join_ir_def input2state_def accepts_from_1a)
     apply (simp add: coin_def value_plus_def join_ir_def input2state_def apply_outputs_def apply_updates_def)
    apply (simp add: coin_def value_plus_def join_ir_def input2state_def apply_updates_def)
-  apply (rule observe_trace_possible_step)
+  apply (rule observe_execution_possible_step)
       apply (simp add: possible_steps_1_coin)
      apply (simp add: coin_def value_plus_def join_ir_def input2state_def accepts_from_2)
     apply (simp add: coin_def value_plus_def join_ir_def input2state_def apply_outputs_def)
    apply (simp add: coin_def value_plus_def join_ir_def input2state_def)
-  apply (rule observe_trace_possible_step)
+  apply (rule observe_execution_possible_step)
      apply (simp add: possible_steps_2_vend apply_updates_def value_plus_def finfun_update_twist input2state_def)
     apply (simp add: vend_def apply_updates_def apply_outputs_def)
    apply simp
@@ -173,10 +173,10 @@ lemma rejects_accepts_prefix: "l \<noteq> STR ''coin'' \<Longrightarrow>
   using rejects_input by blast
 
 lemma rejects_termination:
-  "observe_trace drinks 0 <> [(STR ''select'', [Str ''coke'']), (STR ''rejects'', [Num 50]), (STR ''coin'', [Num 50])] = [[]]"
-  apply (rule observe_trace_step)
+  "observe_execution drinks 0 <> [(STR ''select'', [Str ''coke'']), (STR ''rejects'', [Num 50]), (STR ''coin'', [Num 50])] = [[]]"
+  apply (rule observe_execution_step)
    apply (simp add: step_def possible_steps_0 select_def)
-  apply (rule observe_trace_no_possible_step)
+  apply (rule observe_execution_no_possible_step)
   by (simp add: possible_steps_empty drinks_def can_take_transition_def can_take_def transitions)
 
 (* Part of Example 2 in Foster et. al. *)

@@ -165,7 +165,7 @@ next
     apply (case_tac "random_member
               (ffilter (\<lambda>(s', T). accepts e s' (apply_updates (Updates T) (join_ir b r) r) t) (possible_steps e s r aa b))")
      apply simp
-    using accepts.step random_member_Some by fastforce
+    using accepts.step random_member_is_member by fastforce
 qed
 
 lemma rejects_gives_no_posterior_sequence:
@@ -199,7 +199,7 @@ next
      apply simp
     apply clarify
     apply simp
-    by (metis (mono_tags, lifting) case_prodD ffmember_filter random_member_Some)
+    by (metis (mono_tags, lifting) case_prodD ffmember_filter random_member_is_member)
 qed
 
 lemma no_posterior_sequence_reject:
