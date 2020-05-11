@@ -137,7 +137,7 @@ fun recognises_prim :: "transition_matrix \<Rightarrow> nat \<Rightarrow> regist
     (\<exists>(s', T) |\<in>| poss_steps. recognises_prim e s' (apply_updates (Updates T) (join_ir i d) d) t)
   )"
 
-lemma recognises_prim: "recognises e s r t = recognises_prim e s r t"
+lemma recognises_prim [code]: "recognises e s r t = recognises_prim e s r t"
 proof(induct t arbitrary: r s)
   case Nil
   then show ?case
@@ -171,6 +171,53 @@ lemma recognises_must_be_possible_step:
   "recognises e s r (h # t) \<Longrightarrow>
    \<exists>aa ba. (aa, ba) |\<in>| possible_steps e s r (fst h) (snd h)"
   using recognises_step_equiv by fastforce
+
+inductive accepts_trace :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> trace \<Rightarrow> bool" where
+  base: "accepts_trace e s d []" |
+  step: "\<exists>(s', T) |\<in>| possible_steps e s d l i.
+         apply_outputs (Outputs T) (join_ir i d) = (map Some p) \<and>
+         accepts_trace e s' (apply_updates (Updates T) (join_ir i d) d) t \<Longrightarrow>
+         accepts_trace e s d ((l, i, p)#t)"
+
+lemma accepts_trace_step:
+  "accepts_trace e s d ((l, i, p)#t) = (\<exists>(s', T) |\<in>| possible_steps e s d l i.
+         apply_outputs (Outputs T) (join_ir i d) = (map Some p) \<and>
+         accepts_trace e s' (apply_updates (Updates T) (join_ir i d) d) t)"
+  apply standard
+   defer
+   apply (simp add: accepts_trace.step)
+  apply (rule accepts_trace.cases)
+  by auto
+
+fun accepts_trace_prim :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> trace \<Rightarrow> bool" where
+  "accepts_trace_prim _ _ _ [] = True" |
+  "accepts_trace_prim e s d ((l, i, p)#t) = (
+    let poss_steps = possible_steps e s d l i in
+    if fis_singleton poss_steps then
+      let (s', T) = fthe_elem poss_steps in
+      if apply_outputs (Outputs T) (join_ir i d) = (map Some p) then
+        accepts_trace_prim e s' (apply_updates (Updates T) (join_ir i d) d) t
+      else False
+    else
+      (\<exists>(s', T) |\<in>| poss_steps.
+         apply_outputs (Outputs T) (join_ir i d) = (map Some p) \<and>
+         accepts_trace_prim e s' (apply_updates (Updates T) (join_ir i d) d) t))"
+
+lemma accepts_trace_prim [code]: "accepts_trace e s d l = accepts_trace_prim e s d l"
+proof(induct l arbitrary: s d)
+case Nil
+  then show ?case
+    by (simp add: accepts_trace.base)
+next
+case (Cons a l)
+  then show ?case
+    apply (cases a)
+    apply (simp add: accepts_trace_step Let_def fis_singleton_alt)
+    by auto
+qed
+
+definition accepts_log :: "trace set \<Rightarrow> transition_matrix \<Rightarrow> bool" where
+  "accepts_log T e = (\<forall>t \<in> T. accepts_trace e 0 <> t)"
 
 inductive execution_equivalence :: "transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
   base: "execution_equivalence e1 s1 r1 e2 s2 r2 []" |
