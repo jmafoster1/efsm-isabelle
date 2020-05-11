@@ -115,59 +115,59 @@ lemma possible_steps_2_vend:
   apply safe
   by (simp_all add: transitions apply_guards_def value_gt_def join_ir_def connectives)
 
-lemma accepts_from_2:
-  "accepts drinks 1 <1 $:= d, 2 $:= Some (Num 100)> [(STR ''vend'', [])]"
-  apply (rule accepts.step[of 2 vend])
+lemma recognises_from_2:
+  "recognises drinks 1 <1 $:= d, 2 $:= Some (Num 100)> [(STR ''vend'', [])]"
+  apply (rule recognises.step[of 2 vend])
    apply (simp add: possible_steps_2_vend)
-  by (simp add: accepts.base)
+  by (simp add: recognises.base)
 
-lemma accepts_from_1a:
-  "accepts drinks 1 <1 $:= d, 2 $:= Some (Num 50)> [(STR ''coin'', [Num 50]), (STR ''vend'', [])]"
-  apply (rule accepts.step[of 1 coin])
+lemma recognises_from_1a:
+  "recognises drinks 1 <1 $:= d, 2 $:= Some (Num 50)> [(STR ''coin'', [Num 50]), (STR ''vend'', [])]"
+  apply (rule recognises.step[of 1 coin])
    apply (simp add: possible_steps_1_coin)
   apply (simp add: apply_updates_def coin_def finfun_update_twist value_plus_def)
-  using accepts_from_2 by auto
+  using recognises_from_2 by auto
 
-lemma accepts_from_1: "accepts drinks 1 <2 $:= Some (Num 0), 1 $:= Some d>
+lemma recognises_from_1: "recognises drinks 1 <2 $:= Some (Num 0), 1 $:= Some d>
      [(STR ''coin'', [Num 50]), (STR ''coin'', [Num 50]), (STR ''vend'', [])]"
-  apply (rule accepts.step[of 1 coin])
+  apply (rule recognises.step[of 1 coin])
    apply (simp add: possible_steps_1_coin)
   apply (simp add: apply_updates_def coin_def value_plus_def finfun_update_twist)
-  using accepts_from_1a by auto
+  using recognises_from_1a by auto
 
 lemma purchase_coke:
   "observe_execution drinks 0 <> [(STR ''select'', [Str ''coke'']), (STR ''coin'', [Num 50]), (STR ''coin'', [Num 50]), (STR ''vend'', [])] =
                        [[], [Some (Num 50)], [Some (Num 100)], [Some (Str ''coke'')]]"
   apply (rule observe_execution_possible_step)
      apply (simp add: possible_steps_0)
-     apply (simp add: select_def join_ir_def input2state_def accepts_from_1)
+     apply (simp add: select_def join_ir_def input2state_def recognises_from_1)
     apply (simp add: select_def)
   apply (rule observe_execution_possible_step)
       apply (simp add: possible_steps_1_coin)
-     apply (simp add: coin_def value_plus_def join_ir_def input2state_def accepts_from_1a)
+     apply (simp add: coin_def value_plus_def join_ir_def input2state_def recognises_from_1a)
     apply (simp add: coin_def value_plus_def join_ir_def input2state_def apply_outputs_def apply_updates_def)
    apply (simp add: coin_def value_plus_def join_ir_def input2state_def apply_updates_def)
   apply (rule observe_execution_possible_step)
       apply (simp add: possible_steps_1_coin)
-     apply (simp add: coin_def value_plus_def join_ir_def input2state_def accepts_from_2)
+     apply (simp add: coin_def value_plus_def join_ir_def input2state_def recognises_from_2)
     apply (simp add: coin_def value_plus_def join_ir_def input2state_def apply_outputs_def)
    apply (simp add: coin_def value_plus_def join_ir_def input2state_def)
   apply (rule observe_execution_possible_step)
      apply (simp add: possible_steps_2_vend apply_updates_def value_plus_def finfun_update_twist input2state_def)
     apply (simp add: vend_def apply_updates_def apply_outputs_def)
    apply simp
-  by (simp add: accepts.base)
+  by (simp add: recognises.base)
 
 lemma rejects_input:
   "l \<noteq> STR ''coin'' \<Longrightarrow>
    l \<noteq> STR ''vend'' \<Longrightarrow>
-   \<not> accepts drinks 1 d' [(l, i)]"
+   \<not> recognises drinks 1 d' [(l, i)]"
   apply (rule no_possible_steps_rejects)
   by (simp add: possible_steps_empty drinks_def can_take_transition_def can_take_def transitions)
 
-lemma rejects_accepts_prefix: "l \<noteq> STR ''coin'' \<Longrightarrow>
+lemma rejects_recognises_prefix: "l \<noteq> STR ''coin'' \<Longrightarrow>
    l \<noteq> STR ''vend'' \<Longrightarrow>
-   \<not> (accepts_trace drinks [(STR ''select'', [Str ''coke'']), (l, i)])"
+   \<not> (recognises_trace drinks [(STR ''select'', [Str ''coke'']), (l, i)])"
   apply (rule trace_reject_later)
   apply (simp add: possible_steps_0 select_def join_ir_def input2state_def)
   using rejects_input by blast

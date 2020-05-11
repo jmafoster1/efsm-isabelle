@@ -3,8 +3,10 @@ text\<open>This theory defines a second formalisation of the drinks machine exam
 identical output to the first model. This property is called \emph{observational equivalence} and is
 discussed in more detail in \cite{foster2018}.\<close>
 theory Drinks_Machine_2
-  imports Drinks_Machine
+  imports Drinks_Machine_LTL
 begin
+
+(* Only imports Drinks_Machine_LTL so I can easily open all three at once for testing *)
 
 definition vend_nothing :: "transition" where
 "vend_nothing \<equiv> \<lparr>
@@ -53,12 +55,12 @@ lemma possible_steps_2_vend:
   apply safe
   by (simp_all add: transitions apply_guards_def value_gt_def join_ir_def connectives)
 
-lemma accepts_first_select:
-  "accepts drinks 0 r ((aa, b) # as) \<Longrightarrow> aa = STR ''select'' \<and> length b = 1"
-  using accepts_must_be_possible_step[of drinks 0 r "(aa, b)" as]
+lemma recognises_first_select:
+  "recognises drinks 0 r ((aa, b) # as) \<Longrightarrow> aa = STR ''select'' \<and> length b = 1"
+  using recognises_must_be_possible_step[of drinks 0 r "(aa, b)" as]
   apply simp
   apply clarify
-  by (metis first_step_select accepts_possible_steps_not_empty drinks_0_rejects fst_conv snd_conv)
+  by (metis first_step_select recognises_possible_steps_not_empty drinks_0_rejects fst_conv snd_conv)
 
 lemma drinks2_vend_insufficient:
   "possible_steps drinks2 1 r ((STR ''vend'')) [] = {|(1, vend_nothing)|}"
@@ -80,28 +82,28 @@ lemma drinks2_vend_sufficient: "r $ 2 = Some (Num x1) \<Longrightarrow>
   apply safe
   by (simp_all add: transitions apply_guards_def value_gt_def join_ir_def connectives)
 
-lemma accepts_1_2: "accepts drinks 1 r t \<longrightarrow> accepts drinks2 2 r t"
+lemma recognises_1_2: "recognises drinks 1 r t \<longrightarrow> recognises drinks2 2 r t"
 proof(induct t arbitrary: r)
   case Nil
   then show ?case
-    by (simp add: accepts.base)
+    by (simp add: recognises.base)
 next
   case (Cons a as)
   then show ?case
     apply (cases a)
-    apply (simp add: accepts_step_equiv)
+    apply (simp add: recognises_step_equiv)
     apply (case_tac "a=(STR ''vend'', [])")
      apply (case_tac "\<exists>n. r$2 = Some (Num n)")
       apply clarify
       apply (case_tac "n < 100")
        apply (simp add: drinks_vend_insufficient drinks2_vend_insufficient2)
       apply (simp add: drinks_vend_sufficient drinks2_vend_sufficient)
-      apply (metis accepts_prim accepts_prim.elims(3) drinks_rejects_future)
+      apply (metis recognises_prim recognises_prim.elims(3) drinks_rejects_future)
     using drinks_vend_invalid apply blast
     apply (case_tac "\<exists>i. a=(STR ''coin'', [i])")
      apply clarify
      apply (simp add: possible_steps_1_coin possible_steps_2_coin)
-    by (metis accepts.simps drinks_1_rejects_trace fBexE old.prod.exhaust)
+    by (metis recognises.simps drinks_1_rejects_trace fBexE old.prod.exhaust)
 qed
 
 lemma drinks_reject_0_2:
@@ -176,8 +178,8 @@ proof(induction rule: execution_equivalent_induct)
 qed
 
 lemma acceptance:
-  "accepts_trace drinks t \<Longrightarrow> accepts_trace drinks2 t"
-  using execution_equivalence execution_equivalent_accepts_trace
+  "recognises_trace drinks t \<Longrightarrow> recognises_trace drinks2 t"
+  using execution_equivalence execution_equivalent_recognises_trace
   by simp
 
 lemma purchase_coke:
@@ -185,17 +187,17 @@ lemma purchase_coke:
                        [[], [Some (Num 50)], [Some (Num 100)], [Some (Str ''coke'')]]"
   apply (rule observe_execution_possible_step)
      apply (simp add: possible_steps_0)
-     apply (simp add: select_def join_ir_def input2state_def accepts_from_1 acceptance)
+     apply (simp add: select_def join_ir_def input2state_def recognises_from_1 acceptance)
     apply (simp add: select_def)
   apply (rule observe_execution_possible_step)
       apply (simp add: possible_steps_1)
      apply (simp add: coin_def value_plus_def join_ir_def input2state_def)
-  using accepts_1_2 accepts_from_1a
+  using recognises_1_2 recognises_from_1a
     apply (simp add: coin_def value_plus_def join_ir_def input2state_def apply_outputs_def apply_updates_def)
    apply (simp add: coin_def value_plus_def join_ir_def input2state_def)
   apply (rule observe_execution_possible_step)
       apply (simp add: possible_steps_2_coin)
-     apply (simp add: coin_def value_plus_def join_ir_def input2state_def accepts_from_2 accepts_1_2)
+     apply (simp add: coin_def value_plus_def join_ir_def input2state_def recognises_from_2 recognises_1_2)
     apply (simp add: coin_def value_plus_def join_ir_def input2state_def apply_outputs_def apply_updates_def)
    apply (simp add: coin_def value_plus_def join_ir_def input2state_def)
   apply (rule observe_execution_possible_step)

@@ -107,70 +107,70 @@ lemma singleton_dest: assumes "fis_singleton (possible_steps e s r aa b)"
   apply (simp add: fis_singleton_fthe_elem)
   using possible_steps_alt_aux by force
 
-inductive accepts :: "transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
-  base: "accepts e s d []" |
+inductive recognises :: "transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
+  base: "recognises e s d []" |
   step: "(s', t) |\<in>| possible_steps e s r l i \<Longrightarrow>
-         accepts e s' (apply_updates (Updates t) (join_ir i r) r) ts \<Longrightarrow>
-         accepts e s r ((l, i)#ts)"
+         recognises e s' (apply_updates (Updates t) (join_ir i r) r) ts \<Longrightarrow>
+         recognises e s r ((l, i)#ts)"
 
-abbreviation "rejects e s d t \<equiv> \<not> accepts e s d t"
+abbreviation "rejects e s d t \<equiv> \<not> recognises e s d t"
 
-abbreviation accepts_trace :: "transition_matrix \<Rightarrow> execution \<Rightarrow> bool" where
-  "accepts_trace e t \<equiv> accepts e 0 <> t"
+abbreviation recognises_trace :: "transition_matrix \<Rightarrow> execution \<Rightarrow> bool" where
+  "recognises_trace e t \<equiv> recognises e 0 <> t"
 
 lemma no_possible_steps_rejects:
   "possible_steps e s d l i = {||} \<Longrightarrow> rejects e s d ((l, i)#t)"
-  using accepts.cases by blast
+  using recognises.cases by blast
 
-lemma accepts_step_equiv: "accepts e s d ((l, i)#t) =
-   (\<exists>(s', T) |\<in>| possible_steps e s d l i. accepts e s' (apply_updates (Updates T) (join_ir i d) d) t)"
+lemma recognises_step_equiv: "recognises e s d ((l, i)#t) =
+   (\<exists>(s', T) |\<in>| possible_steps e s d l i. recognises e s' (apply_updates (Updates T) (join_ir i d) d) t)"
   apply standard
-   apply (rule accepts.cases, simp)
+   apply (rule recognises.cases, simp)
     apply simp
    apply auto[1]
-  using accepts.step by blast
+  using recognises.step by blast
 
-fun accepts_prim :: "transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
-  "accepts_prim e s d [] = True" |
-  "accepts_prim e s d ((l, i)#t) = (
+fun recognises_prim :: "transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
+  "recognises_prim e s d [] = True" |
+  "recognises_prim e s d ((l, i)#t) = (
     let poss_steps = possible_steps e s d l i in
-    (\<exists>(s', T) |\<in>| poss_steps. accepts_prim e s' (apply_updates (Updates T) (join_ir i d) d) t)
+    (\<exists>(s', T) |\<in>| poss_steps. recognises_prim e s' (apply_updates (Updates T) (join_ir i d) d) t)
   )"
 
-lemma accepts_prim: "accepts e s r t = accepts_prim e s r t"
+lemma recognises_prim: "recognises e s r t = recognises_prim e s r t"
 proof(induct t arbitrary: r s)
   case Nil
   then show ?case
-    by (simp add: accepts.base)
+    by (simp add: recognises.base)
 next
   case (Cons h t)
   then show ?case
     apply (cases h)
     apply simp
     apply standard
-     apply (rule accepts.cases, simp)
+     apply (rule recognises.cases, simp)
       apply simp
      apply auto[1]
-    using accepts.step by blast
+    using recognises.step by blast
 qed
 
-lemma accepts_single_possible_step:
+lemma recognises_single_possible_step:
   assumes "possible_steps e s d l i = {|(s', t)|}"
-      and "accepts e s' (apply_updates (Updates t) (join_ir i d) d) trace"
-    shows "accepts e s d ((l, i)#trace)"
-  apply (rule accepts.step[of s' t])
+      and "recognises e s' (apply_updates (Updates t) (join_ir i d) d) trace"
+    shows "recognises e s d ((l, i)#trace)"
+  apply (rule recognises.step[of s' t])
   using assms by auto
 
-lemma accepts_single_possible_step_atomic:
+lemma recognises_single_possible_step_atomic:
   assumes "possible_steps e s d (fst h) (snd h) = {|(s', t)|}"
-      and "accepts e s' (apply_updates (Updates t) (join_ir (snd h) d) d) trace"
-    shows "accepts e s d (h#trace)"
-  by (metis accepts_single_possible_step assms(1) assms(2) prod.collapse)
+      and "recognises e s' (apply_updates (Updates t) (join_ir (snd h) d) d) trace"
+    shows "recognises e s d (h#trace)"
+  by (metis recognises_single_possible_step assms(1) assms(2) prod.collapse)
 
-lemma accepts_must_be_possible_step:
-  "accepts e s r (h # t) \<Longrightarrow>
+lemma recognises_must_be_possible_step:
+  "recognises e s r (h # t) \<Longrightarrow>
    \<exists>aa ba. (aa, ba) |\<in>| possible_steps e s r (fst h) (snd h)"
-  using accepts_step_equiv by fastforce
+  using recognises_step_equiv by fastforce
 
 inductive execution_equivalence :: "transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
   base: "execution_equivalence e1 s1 r1 e2 s2 r2 []" |
@@ -189,12 +189,12 @@ execution_equivalence e1 s1 r1 e2 s2 r2 t"
 
 lemma execution_equivalence_acceptance:
   "execution_equivalence e1 s1 r1 e2 s2 r2 t \<Longrightarrow>
-   accepts e1 s1 r1 t \<Longrightarrow>
-   accepts e2 s2 r2 t"
+   recognises e1 s1 r1 t \<Longrightarrow>
+   recognises e2 s2 r2 t"
 proof(induct t arbitrary: s1 r1 s2 r2)
   case Nil
   then show ?case
-    by (simp add: accepts.base)
+    by (simp add: recognises.base)
 next
   case (Cons a t)
   then show ?case
@@ -206,13 +206,13 @@ next
     apply (simp add: no_possible_steps_rejects)
     apply clarify
     apply simp
-    apply (simp add: accepts_step_equiv[of e1])
+    apply (simp add: recognises_step_equiv[of e1])
     apply clarify
     apply (erule_tac x="(aa, b)" in fBallE)
      apply simp
      apply clarify
     subgoal for l i s1' t1 s2' t2
-      apply (rule accepts.step[of s2' t2])
+      apply (rule recognises.step[of s2' t2])
       by auto
     by simp
 qed
@@ -227,10 +227,10 @@ lemma execution_equivalent_induct:
 execution_equivalent e1 e2"
   using execution_equivalent_def execution_equivalence_induct by blast
 
-lemma execution_equivalent_accepts_trace:
+lemma execution_equivalent_recognises_trace:
   "execution_equivalent e1 e2 \<Longrightarrow>
-   accepts_trace e1 t \<Longrightarrow>
-   accepts_trace e2 t"
+   recognises_trace e1 t \<Longrightarrow>
+   recognises_trace e2 t"
   apply (simp add: execution_equivalent_def)
   using execution_equivalence_acceptance by blast
 
@@ -419,16 +419,16 @@ next
     by (case_tac "step e s r (fst a) (snd a)", auto)
 qed
 
-lemma accepts_possible_steps_not_empty:
-  "accepts e s d (h#t) \<Longrightarrow> possible_steps e s d (fst h) (snd h) \<noteq> {||}"
-  apply (rule accepts.cases)
+lemma recognises_possible_steps_not_empty:
+  "recognises e s d (h#t) \<Longrightarrow> possible_steps e s d (fst h) (snd h) \<noteq> {||}"
+  apply (rule recognises.cases)
   by auto
 
-lemma accepts_must_be_step:
-  "accepts e s d (h#ts) \<Longrightarrow>
+lemma recognises_must_be_step:
+  "recognises e s d (h#ts) \<Longrightarrow>
    \<exists>t s' p d'. step e s d (fst h) (snd h) = Some (t, s', p, d')"
   apply (cases h)
-  apply (simp add: accepts_step_equiv step_def)
+  apply (simp add: recognises_step_equiv step_def)
   apply clarify
   apply (case_tac "(possible_steps e s d a b)")
    apply (simp add: random_member_def)
@@ -436,13 +436,13 @@ lemma accepts_must_be_step:
   apply (case_tac "SOME xa. xa = x \<or> xa |\<in>| S'")
   by simp
 
-lemma accepts_cons_step:
-  "accepts e s r (h # t) \<Longrightarrow> step e s r (fst h) (snd h) \<noteq>  None"
-  by (simp add: accepts_must_be_step)
+lemma recognises_cons_step:
+  "recognises e s r (h # t) \<Longrightarrow> step e s r (fst h) (snd h) \<noteq>  None"
+  by (simp add: recognises_must_be_step)
 
 lemma no_step_none:
   "step e s r aa ba = None \<Longrightarrow> rejects e s r ((aa, ba) # p)"
-  using accepts_cons_step by fastforce
+  using recognises_cons_step by fastforce
 
 lemma step_none_rejects:
   "step e s d (fst h) (snd h) = None \<Longrightarrow> rejects e s d (h#t)"
@@ -458,11 +458,11 @@ lemma possible_steps_not_empty_iff:
 
 lemma trace_reject:
   "(rejects e s d ((a, b)#t)) = (possible_steps e s d a b = {||} \<or> (\<forall>(s', T) |\<in>| possible_steps e s d a b. rejects e s' (apply_updates (Updates T) (join_ir b d) d) t))"
-  using accepts_prim by fastforce
+  using recognises_prim by fastforce
 
 lemma trace_reject_no_possible_steps_atomic:
   "possible_steps e s d (fst a) (snd a) = {||} \<Longrightarrow> rejects e s d (a#t)"
-  using accepts_possible_steps_not_empty by auto
+  using recognises_possible_steps_not_empty by auto
 
 lemma trace_reject_later:
   "\<forall>(s', T) |\<in>| possible_steps e s d a b. rejects e s' (apply_updates (Updates T) (join_ir b d) d) t \<Longrightarrow>
@@ -474,7 +474,7 @@ lemma rejects_prefix_all_s_d:
 proof(induct t arbitrary: s d)
   case Nil
   then show ?case
-    by (simp add: accepts.base)
+    by (simp add: recognises.base)
 next
   case (Cons a t)
   then show ?case
@@ -486,11 +486,11 @@ qed
 lemma rejects_prefix: "rejects e s d t \<Longrightarrow> rejects e s d (t @ t')"
   by (simp add: rejects_prefix_all_s_d)
 
-lemma prefix_closure: "accepts e s d (t@t') \<Longrightarrow> accepts e s d t"
+lemma prefix_closure: "recognises e s d (t@t') \<Longrightarrow> recognises e s d t"
   using rejects_prefix_all_s_d by blast
 
-lemma accepts_head: "accepts e s d (h#t) \<Longrightarrow> accepts e s d [h]"
-  by (metis accepts.simps accepts_must_be_possible_step prod.exhaust_sel)
+lemma recognises_head: "recognises e s d (h#t) \<Longrightarrow> recognises e s d [h]"
+  by (metis recognises.simps recognises_must_be_possible_step prod.exhaust_sel)
 
 inductive gets_us_to :: "cfstate \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
   base: "s = target \<Longrightarrow> gets_us_to target _ s _ []" |
