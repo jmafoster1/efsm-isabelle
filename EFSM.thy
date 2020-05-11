@@ -237,10 +237,13 @@ lemma execution_equivalent_accepts_trace:
 definition random_member :: "'a fset \<Rightarrow> 'a option" where
   "random_member f = (if f = {||} then None else Some (Eps (\<lambda>x. x |\<in>| f)))"
 
+lemma random_member_nonempty: "s \<noteq> {||} = (random_member s \<noteq> None)"
+  by (simp add: random_member_def)
+
 lemma random_member_singleton [simp]: "random_member {|a|} = Some a"
   by (simp add: random_member_def)
 
-lemma random_member_Some:
+lemma random_member_is_member:
   "random_member ss = Some s \<Longrightarrow> s |\<in>| ss"
   apply (simp add: random_member_def)
   by (metis equalsffemptyI option.distinct(1) option.inject verit_sko_ex_indirect)
@@ -256,6 +259,19 @@ definition step :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> regist
       None \<Rightarrow> None |
       Some (s', t) \<Rightarrow>  Some (t, s', apply_outputs (Outputs t) (join_ir i r), apply_updates (Updates t) (join_ir i r) r)
   )"
+
+lemma step_member: "step e s r l i = Some (t, s', p, r') \<Longrightarrow> (s', t) |\<in>| possible_steps e s r l i"
+  apply (simp add: step_def)
+  apply (case_tac "random_member (possible_steps e s r l i)")
+   apply simp
+  by (case_tac a, simp add: random_member_is_member)
+
+lemma step_outputs: "step e s r l i = Some (t, s', p, r') \<Longrightarrow> evaluate_outputs t i r = p"
+  apply (simp add: step_def)
+  apply (case_tac "random_member (possible_steps e s r l i)")
+   apply simp
+  apply (simp add: evaluate_outputs_def)
+  by auto
 
 lemma step_some: "possibilities = (possible_steps e s r l i) \<Longrightarrow>
    random_member possibilities = Some (s', t) \<Longrightarrow>
@@ -293,58 +309,78 @@ primrec observe_all :: "transition_matrix \<Rightarrow> nat \<Rightarrow> regist
 definition state :: "(transition \<times> nat \<times> outputs \<times> vname datastate) \<Rightarrow> nat" where
   "state x \<equiv> fst (snd x)"
 
-definition observe_trace :: "transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> observation" where
-  "observe_trace e s r t \<equiv> map (\<lambda>(t,x,y,z). y) (observe_all e s r t)"
+fun observe_execution :: "transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> outputs list" where
+  "observe_execution _ _ _ [] = []" |
+  "observe_execution e s r ((l, i)#as)  = (
+    let viable = possible_steps e s r l i in
+    if viable = {||} then
+      []
+    else
+      let (s', t) = Eps (\<lambda>x. x |\<in>| viable) in
+      (evaluate_outputs t i r)#(observe_execution e s' (evaluate_updates t i r) as)
+    )"
 
-lemma observe_trace_empty [simp]: "observe_trace e s r [] = []"
-  by (simp add: observe_trace_def)
+lemma observe_execution_step_def: "observe_execution e s r ((l, i)#as)  = (
+    case step e s r l i of
+      None \<Rightarrow> []|
+      Some (t, s', p, r') \<Rightarrow> p#(observe_execution e s' r' as)
+    )"
+  apply (simp add: step_def)
+  apply (case_tac "possible_steps e s r l i")
+   apply simp
+  apply (simp add: random_member_def)
+  apply (case_tac "SOME xa. xa = x \<or> xa |\<in>| S'")
+  by (simp add: evaluate_outputs_def evaluate_updates_def)
 
-lemma observe_trace_step:
+lemma observe_execution_step:
   "step e s r (fst h) (snd h) = Some (t, s', p, r') \<Longrightarrow>
-   observe_trace e s' r' es = obs \<Longrightarrow>
-   observe_trace e s r (h#es) = p#obs"
-  by (simp add: observe_trace_def)
+   observe_execution e s' r' es = obs \<Longrightarrow>
+   observe_execution e s r (h#es) = p#obs"
+  apply (cases h, simp add: step_def)
+  apply (case_tac "possible_steps e s r a b = {||}")
+   apply simp
+  apply (case_tac "SOME x. x |\<in>| possible_steps e s r a b")
+  apply (simp add: random_member_def evaluate_outputs_def evaluate_updates_def)
+  by auto
 
-lemma observe_trace_possible_step:
+lemma observe_execution_possible_step:
   "possible_steps e s r (fst h) (snd h) = {|(s', t)|} \<Longrightarrow>
    apply_outputs (Outputs t) (join_ir (snd h) r) = p \<Longrightarrow>
    apply_updates (Updates t) (join_ir (snd h) r) r = r' \<Longrightarrow>
-   observe_trace e s' r' es = obs \<Longrightarrow>
-   observe_trace e s r (h#es) = p#obs"
-  apply (rule observe_trace_step)
-   apply (simp add: step_def random_member_def)
-  by simp
+   observe_execution e s' r' es = obs \<Longrightarrow>
+   observe_execution e s r (h#es) = p#obs"
+  by (simp add: observe_execution_step step_some)
 
-lemma observe_trace_no_possible_step:
+lemma observe_execution_no_possible_step:
   "possible_steps e s r (fst h) (snd h) = {||} \<Longrightarrow>
-   observe_trace e s r (h#es) = []"
-  by (simp add: observe_trace_def step_def random_member_def)
+   observe_execution e s r (h#es) = []"
+  by (cases h, simp)
 
 definition observably_equivalent :: "transition_matrix \<Rightarrow> transition_matrix \<Rightarrow> execution \<Rightarrow> bool" where
-  "observably_equivalent e1 e2 t = ((observe_trace e1 0 <> t) = (observe_trace e2 0 <> t))"
+  "observably_equivalent e1 e2 t = ((observe_execution e1 0 <> t) = (observe_execution e2 0 <> t))"
 
-lemma observe_trace_no_possible_steps:
+lemma observe_execution_no_possible_steps:
   "possible_steps e1 s1 r1 (fst h) (snd h) = {||} \<Longrightarrow>
    possible_steps e2 s2 r2 (fst h) (snd h) = {||} \<Longrightarrow>
-   (observe_trace e1 s1 r1 (h#t)) = (observe_trace e2 s2 r2 (h#t))"
-  by (simp add: observe_trace_def step_def random_member_def)
+   (observe_execution e1 s1 r1 (h#t)) = (observe_execution e2 s2 r2 (h#t))"
+  by (simp add: observe_execution_no_possible_step)
 
-lemma observe_trace_one_possible_step:
+lemma observe_execution_one_possible_step:
   "possible_steps e1 s1 r (fst h) (snd h) = {|(s1', t1)|} \<Longrightarrow>
    possible_steps e2 s2 r (fst h) (snd h) = {|(s2', t2)|} \<Longrightarrow>
    apply_outputs (Outputs t1) (join_ir (snd h) r) = apply_outputs (Outputs t2) (join_ir (snd h) r) \<Longrightarrow>
 
    apply_updates (Updates t1) (join_ir (snd h) r) r = r' \<Longrightarrow>
    apply_updates (Updates t2) (join_ir (snd h) r) r = r' \<Longrightarrow>
-   (observe_trace e1 s1' r' t) = (observe_trace e2 s2' r' t) \<Longrightarrow>
-   (observe_trace e1 s1 r (h#t)) = (observe_trace e2 s2 r (h#t))"
-  by (simp add: observe_trace_def step_def)
+   (observe_execution e1 s1' r' t) = (observe_execution e2 s2' r' t) \<Longrightarrow>
+   (observe_execution e1 s1 r (h#t)) = (observe_execution e2 s2 r (h#t))"
+  by (simp add: observe_execution_possible_step)
 
 lemma observably_equivalent_no_possible_step:
   "possible_steps e1 s1 r1 (fst h) (snd h) = {||} \<Longrightarrow>
    possible_steps e2 s2 r2 (fst h) (snd h) = {||} \<Longrightarrow>
-   observe_trace e1 s1 r1 (h#t) = observe_trace e2 s2 r2 (h#t)"
-  by (simp add: observe_trace_no_possible_step)
+   observe_execution e1 s1 r1 (h#t) = observe_execution e2 s2 r2 (h#t)"
+  by (simp add: observe_execution_no_possible_step)
 
 lemma observably_equivalent_reflexive: "observably_equivalent e1 e1 t"
   by (simp add: observably_equivalent_def)
@@ -359,9 +395,21 @@ lemma observably_equivalent_transitive:
    observably_equivalent e1 e3 t"
   by (simp add: observably_equivalent_def)
 
-lemma observe_trace_preserves_length:
-  "length (observe_all e s r t) = length (observe_trace e s r t)"
-  by (simp add: observe_trace_def)
+lemma observe_execution_preserves_length:
+  "length (observe_all e s r as) = length (observe_execution e s r as)"
+proof(induct as arbitrary: s r)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons a as)
+  then show ?case
+    apply (cases a, simp add: step_def)
+    apply (case_tac "possible_steps e s r aa b = {||}")
+     apply simp
+    apply (simp add: random_member_def)
+    apply (case_tac "SOME x. x |\<in>| possible_steps e s r aa b")
+    by (simp add: evaluate_updates_def)
+qed
 
 lemma length_observation_leq_length_trace:
   "\<And>s r. length (observe_all e s r t) \<le> length t"
@@ -371,8 +419,7 @@ proof (induction t)
 next
   case (Cons a t)
   then show ?case
-    apply (case_tac "step e s r (fst a) (snd a)")
-    by auto
+    by (case_tac "step e s r (fst a) (snd a)", auto)
 qed
 
 lemma accepts_possible_steps_not_empty:
@@ -464,9 +511,9 @@ lemma no_further_steps:
   apply (rule gets_us_to.cases)
   by auto
 
-lemma observe_trace_empty_iff:
-  "(observe_trace e s r t = []) = (observe_all e s r t = [])"
-  by (simp add: observe_trace_def)
+lemma observe_execution_empty_iff:
+  "(observe_execution e s r t = []) = (observe_all e s r t = [])"
+  by (metis length_greater_0_conv observe_execution_preserves_length)
 
 definition max_reg :: "transition_matrix \<Rightarrow> nat option" where
   "max_reg e = (let maxes = (fimage (\<lambda>(_, t). Transition.max_reg t) e) in if maxes = {||} then None else fMax maxes)"
@@ -520,30 +567,16 @@ inductive trace_equivalence :: "transition_matrix \<Rightarrow> nat \<Rightarrow
 definition trace_equivalent :: "transition_matrix \<Rightarrow> transition_matrix \<Rightarrow> bool" where
   "trace_equivalent e1 e2 \<equiv> \<forall>t. trace_equivalence e1 0 <> e2 0 <> t"
 
-lemma observe_trace_first_outputs_equiv:
-  "observe_trace e1 s1 r1 ((l, i) # ts) = observe_trace e2 s2 r2 ((l, i) # ts) \<Longrightarrow>
+lemma observe_execution_first_outputs_equiv:
+  "observe_execution e1 s1 r1 ((l, i) # ts) = observe_execution e2 s2 r2 ((l, i) # ts) \<Longrightarrow>
    step e1 s1 r1 l i = Some (t, s', p, r') \<Longrightarrow>
-   \<exists>(s2', t2)|\<in>|possible_steps e2 s2 r2 l i. apply_outputs (Outputs t2) (join_ir i r2) = p"
-  apply (simp add: observe_trace_def)
+   \<exists>(s2', t2)|\<in>|possible_steps e2 s2 r2 l i. evaluate_outputs t2 i r2 = p"
+  apply (simp only: observe_execution_step_def)
   apply (case_tac "step e2 s2 r2 l i")
    apply simp
+  apply simp
   apply (case_tac a)
-  apply simp
-  apply clarify
-  apply simp
-  apply (simp add: step_def random_member_def)
-  apply (case_tac "possible_steps e1 s1 r1 l i = {||}")
-   apply simp
-  apply (case_tac "possible_steps e2 s2 r2 l i = {||}")
-   apply simp
-  apply simp
-  apply (case_tac "SOME x. x |\<in>| possible_steps e1 s1 r1 l i")
-  apply (case_tac "SOME x. x |\<in>| possible_steps e2 s2 r2 l i")
-  apply simp
-  apply clarify
-  apply simp
-  apply (rule_tac x="(ba, aaa)" in fBexI)
-   apply simp
-  by (metis random_member_Some random_member_def)
+  apply clarsimp
+  by (meson step_member case_prodI rev_fBexI step_outputs)
 
 end

@@ -181,24 +181,24 @@ lemma acceptance:
   by simp
 
 lemma purchase_coke:
-  "observe_trace drinks2 0 <> [((STR ''select''), [Str ''coke'']), ((STR ''coin''), [Num 50]), ((STR ''coin''), [Num 50]), ((STR ''vend''), [])] =
+  "observe_execution drinks2 0 <> [((STR ''select''), [Str ''coke'']), ((STR ''coin''), [Num 50]), ((STR ''coin''), [Num 50]), ((STR ''vend''), [])] =
                        [[], [Some (Num 50)], [Some (Num 100)], [Some (Str ''coke'')]]"
-  apply (rule observe_trace_possible_step)
+  apply (rule observe_execution_possible_step)
      apply (simp add: possible_steps_0)
      apply (simp add: select_def join_ir_def input2state_def accepts_from_1 acceptance)
     apply (simp add: select_def)
-  apply (rule observe_trace_possible_step)
+  apply (rule observe_execution_possible_step)
       apply (simp add: possible_steps_1)
      apply (simp add: coin_def value_plus_def join_ir_def input2state_def)
   using accepts_1_2 accepts_from_1a
     apply (simp add: coin_def value_plus_def join_ir_def input2state_def apply_outputs_def apply_updates_def)
    apply (simp add: coin_def value_plus_def join_ir_def input2state_def)
-  apply (rule observe_trace_possible_step)
+  apply (rule observe_execution_possible_step)
       apply (simp add: possible_steps_2_coin)
      apply (simp add: coin_def value_plus_def join_ir_def input2state_def accepts_from_2 accepts_1_2)
     apply (simp add: coin_def value_plus_def join_ir_def input2state_def apply_outputs_def apply_updates_def)
    apply (simp add: coin_def value_plus_def join_ir_def input2state_def)
-  apply (rule observe_trace_possible_step)
+  apply (rule observe_execution_possible_step)
      apply (simp add: possible_steps_2_vend apply_updates_def value_plus_def input2state_def)
     apply (simp add: apply_outputs_def vend_def apply_updates_def input2state_def)
    apply (simp add: vend_def apply_updates_def)
@@ -247,7 +247,7 @@ lemma drinks2_vend_invalid:
   apply safe
   by (simp_all add: transitions can_take_transition_def can_take_def value_gt_def MaybeBoolInt_not_num_1)
 
-lemma equiv_1_2: "observe_trace drinks 1 r t = observe_trace drinks2 2 r t"
+lemma equiv_1_2: "observe_execution drinks 1 r t = observe_execution drinks2 2 r t"
 proof(induct t arbitrary: r)
   case Nil
   then show ?case
@@ -259,37 +259,29 @@ next
      defer
      apply (case_tac "a = (STR ''vend'', [])")
       defer
-      apply (rule observe_trace_no_possible_steps)
+      apply (rule observe_execution_no_possible_steps)
        apply (simp add: drinks_1_rejects)
       apply (simp add: drinks2_2_invalid)
-     apply (rule observe_trace_one_possible_step)
+     apply (rule observe_execution_one_possible_step)
           apply (simp add: possible_steps_1_coin)
          apply (simp add: possible_steps_2_coin)
         apply simp+
     apply (case_tac "\<exists>n. r $ 2 = Some (Num n)")
      defer
-     apply (rule observe_trace_no_possible_steps)
-      apply (simp add: drinks_vend_invalid)
-     apply (simp add: drinks2_vend_invalid)
+     apply (simp add: drinks_vend_invalid drinks2_vend_invalid)
     apply clarify
     apply (case_tac "n < 100")
-     apply (rule observe_trace_one_possible_step)
-          apply (simp add: Drinks_Machine.drinks_vend_insufficient)
-         apply (simp add: drinks2_vend_insufficient2)
-        apply simp+
-    apply (rule observe_trace_one_possible_step)
-         apply (simp add: Drinks_Machine.drinks_vend_sufficient)
-        apply (simp add: drinks2_vend_sufficient)
-       apply simp+
+     apply (simp add: Drinks_Machine.drinks_vend_insufficient drinks2_vend_insufficient2)
+    apply (simp add: Drinks_Machine.drinks_vend_sufficient drinks2_vend_sufficient)
     apply (induct t)
      apply simp
-    apply (rule observe_trace_no_possible_steps)
+    apply (rule observe_execution_no_possible_steps)
      apply (simp add: drinks_end)
     by (simp add: drinks2_end)
 qed
 
 lemma equiv_1_1:
-  "observe_trace drinks 1 <2 $:= Some (Num 0), 1 $:= i> t = observe_trace drinks2 1 <2 $:= Some (Num 0), 1 $:= i> t"
+  "observe_execution drinks 1 <2 $:= Some (Num 0), 1 $:= i> t = observe_execution drinks2 1 <2 $:= Some (Num 0), 1 $:= i> t"
 proof(induct t)
   case Nil
   then show ?case
@@ -301,15 +293,15 @@ next
      defer
      apply (case_tac "a = (STR ''vend'', [])")
       defer
-      apply (rule observe_trace_no_possible_steps)
+      apply (rule observe_execution_no_possible_steps)
        apply (simp add: drinks_1_rejects)
       apply (metis drinks2_1_invalid prod.collapse)
-     apply (rule observe_trace_one_possible_step)
+     apply (rule observe_execution_one_possible_step)
           apply (simp add: possible_steps_1_coin)
          apply (simp add: possible_steps_1)
         apply simp+
      apply (simp add: equiv_1_2)
-    apply (rule observe_trace_one_possible_step)
+    apply (rule observe_execution_one_possible_step)
          apply (simp add: drinks_vend_insufficient)
         apply (simp add: drinks2_vend_insufficient)
        apply (simp add: vend_fail_def vend_nothing_def)+
@@ -327,13 +319,13 @@ proof (induct t)
   then show ?case
     apply (simp add: observably_equivalent_def)
     apply (case_tac "fst a = STR ''select'' \<and> length (snd a) = 1")
-     apply (rule observe_trace_one_possible_step)
+     apply (rule observe_execution_one_possible_step)
           apply (simp add: Drinks_Machine.possible_steps_0)
          apply (simp add: possible_steps_0)
        apply simp+
      apply (simp add: select_def join_ir_def input2state_nth apply_updates_def)
      apply (metis equiv_1_1 empty_None finfun_update_twist numeral_eq_one_iff semiring_norm(85))
-     apply (rule observe_trace_no_possible_steps)
+     apply (rule observe_execution_no_possible_steps)
     using drinks_0_rejects apply blast
     using drinks2_0_invalid by auto
 qed

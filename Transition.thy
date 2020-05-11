@@ -93,6 +93,8 @@ lemma cant_take_if:
 definition apply_outputs :: "'a aexp list \<Rightarrow> 'a datastate \<Rightarrow> value option list" where
   "apply_outputs p s = map (\<lambda>p. aval p s) p"
 
+definition "evaluate_outputs t i r = apply_outputs (Outputs t) (join_ir i r)"
+
 lemma apply_outputs_nth:
   "i < length p \<Longrightarrow> apply_outputs p s ! i = aval (p ! i) s"
   by (simp add: apply_outputs_def)
@@ -121,6 +123,8 @@ lemma apply_outputs_unupdated: assumes "ia \<noteq> r"
 
 definition apply_updates :: "update_function list \<Rightarrow> vname datastate \<Rightarrow> registers \<Rightarrow> registers" where
   "apply_updates u old = fold (\<lambda>h r. r(fst h $:= aval (snd h) old)) u"
+
+definition "evaluate_updates t i r = apply_updates (Updates t) (join_ir i r) r"
 
 lemma apply_updates_cons: "ra \<noteq> r \<Longrightarrow>
        apply_updates u (join_ir ia c) c $ ra = apply_updates ((r, a) # u) (join_ir ia c) c $ ra"

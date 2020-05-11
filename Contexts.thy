@@ -115,7 +115,7 @@ next
       apply (case_tac "random_member
               (ffilter (\<lambda>(s', T). accepts e s' (apply_updates (Updates T) (join_ir b r) r) ts) (possible_steps e s r aa b))")
      apply simp
-    using accepts.step random_member_Some by fastforce
+    using accepts.step random_member_is_member by fastforce
 qed
 
 lemma posterior_sequence_accepts:
