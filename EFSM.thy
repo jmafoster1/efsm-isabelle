@@ -365,6 +365,20 @@ primrec observe_all :: "transition_matrix \<Rightarrow> nat \<Rightarrow> regist
       _ \<Rightarrow> []
     )"
 
+fun execute :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> trace" where
+  "execute _ _ _ [] = []" |
+  "execute e s r ((l, i)#as)  = (
+    let
+      viable = possible_steps e s r l i;
+      output_viable = ffilter (\<lambda>(_, t). \<forall>p \<in> set (evaluate_outputs t i r). p \<noteq> None) viable
+    in
+    if viable = {||} then
+      []
+    else
+      let (s', t) = Eps (\<lambda>x. x |\<in>| viable) in
+      (l, i, map (\<lambda>p. case p of Some o \<Rightarrow> o) (evaluate_outputs t i r))#(execute e s' (evaluate_updates t i r) as)
+    )"
+
 fun observe_execution :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> outputs list" where
   "observe_execution _ _ _ [] = []" |
   "observe_execution e s r ((l, i)#as)  = (
@@ -412,9 +426,6 @@ lemma observe_execution_no_possible_step:
    observe_execution e s r (h#es) = []"
   by (cases h, simp)
 
-definition observably_equivalent :: "transition_matrix \<Rightarrow> transition_matrix \<Rightarrow> execution \<Rightarrow> bool" where
-  "observably_equivalent e1 e2 t = ((observe_execution e1 0 <> t) = (observe_execution e2 0 <> t))"
-
 lemma observe_execution_no_possible_steps:
   "possible_steps e1 s1 r1 (fst h) (snd h) = {||} \<Longrightarrow>
    possible_steps e2 s2 r2 (fst h) (snd h) = {||} \<Longrightarrow>
@@ -431,19 +442,6 @@ lemma observe_execution_one_possible_step:
    (observe_execution e1 s1' r' t) = (observe_execution e2 s2' r' t) \<Longrightarrow>
    (observe_execution e1 s1 r (h#t)) = (observe_execution e2 s2 r (h#t))"
   by (simp add: observe_execution_possible_step)
-
-lemma observably_equivalent_reflexive: "observably_equivalent e1 e1 t"
-  by (simp add: observably_equivalent_def)
-
-lemma observably_equivalent_symmetric:
-  "observably_equivalent e1 e2 t = observably_equivalent e2 e1 t"
-  using observably_equivalent_def by auto
-
-lemma observably_equivalent_transitive:
-  "observably_equivalent e1 e2 t \<Longrightarrow>
-   observably_equivalent e2 e3 t \<Longrightarrow>
-   observably_equivalent e1 e3 t"
-  by (simp add: observably_equivalent_def)
 
 lemma observe_execution_preserves_length:
   "length (observe_all e s r as) = length (observe_execution e s r as)"
@@ -606,14 +604,14 @@ definition eq_upto_rename_strong :: "transition_matrix \<Rightarrow> transition_
 inductive trace_equivalence :: "transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
   base: "trace_equivalence e1 s1 r1 e2 s2 r2 []" |
   step: "\<forall>(s1', t1) |\<in>| possible_steps e1 s1 r1 l i.
-           \<forall>(s2', t2) |\<in>| possible_steps e2 s2 r2 l i.
+           \<exists>(s2', t2) |\<in>| possible_steps e2 s2 r2 l i.
             apply_outputs (Outputs t1) (join_ir i r1) = apply_outputs (Outputs t2) (join_ir i r2) \<and>
             trace_equivalence e1 s1' (apply_updates (Updates t1) (join_ir i r1) r1) e2 s2' (apply_updates (Updates t2) (join_ir i r2) r2) es \<Longrightarrow>
          trace_equivalence e1 s1 r1 e2 s2 r2 ((l, i)#es)"
 
 lemma trace_equivalence_step: "trace_equivalence e1 s1 r1 e2 s2 r2 ((l, i)#es) = (
   \<forall>(s1', t1) |\<in>| possible_steps e1 s1 r1 l i.
-           \<forall>(s2', t2) |\<in>| possible_steps e2 s2 r2 l i.
+           \<exists>(s2', t2) |\<in>| possible_steps e2 s2 r2 l i.
             apply_outputs (Outputs t1) (join_ir i r1) = apply_outputs (Outputs t2) (join_ir i r2) \<and>
             trace_equivalence e1 s1' (apply_updates (Updates t1) (join_ir i r1) r1) e2 s2' (apply_updates (Updates t2) (join_ir i r2) r2) es)"
   apply standard
@@ -655,7 +653,7 @@ definition "simulates e1 e2 = (\<exists>f. \<forall>t. trace_simulation f e1 0 <
 definition T :: "transition_matrix \<Rightarrow> trace set" where
   "T e = {t. accepts_trace e 0 <> t}"
 
-definition "trace_equiv e1 e2 = (T e1 = T e2)"
+definition "observably_equivalent e1 e2 = (T e1 = T e2)"
 
 lemma pair_list_induct [case_names Nil Cons]:
   "f [] \<Longrightarrow> (\<And>l i as. f as \<Longrightarrow> f ((l, i) # as)) \<Longrightarrow> f l"
@@ -712,7 +710,40 @@ lemma simulates_trace_subset: "simulates e1 e2 \<Longrightarrow> T e1 \<subseteq
   apply (simp add: simulates_def T_def)
   using accepts_trace_simulation by blast
 
-lemma "simulates e1 e2 \<Longrightarrow> simulates e2 e1 \<Longrightarrow> T e1 = T e2"
-  using simulates_trace_subset by auto
+lemma simulation_implies_observably_equivalent:
+"simulates e1 e2 \<Longrightarrow> simulates e2 e1 \<Longrightarrow> observably_equivalent e1 e2"
+  using simulates_trace_subset observably_equivalent_def by auto
+
+lemma observably_equivalent_reflexive: "observably_equivalent e1 e1"
+  by (simp add: observably_equivalent_def)
+
+lemma observably_equivalent_symmetric:
+  "observably_equivalent e1 e2 = observably_equivalent e2 e1"
+  using observably_equivalent_def by auto
+
+lemma observably_equivalent_transitive:
+  "observably_equivalent e1 e2 \<Longrightarrow>
+   observably_equivalent e2 e3 \<Longrightarrow>
+   observably_equivalent e1 e3"
+  by (simp add: observably_equivalent_def)
+
+lemma observably_equivalent:
+  "\<forall>t. accepts_trace e1 0 <> t = accepts_trace e2 0 <> t \<Longrightarrow> observably_equivalent e1 e2"
+  by (simp add: T_def observably_equivalent_def)
+
+inductive exec_diff :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
+  base: "(s1', t1) |\<in>| possible_steps e1 s1 r1 l i \<Longrightarrow>
+         \<nexists>(s2', t2) |\<in>| possible_steps e2 s2 r2 l i. evaluate_outputs t1 i r1 = evaluate_outputs t2 i r2 \<Longrightarrow>
+         exec_diff e1 s1 r1 e2 s2 r2 ((l, i)#t)" |
+  step: "(s1', t1) |\<in>| possible_steps e1 s1 r1 l i \<Longrightarrow>
+         (s2', t2) |\<in>| possible_steps e2 s2 r2 l i \<Longrightarrow>
+         exec_diff e1 s1' (evaluate_updates t1 i r1) e2 s2' (evaluate_updates t2 i r2) t \<Longrightarrow>
+         exec_diff e1 s1 r1 e2 s2 r2 ((l, i)#t)"
+
+lemma accepts_trace_step_2: "(s2', t2) |\<in>| possible_steps e2 s2 r2 l i \<Longrightarrow>
+       accepts_trace e2 s2' (evaluate_updates t2 i r2) t \<Longrightarrow>
+       evaluate_outputs t2 i r2 = map Some p \<Longrightarrow>
+       accepts_trace e2 s2 r2 ((l, i, p)#t)"
+  by (rule accepts_trace.step, auto)
 
 end
