@@ -56,7 +56,7 @@ lemma aval_plus_symmetry: "aval (Plus x y) s = aval (Plus y x) s"
   by (simp add: value_plus_symmetry)
 
 text \<open>A little syntax magic to write larger states compactly:\<close>
-abbreviation null_state ("<>") where
+definition null_state ("<>") where
   "null_state \<equiv> (K$ bot)"
 
 no_notation finfun_update ("_'(_ $:= _')" [1000, 0, 0] 1000)
@@ -67,21 +67,19 @@ syntax
   ""         :: "fupdbind \<Rightarrow> fupdbinds"             ("_")
   "_fupdbinds":: "fupdbind \<Rightarrow> fupdbinds \<Rightarrow> fupdbinds" ("_,/ _")
   "_fUpdate"  :: "'a \<Rightarrow> fupdbinds \<Rightarrow> 'a"            ("_/'((_)')" [1000, 0] 900)
+  "_State" :: "fupdbinds => 'a" ("<_>")
 
 translations
   "_fUpdate f (_fupdbinds b bs)" \<rightleftharpoons> "_fUpdate (_fUpdate f b) bs"
   "f(x$:=y)" \<rightleftharpoons> "CONST finfun_update f x y"
-
-syntax
-  "_State" :: "fupdbinds => 'a" ("<_>")
-translations
   "_State ms" == "_fUpdate <> ms"
   "_State (_updbinds b bs)" <= "_fUpdate (_State b) bs"
 
-lemma empty_None [simp]: "<> = (K$ None)"
-  by (simp add: bot_option_def)
+lemma empty_None: "<> = (K$ None)"
+  by (simp add: null_state_def bot_option_def)
 
-
+lemma apply_empty_None [simp]: "<> $ x2 = None"
+  by (simp add: null_state_def bot_option_def)
 
 definition input2state :: "value list \<Rightarrow> registers" where
   "input2state n = fold (\<lambda>(k, v) f. f(k $:= Some v)) (enumerate 0 n) (K$ None)"
@@ -253,7 +251,7 @@ lemma join_ir_empty [simp]: "join_ir [] <> = (\<lambda>x. None)"
   apply (simp add: join_ir_def)
   apply (case_tac x)
    apply (simp add: input2state_def)
-  by simp
+  by (simp add: empty_None)
 
 lemma join_ir_R [simp]: "(join_ir i r) (R n) = r $ n"
   by (simp add: join_ir_def)
