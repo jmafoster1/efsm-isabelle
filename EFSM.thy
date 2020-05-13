@@ -639,14 +639,18 @@ lemma observe_execution_first_outputs_equiv:
 inductive trace_simulation :: "(cfstate \<Rightarrow> cfstate) \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> trace \<Rightarrow> bool" where
   base: "s2 = f s1 \<Longrightarrow> trace_simulation f e1 s1 r1 e2 s2 r2 []" |
   step: "s2 = f s1 \<Longrightarrow>
-              \<forall>(s1', t1) |\<in>| possible_steps e1 s1 r1 l i. evaluate_outputs t1 i r1 = map Some o \<longrightarrow>
-              (\<exists>(s2', t2) |\<in>| possible_steps e2 s2 r2 l i. evaluate_outputs t2 i r2 = map Some o \<and>
-              trace_simulation f e1 s1' (evaluate_updates t1 i r1) e2 s2' (evaluate_updates t2 i r2) es) \<Longrightarrow>
-              trace_simulation f e1 s1 r1 e2 s2 r2 ((l, i, o)#es)"
+         \<forall>(s1', t1) |\<in>| ffilter (\<lambda>(s1', t1). evaluate_outputs t1 i r1 = map Some o) (possible_steps e1 s1 r1 l i).
+         (\<exists>(s2', t2) |\<in>| possible_steps e2 s2 r2 l i. evaluate_outputs t2 i r2 = map Some o \<and>
+         trace_simulation f e1 s1' (evaluate_updates t1 i r1) e2 s2' (evaluate_updates t2 i r2) es) \<Longrightarrow>
+         trace_simulation f e1 s1 r1 e2 s2 r2 ((l, i, o)#es)"
 
 lemma step_none: "s2 = f s1 \<Longrightarrow> \<nexists>(s1', t1) |\<in>| possible_steps e1 s1 r1 l i. evaluate_outputs t1 i r1 = map Some o \<Longrightarrow>
 trace_simulation f e1 s1 r1 e2 s2 r2 ((l, i, o)#es)"
-  by (rule trace_simulation.step, auto)
+  apply (rule trace_simulation.step)
+   apply simp
+  apply (case_tac "ffilter (\<lambda>(s1', t1). evaluate_outputs t1 i r1 = map Some o) (possible_steps e1 s1 r1 l i)")
+   apply simp
+  by fastforce
 
 definition "simulates e1 e2 = (\<exists>f. \<forall>t. trace_simulation f e1 0 <> e2 0 <> t)"
 
@@ -669,9 +673,10 @@ lemma accepts_trace_exists_possible_step:
           evaluate_outputs t1 b r1 = map Some c"
   using accepts_trace_step by auto
 
-lemma "rejects_trace e2 s2 r2 t \<Longrightarrow>
- accepts_trace e1 s1 r1 t \<Longrightarrow>
-\<not>trace_simulation f e1 s1 r1 e2 s2 r2 t"
+lemma rejects_trace_simulation:
+  "rejects_trace e2 s2 r2 t \<Longrightarrow>
+   accepts_trace e1 s1 r1 t \<Longrightarrow>
+   \<not>trace_simulation f e1 s1 r1 e2 s2 r2 t"
 proof(induct t arbitrary: s1 r1 s2 r2)
   case Nil
   then show ?case
@@ -686,32 +691,21 @@ next
     apply (rule trace_simulation.cases)
       apply simp
      apply simp
-    by blast
+    apply clarsimp
+    apply (case_tac "ffilter (\<lambda>(s1', t1). evaluate_outputs t1 i r1 = map Some o) (possible_steps e1 s1 r1 l i) = {||}")
+     apply auto[1]
+    by fastforce
 qed
 
 lemma accepts_trace_simulation:
 "accepts_trace e1 s1 r1 t \<Longrightarrow> trace_simulation f e1 s1 r1 e2 s2 r2 t \<Longrightarrow> accepts_trace e2 s2 r2 t"
-proof(induct t arbitrary: s1 r1 s2 r2)
-  case Nil
-  then show ?case
-    by (simp add: accepts_trace.base)
-next
-  case (Cons h t)
-  then show ?case
-    apply (cases h, clarsimp)                     
-    apply (simp add: accepts_trace_step)
-    apply (rule trace_simulation.cases)
-      apply simp
-     apply simp
-    by blast
-qed
+  using rejects_trace_simulation by blast
 
 lemma simulates_trace_subset: "simulates e1 e2 \<Longrightarrow> T e1 \<subseteq> T e2"
-  apply (simp add: simulates_def T_def)
-  using accepts_trace_simulation by blast
+  using T_def accepts_trace_simulation simulates_def by fastforce
 
 lemma simulation_implies_observably_equivalent:
-"simulates e1 e2 \<Longrightarrow> simulates e2 e1 \<Longrightarrow> observably_equivalent e1 e2"
+  "simulates e1 e2 \<Longrightarrow> simulates e2 e1 \<Longrightarrow> observably_equivalent e1 e2"
   using simulates_trace_subset observably_equivalent_def by auto
 
 lemma observably_equivalent_reflexive: "observably_equivalent e1 e1"
@@ -731,19 +725,132 @@ lemma observably_equivalent:
   "\<forall>t. accepts_trace e1 0 <> t = accepts_trace e2 0 <> t \<Longrightarrow> observably_equivalent e1 e2"
   by (simp add: T_def observably_equivalent_def)
 
-inductive exec_diff :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
-  base: "(s1', t1) |\<in>| possible_steps e1 s1 r1 l i \<Longrightarrow>
-         \<nexists>(s2', t2) |\<in>| possible_steps e2 s2 r2 l i. evaluate_outputs t1 i r1 = evaluate_outputs t2 i r2 \<Longrightarrow>
-         exec_diff e1 s1 r1 e2 s2 r2 ((l, i)#t)" |
-  step: "(s1', t1) |\<in>| possible_steps e1 s1 r1 l i \<Longrightarrow>
-         (s2', t2) |\<in>| possible_steps e2 s2 r2 l i \<Longrightarrow>
-         exec_diff e1 s1' (evaluate_updates t1 i r1) e2 s2' (evaluate_updates t2 i r2) t \<Longrightarrow>
-         exec_diff e1 s1 r1 e2 s2 r2 ((l, i)#t)"
-
 lemma accepts_trace_step_2: "(s2', t2) |\<in>| possible_steps e2 s2 r2 l i \<Longrightarrow>
        accepts_trace e2 s2' (evaluate_updates t2 i r2) t \<Longrightarrow>
        evaluate_outputs t2 i r2 = map Some p \<Longrightarrow>
        accepts_trace e2 s2 r2 ((l, i, p)#t)"
   by (rule accepts_trace.step, auto)
+
+inductive exec_simulation :: "(cfstate \<Rightarrow> cfstate) \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
+  base: "s2 = f s1 \<Longrightarrow> exec_simulation f e1 s1 r1 e2 s2 r2 []" |
+  step: "s2 = f s1 \<Longrightarrow>
+         \<forall>(s1', t1) |\<in>| (possible_steps e1 s1 r1 l i).
+         (\<exists>(s2', t2) |\<in>| possible_steps e2 s2 r2 l i. evaluate_outputs t1 i r1 = evaluate_outputs t2 i r2 \<and>
+         exec_simulation f e1 s1' (evaluate_updates t1 i r1) e2 s2' (evaluate_updates t2 i r2) es) \<Longrightarrow>
+         exec_simulation f e1 s1 r1 e2 s2 r2 ((l, i)#es)"
+
+lemma exec_simulation_step:
+"exec_simulation f e1 s1 r1 e2 s2 r2 ((l, i)#es) =
+ (s2 = f s1 \<and>
+ (\<forall>(s1', t1) |\<in>| (possible_steps e1 s1 r1 l i).
+         (\<exists>(s2', t2) |\<in>| possible_steps e2 s2 r2 l i. evaluate_outputs t1 i r1 = evaluate_outputs t2 i r2 \<and>
+         exec_simulation f e1 s1' (evaluate_updates t1 i r1) e2 s2' (evaluate_updates t2 i r2) es))
+)"
+  apply standard
+   apply (rule exec_simulation.cases)
+     apply simp
+    apply simp
+   apply simp
+  apply (rule exec_simulation.step)
+   apply simp
+  by blast
+
+lemma exec_simulation_trace_simulation:
+  "exec_simulation f e1 s1 r1 e2 s2 r2 (map (\<lambda>(l, i, o). (l, i)) t) \<Longrightarrow> trace_simulation f e1 s1 r1 e2 s2 r2 t"
+proof(induct t arbitrary: s1 s2 r1 r2)
+case Nil
+  then show ?case
+    apply (rule exec_simulation.cases)
+     apply (simp add: trace_simulation.base)
+    by simp
+next
+  case (Cons a t)
+  then show ?case
+    apply (cases a, clarsimp)
+    apply (rule exec_simulation.cases)
+      apply simp
+     apply simp
+    apply (rule trace_simulation.step)
+     apply simp
+    apply clarsimp
+    apply (erule_tac x="(aa, ba)" in fBallE)
+     apply clarsimp
+     apply blast
+    by simp
+qed
+
+inductive exec_equiv :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
+  base: "exec_equiv e1 s1 r1 e2 s2 r2 []" |
+  step: "\<forall>(s1', t1) |\<in>| (possible_steps e1 s1 r1 l i). possible_steps e2 s2 r2 l i \<noteq> {||} \<and>
+         (\<forall>(s2', t2) |\<in>| possible_steps e2 s2 r2 l i. evaluate_outputs t1 i r1 = evaluate_outputs t2 i r2 \<and>
+         exec_equiv e1 s1' (evaluate_updates t1 i r1) e2 s2' (evaluate_updates t2 i r2) es) \<Longrightarrow>
+         \<forall>(s2', t2) |\<in>| (possible_steps e2 s2 r2 l i). possible_steps e1 s1 r1 l i \<noteq> {||} \<and>
+         (\<forall>(s1', t1) |\<in>| possible_steps e1 s1 r1 l i. evaluate_outputs t1 i r1 = evaluate_outputs t2 i r2 \<and>
+         exec_equiv e1 s1' (evaluate_updates t1 i r1) e2 s2' (evaluate_updates t2 i r2) es) \<Longrightarrow>
+         exec_equiv e1 s1 r1 e2 s2 r2 ((l, i)#es)"
+
+lemma exec_equiv_step:
+"exec_equiv e1 s1 r1 e2 s2 r2 ((l, i)#es) = (
+  (\<forall>(s1', t1) |\<in>| (possible_steps e1 s1 r1 l i). possible_steps e2 s2 r2 l i \<noteq> {||} \<and>
+   (\<forall>(s2', t2) |\<in>| possible_steps e2 s2 r2 l i. evaluate_outputs t1 i r1 = evaluate_outputs t2 i r2 \<and>
+   exec_equiv e1 s1' (evaluate_updates t1 i r1) e2 s2' (evaluate_updates t2 i r2) es)) \<and>
+  (\<forall>(s2', t2) |\<in>| (possible_steps e2 s2 r2 l i). possible_steps e1 s1 r1 l i \<noteq> {||} \<and>
+   (\<forall>(s1', t1) |\<in>| possible_steps e1 s1 r1 l i. evaluate_outputs t1 i r1 = evaluate_outputs t2 i r2 \<and>
+   exec_equiv e1 s1' (evaluate_updates t1 i r1) e2 s2' (evaluate_updates t2 i r2) es))
+)"
+  apply standard
+   apply (rule exec_equiv.cases)
+     apply simp
+    apply simp
+   apply simp
+  by (rule exec_equiv.step, auto)
+
+lemma "possible_steps e1 s1 r1 l i \<noteq> {||} \<Longrightarrow>
+possible_steps e2 s2 r2 l i = {||} \<Longrightarrow>
+\<not>exec_equiv e1 s1 r1 e2 s2 r2 ((l, i)#es)"
+  apply (simp add: exec_equiv_step)
+  by auto
+
+lemma exec_equiv_acceptance:
+  "exec_equiv e1 s1 r1 e2 s2 r2 (map (\<lambda>(l, i, o). (l, i)) t) \<Longrightarrow> accepts_trace e2 s2 r2 t = accepts_trace e1 s1 r1 t"
+proof(induct t arbitrary: s1 s2 r1 r2)
+  case Nil
+  then show ?case
+    by (simp add: accepts_trace.base)
+next
+  case (Cons a t)
+  then show ?case
+    apply (cases a, simp)
+    apply (rule exec_equiv.cases)
+      apply simp
+     apply simp
+    apply clarsimp
+    apply standard
+    subgoal for p l i
+      apply (rule accepts_trace.cases)
+      apply simp
+     apply simp
+    apply clarsimp
+    apply (rule accepts_trace.step)
+    apply (erule_tac x="(aa, b)" in fBallE[of "possible_steps e2 s2 r2 l i"])
+     defer apply simp
+      by (case_tac "possible_steps e1 s1 r1 l i", auto)
+    apply (rule accepts_trace.cases)
+      apply simp
+     apply simp
+    apply clarsimp
+    apply (rule accepts_trace.step)
+    apply (erule_tac x="(aa, b)" in fBallE)
+     defer apply simp
+    apply simp
+    by (case_tac "possible_steps e2 s2 r2 la ia", auto)
+qed
+
+lemma "\<forall>x. exec_equiv e1 0 <> e2 0 <> x \<Longrightarrow> observably_equivalent e1 e2"
+  apply (rule observably_equivalent)
+  apply clarify
+  apply (erule_tac x="map (\<lambda>(l, i, o). (l, i)) t" in allE)
+  by (simp add: exec_equiv_acceptance)
+
 
 end
