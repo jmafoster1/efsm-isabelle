@@ -1,6 +1,6 @@
 subsection \<open>Contexts\<close>
 text\<open>
-This theory defines contexts as a way of relating possible constraints on register values to
+tthis theory defines contexts as a way of relating possible constraints on register values to
 observable output. We then use contexts to extendthe idea of transition subsumption to EFSM
 transitions with register update functions.
 \<close>
@@ -74,7 +74,7 @@ primrec accepting_sequence :: "transition_matrix \<Rightarrow> cfstate \<Rightar
     accepting = ffilter (\<lambda>(s', tt). recognises e s' (apply_updates (Updates tt) (join_ir (snd a) r) r) t) poss in
     case random_member accepting of
     None \<Rightarrow> None |
-    Some (s', T) \<Rightarrow> let
+    Some (s', tt) \<Rightarrow> let
       r' = (apply_updates (Updates tt) (join_ir (snd a) r) r) in
       accepting_sequence e s' r' t ((tt, s', (apply_outputs (Outputs tt) (join_ir (snd a) r)), r')#obs)
   )"
@@ -113,7 +113,7 @@ next
     apply (cases a)
       apply simp
       apply (case_tac "random_member
-              (ffilter (\<lambda>(s', T). recognises e s' (apply_updates (Updates T) (join_ir b r) r) ts) (possible_steps e s r aa b))")
+              (ffilter (\<lambda>(s', tt). recognises e s' (apply_updates (Updates tt) (join_ir b r) r) ts) (possible_steps e s r aa b))")
      apply simp
     using recognises.step random_member_is_member by fastforce
 qed
@@ -163,7 +163,7 @@ next
     apply (cases a)
     apply simp
     apply (case_tac "random_member
-              (ffilter (\<lambda>(s', T). recognises e s' (apply_updates (Updates T) (join_ir b r) r) t) (possible_steps e s r aa b))")
+              (ffilter (\<lambda>(s', tt). recognises e s' (apply_updates (Updates tt) (join_ir b r) r) t) (possible_steps e s r aa b))")
      apply simp
     using recognises.step random_member_is_member by fastforce
 qed
@@ -184,7 +184,7 @@ next
     apply (cases a)
     apply simp
     apply (case_tac "random_member
-              (ffilter (\<lambda>(s', T). recognises e s' (apply_updates (Updates T) (join_ir b d) d) t) (possible_steps e s d aa b))")
+              (ffilter (\<lambda>(s', tt). recognises e s' (apply_updates (Updates tt) (join_ir b d) d) t) (possible_steps e s d aa b))")
      apply simp
      apply clarify
      apply (rule recognises.cases)
