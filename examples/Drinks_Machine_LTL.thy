@@ -10,13 +10,13 @@ lemma LTL_r2_not_always_gt_100:
 
 lemma possible_steps_select_wrong_arity: "a = STR ''select'' \<Longrightarrow>
        length b \<noteq> 1 \<Longrightarrow>
-       possible_steps drinks 0 (K$ None) a b = {||}"
+       possible_steps drinks 0 <> a b = {||}"
   apply (simp add: possible_steps_def ffilter_def fset_both_sides Abs_fset_inverse Set.filter_def drinks_def)
   apply safe
   by (simp_all add: select_def)
 
 lemma possible_steps_0_not_select: "a \<noteq> STR ''select'' \<Longrightarrow>
-       possible_steps drinks 0 (K$ None) a b = {||}"
+       possible_steps drinks 0 <> a b = {||}"
   apply (simp add: possible_steps_def ffilter_def fset_both_sides Abs_fset_inverse Set.filter_def drinks_def)
   apply safe
   by (simp_all add: select_def)
@@ -132,7 +132,7 @@ qed
 
 lemma possible_steps_0_invalid:
   "\<not> (l = STR ''select'' \<and> length i = 1) \<Longrightarrow>
-   possible_steps drinks 0 (K$ None) l i = {||}"
+   possible_steps drinks 0 <> l i = {||}"
   using possible_steps_0_not_select possible_steps_select_wrong_arity by fastforce
 
 lemma costsMoney_aux:
@@ -252,7 +252,7 @@ lemma ltl_step_not_select:
   by (cases e, case_tac b, auto)
 
 lemma ltl_step_select:
-  "ltl_step drinks (Some 0) (K$ None) (STR ''select'', [i]) = (Some 1, [], <1 $:= Some i, 2 $:= Some (Num 0)>)"
+  "ltl_step drinks (Some 0) <> (STR ''select'', [i]) = (Some 1, [], <1 $:= Some i, 2 $:= Some (Num 0)>)"
   apply (rule  ltl_step_some[of _ _ _ _ _ _ select])
     apply (simp add: possible_steps_0)
    apply (simp add: select_def)

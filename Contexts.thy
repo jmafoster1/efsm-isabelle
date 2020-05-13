@@ -71,12 +71,12 @@ primrec accepting_sequence :: "transition_matrix \<Rightarrow> cfstate \<Rightar
   "accepting_sequence _ _ r [] obs = Some (rev obs)" |
   "accepting_sequence e s r (a#t) obs = (let
     poss = possible_steps e s r (fst a) (snd a);
-    accepting = ffilter (\<lambda>(s', T). recognises e s' (apply_updates (Updates T) (join_ir (snd a) r) r) t) poss in
+    accepting = ffilter (\<lambda>(s', tt). recognises e s' (apply_updates (Updates tt) (join_ir (snd a) r) r) t) poss in
     case random_member accepting of
     None \<Rightarrow> None |
     Some (s', T) \<Rightarrow> let
-      r' = (apply_updates (Updates T) (join_ir (snd a) r) r) in
-      accepting_sequence e s' r' t ((T, s', (apply_outputs (Outputs T) (join_ir (snd a) r)), r')#obs)
+      r' = (apply_updates (Updates tt) (join_ir (snd a) r) r) in
+      accepting_sequence e s' r' t ((tt, s', (apply_outputs (Outputs tt) (join_ir (snd a) r)), r')#obs)
   )"
 
 definition posterior_sequence :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> registers option" where
