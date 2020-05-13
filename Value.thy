@@ -1,12 +1,12 @@
-theory Value
-imports Trilean
-begin
-
 section\<open>Values\<close>
 
 text\<open>Our EFSM implementation can currently handle integers and strings. Here we define a sum type
 which combines these. We also define an arithmetic in terms of values such that EFSMs do not need
 to be strongly typed.\<close>
+
+theory Value
+imports Trilean
+begin
 
 text_raw\<open>\snip{valuetype}{1}{2}{%\<close>
 datatype "value" = Num int | Str String.literal

@@ -1,13 +1,12 @@
-subsection \<open>Extended Finite State Machines\<close>
-text\<open>
-This theory defines extended finite state machines as presented in \cite{foster2018}. States are
-indexed by natural numbers, however, since transition matrices are implemented by finite sets, the
-number of reachable states in $S$ is necessarily finite. For ease of implementation, we implicitly
-make the initial state zero for all EFSMs. This allows EFSMs to be represented purely by their
-transition matrix which, in this implementation, is a finite set of tuples of the form
-$((s_1, s_2), t)$ in which $s_1$ is the origin state, $s_2$ is the destination state, and t is a
-transition.
-\<close>
+section \<open>Extended Finite State Machines\<close>
+
+text\<open>This theory defines extended finite state machines as presented in \cite{foster2018}. States
+are indexed by natural numbers, however, since transition matrices are implemented by finite sets,
+the number of reachable states in $S$ is necessarily finite. For ease of implementation, we
+implicitly make the initial state zero for all EFSMs. This allows EFSMs to be represented purely by
+their transition matrix which, in this implementation, is a finite set of tuples of the form
+$((s_1, s_2), t)$ in which $s_1$ is the origin state, $s_2$ is the destination state, and $t$ is a
+transition.\<close>
 
 theory EFSM
   imports "HOL-Library.FSet" Transition FSet_Utils
@@ -26,7 +25,6 @@ type_synonym transition_matrix = "((cfstate \<times> cfstate) \<times> transitio
 
 no_notation relcomp (infixr "O" 75) and comp (infixl "o" 55)
 
-(* An execution represents a run of the software and has the form [(label, inputs, outputs)]*)
 type_synonym event = "(label \<times> inputs \<times> value list)"
 type_synonym trace = "event list"
 type_synonym log = "trace list"
@@ -44,6 +42,10 @@ lemma S_ffUnion: "S e = ffUnion (fimage (\<lambda>((s, s'), _). {|s, s'|}) e)"
   unfolding S_def
   by(induct e, auto)
 
+subsection\<open>Choice\<close>
+text\<open>Here we define the \texttt{choice} operator which determines whether or not two transitions are
+nondeterministic.\<close>
+
 definition choice :: "transition \<Rightarrow> transition \<Rightarrow> bool" where
   "choice t t' = (\<exists> i r. apply_guards (Guards t) (join_ir i r) \<and> apply_guards (Guards t') (join_ir i r))"
 
@@ -55,6 +57,11 @@ lemma choice_alt: "choice t t' = choice_alt t t'"
 
 lemma choice_symmetry: "choice x y = choice y x"
   using choice_def by auto
+
+subsection\<open>Possible Steps\<close>
+text\<open>From a given state, the possible steps for a given action are those transitions with labels
+which correspond to the action label, arities which correspond to the number of inputs, and guards
+which are satisfied by those inputs.\<close>
 
 definition possible_steps :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> label \<Rightarrow> inputs \<Rightarrow> (cfstate \<times> transition) fset" where
   "possible_steps e s r l i = fimage (\<lambda>((origin, dest), t). (dest, t)) (ffilter (\<lambda>((origin, dest), t). origin = s \<and> (Label t) = l \<and> (length i) = (Arity t) \<and> apply_guards (Guards t) (join_ir i r)) e)"
@@ -112,19 +119,229 @@ lemma singleton_dest:
   apply (simp add: fis_singleton_fthe_elem)
   using possible_steps_alt_aux by force
 
+text\<open>The \texttt{random\_member} function returns a random member from a finite set, or
+\texttt{None}, if the set is empty.\<close>
+definition random_member :: "'a fset \<Rightarrow> 'a option" where
+  "random_member f = (if f = {||} then None else Some (Eps (\<lambda>x. x |\<in>| f)))"
+
+lemma random_member_nonempty: "s \<noteq> {||} = (random_member s \<noteq> None)"
+  by (simp add: random_member_def)
+
+lemma random_member_singleton [simp]: "random_member {|a|} = Some a"
+  by (simp add: random_member_def)
+
+lemma random_member_is_member:
+  "random_member ss = Some s \<Longrightarrow> s |\<in>| ss"
+  apply (simp add: random_member_def)
+  by (metis equalsffemptyI option.distinct(1) option.inject verit_sko_ex_indirect)
+
+lemma random_member_None[simp]: "random_member ss = None = (ss = {||})"
+  by (simp add: random_member_def)
+
+lemma random_member_empty[simp]: "random_member {||} = None"
+  by simp
+
+definition step :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> label \<Rightarrow> inputs \<Rightarrow> (transition \<times> cfstate \<times> outputs \<times> registers) option" where
+  "step e s r l i = (case random_member (possible_steps e s r l i) of
+      None \<Rightarrow> None |
+      Some (s', t) \<Rightarrow>  Some (t, s', apply_outputs (Outputs t) (join_ir i r), apply_updates (Updates t) (join_ir i r) r)
+  )"
+
+lemma possible_steps_not_empty_iff:
+  "step e s d a b \<noteq> None \<Longrightarrow>
+   \<exists>aa ba. (aa, ba) |\<in>| possible_steps e s d a b"
+  apply (simp add: step_def)
+  apply (case_tac "possible_steps e s d a b")
+   apply (simp add: random_member_def)
+  by auto
+
+lemma step_member: "step e s r l i = Some (t, s', p, r') \<Longrightarrow> (s', t) |\<in>| possible_steps e s r l i"
+  apply (simp add: step_def)
+  apply (case_tac "random_member (possible_steps e s r l i)")
+   apply simp
+  by (case_tac a, simp add: random_member_is_member)
+
+lemma step_outputs: "step e s r l i = Some (t, s', p, r') \<Longrightarrow> evaluate_outputs t i r = p"
+  apply (simp add: step_def)
+  apply (case_tac "random_member (possible_steps e s r l i)")
+  by auto
+
+lemma step_some:
+  "possibilities = (possible_steps e s r l i) \<Longrightarrow>
+   random_member possibilities = Some (s', t) \<Longrightarrow>
+   apply_outputs (Outputs t) (join_ir i r) = p \<Longrightarrow>
+   apply_updates (Updates t) (join_ir i r) r = r' \<Longrightarrow>
+   step e s r l i = Some (t, s', p, r')"
+  by (simp add: step_def)
+
+lemma step_None: "step e s r l i = None = (possible_steps e s r l i = {||})"
+  by (simp add: step_def prod.case_eq_if random_member_def)
+
+lemma step_Some: "step e s r l i = Some (t, s', p, r') =
+  (
+    random_member (possible_steps e s r l i) = Some (s', t) \<and>
+    apply_outputs (Outputs t) (join_ir i r) = p \<and>
+    apply_updates (Updates t) (join_ir i r) r = r'
+  )"
+  apply (simp add: step_def)
+  apply (case_tac "random_member (possible_steps e s r l i)")
+   apply simp
+  by (case_tac a, auto)
+
+lemma no_possible_steps_1:
+  "possible_steps e s r l i = {||} \<Longrightarrow> step e s r l i = None"
+  by (simp add: step_def random_member_def)
+
+subsection\<open>Execution Observation\<close>
+text\<open>One of the key features of this formalisation of EFSMs is their ability to produce
+\emph{outputs}, which represent function return values. When action sequences are executed in an
+EFSM, they produce a corresponding \emph{observation}.\<close>
+
+fun observe_execution :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> outputs list" where
+  "observe_execution _ _ _ [] = []" |
+  "observe_execution e s r ((l, i)#as)  = (
+    let viable = possible_steps e s r l i in
+    if viable = {||} then
+      []
+    else
+      let (s', t) = Eps (\<lambda>x. x |\<in>| viable) in
+      (evaluate_outputs t i r)#(observe_execution e s' (evaluate_updates t i r) as)
+    )"
+
+lemma observe_execution_step_def: "observe_execution e s r ((l, i)#as)  = (
+    case step e s r l i of
+      None \<Rightarrow> []|
+      Some (t, s', p, r') \<Rightarrow> p#(observe_execution e s' r' as)
+    )"
+  apply (simp add: step_def)
+  apply (case_tac "possible_steps e s r l i")
+   apply simp
+  apply (simp add: random_member_def)
+  apply (case_tac "SOME xa. xa = x \<or> xa |\<in>| S'")
+  by simp
+
+lemma observe_execution_first_outputs_equiv:
+  "observe_execution e1 s1 r1 ((l, i) # ts) = observe_execution e2 s2 r2 ((l, i) # ts) \<Longrightarrow>
+   step e1 s1 r1 l i = Some (t, s', p, r') \<Longrightarrow>
+   \<exists>(s2', t2)|\<in>|possible_steps e2 s2 r2 l i. evaluate_outputs t2 i r2 = p"
+  apply (simp only: observe_execution_step_def)
+  apply (case_tac "step e2 s2 r2 l i")
+   apply simp
+  apply simp
+  apply (case_tac a)
+  apply clarsimp
+  by (meson step_member case_prodI rev_fBexI step_outputs)
+
+lemma observe_execution_step:
+  "step e s r (fst h) (snd h) = Some (t, s', p, r') \<Longrightarrow>
+   observe_execution e s' r' es = obs \<Longrightarrow>
+   observe_execution e s r (h#es) = p#obs"
+  apply (cases h, simp add: step_def)
+  apply (case_tac "possible_steps e s r a b = {||}")
+   apply simp
+  apply (case_tac "SOME x. x |\<in>| possible_steps e s r a b")
+  apply (simp add: random_member_def)
+  by auto
+
+lemma observe_execution_possible_step:
+  "possible_steps e s r (fst h) (snd h) = {|(s', t)|} \<Longrightarrow>
+   apply_outputs (Outputs t) (join_ir (snd h) r) = p \<Longrightarrow>
+   apply_updates (Updates t) (join_ir (snd h) r) r = r' \<Longrightarrow>
+   observe_execution e s' r' es = obs \<Longrightarrow>
+   observe_execution e s r (h#es) = p#obs"
+  by (simp add: observe_execution_step step_some)
+
+lemma observe_execution_no_possible_step:
+  "possible_steps e s r (fst h) (snd h) = {||} \<Longrightarrow>
+   observe_execution e s r (h#es) = []"
+  by (cases h, simp)
+
+lemma observe_execution_no_possible_steps:
+  "possible_steps e1 s1 r1 (fst h) (snd h) = {||} \<Longrightarrow>
+   possible_steps e2 s2 r2 (fst h) (snd h) = {||} \<Longrightarrow>
+   (observe_execution e1 s1 r1 (h#t)) = (observe_execution e2 s2 r2 (h#t))"
+  by (simp add: observe_execution_no_possible_step)
+
+lemma observe_execution_one_possible_step:
+  "possible_steps e1 s1 r (fst h) (snd h) = {|(s1', t1)|} \<Longrightarrow>
+   possible_steps e2 s2 r (fst h) (snd h) = {|(s2', t2)|} \<Longrightarrow>
+   apply_outputs (Outputs t1) (join_ir (snd h) r) = apply_outputs (Outputs t2) (join_ir (snd h) r) \<Longrightarrow>
+
+   apply_updates (Updates t1) (join_ir (snd h) r) r = r' \<Longrightarrow>
+   apply_updates (Updates t2) (join_ir (snd h) r) r = r' \<Longrightarrow>
+   (observe_execution e1 s1' r' t) = (observe_execution e2 s2' r' t) \<Longrightarrow>
+   (observe_execution e1 s1 r (h#t)) = (observe_execution e2 s2 r (h#t))"
+  by (simp add: observe_execution_possible_step)
+
+subsection\<open>Reachability\<close>
+text\<open>Here, we define the function \texttt{gets\_us\_to} which returns true if the given execution
+leaves the given EFSM in the given state.\<close>
+
+inductive gets_us_to :: "cfstate \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
+  base: "s = target \<Longrightarrow> gets_us_to target _ s _ []" |
+  step_some: "\<exists>(s', T) |\<in>| possible_steps e s d (fst h) (snd h). gets_us_to target e s' (apply_updates (Updates T) (join_ir i r) r) t \<Longrightarrow>
+   gets_us_to target e s r (h#t)" |
+  step_none: "step e s r (fst h) (snd h) = None \<Longrightarrow>
+   s = target \<Longrightarrow>
+   gets_us_to target e s r (h#t)"
+
+lemma no_further_steps:
+  "s \<noteq> s' \<Longrightarrow> \<not> gets_us_to s e s' r []"
+  apply safe
+  apply (rule gets_us_to.cases)
+  by auto
+
+subsubsection\<open>Utilities\<close>
+text\<open>Here we define some utility functions to access the various key properties of a given EFSM.\<close>
+
+definition max_reg :: "transition_matrix \<Rightarrow> nat option" where
+  "max_reg e = (let maxes = (fimage (\<lambda>(_, t). Transition.max_reg t) e) in if maxes = {||} then None else fMax maxes)"
+
+definition enumerate_ints :: "transition_matrix \<Rightarrow> int set" where
+  "enumerate_ints e = \<Union> (image (\<lambda>(_, t). Transition.enumerate_ints t) (fset e))"
+
+definition max_int :: "transition_matrix \<Rightarrow> int" where
+  "max_int e = Max (insert 0 (enumerate_ints e))"
+
+definition max_output :: "transition_matrix \<Rightarrow> nat" where
+  "max_output e = fMax (fimage (\<lambda>(_, t). length (Outputs t)) e)"
+
+definition all_regs :: "transition_matrix \<Rightarrow> nat set" where
+  "all_regs e = \<Union> (image (\<lambda>(_, t). enumerate_regs t) (fset e))"
+
+lemma finite_all_regs: "finite (all_regs e)"
+  apply (simp add: all_regs_def enumerate_regs_def)
+  apply clarify
+  apply standard
+   apply (rule finite_UnI)+
+  using GExp.finite_enumerate_regs apply blast
+  using AExp.finite_enumerate_regs apply blast
+   apply (simp add: AExp.finite_enumerate_regs prod.case_eq_if)
+  by auto
+
+definition max_input :: "transition_matrix \<Rightarrow> nat option" where
+  "max_input e = fMax (fimage (\<lambda>(_, t). Transition.max_input t) e)"
+
+fun maxS :: "transition_matrix \<Rightarrow> nat" where
+  "maxS t = (if t = {||} then 0 else fMax ((fimage (\<lambda>((origin, dest), t). origin) t) |\<union>| (fimage (\<lambda>((origin, dest), t). dest) t)))"
+
+subsection\<open>Execution Recognition\<close>
+text\<open>The \texttt{recognises} function returns true if the given EFSM recognises a given execution.
+That is, the EFSM is able to respond to each event in sequence. There is no restriction on the
+outputs produced. When a recognised execution is observed, it produces an accepted trace of the
+EFSM.\<close>
+
 inductive recognises :: "transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
   base: "recognises e s d []" |
   step: "(s', t) |\<in>| possible_steps e s r l i \<Longrightarrow>
          recognises e s' (apply_updates (Updates t) (join_ir i r) r) ts \<Longrightarrow>
          recognises e s r ((l, i)#ts)"
 
-abbreviation "rejects e s d t \<equiv> \<not> recognises e s d t"
-
 abbreviation recognises_trace :: "transition_matrix \<Rightarrow> execution \<Rightarrow> bool" where
   "recognises_trace e t \<equiv> recognises e 0 <> t"
 
 lemma no_possible_steps_rejects:
-  "possible_steps e s d l i = {||} \<Longrightarrow> rejects e s d ((l, i)#t)"
+  "possible_steps e s d l i = {||} \<Longrightarrow> \<not> recognises e s d ((l, i)#t)"
   using recognises.cases by blast
 
 lemma recognises_step_equiv: "recognises e s d ((l, i)#t) =
@@ -177,6 +394,74 @@ lemma recognises_must_be_possible_step:
    \<exists>aa ba. (aa, ba) |\<in>| possible_steps e s r (fst h) (snd h)"
   using recognises_step_equiv by fastforce
 
+lemma recognises_possible_steps_not_empty:
+  "recognises e s d (h#t) \<Longrightarrow> possible_steps e s d (fst h) (snd h) \<noteq> {||}"
+  apply (rule recognises.cases)
+  by auto
+
+lemma recognises_must_be_step:
+  "recognises e s d (h#ts) \<Longrightarrow>
+   \<exists>t s' p d'. step e s d (fst h) (snd h) = Some (t, s', p, d')"
+  apply (cases h)
+  apply (simp add: recognises_step_equiv step_def)
+  apply clarify
+  apply (case_tac "(possible_steps e s d a b)")
+   apply (simp add: random_member_def)
+  apply (simp add: random_member_def)
+  apply (case_tac "SOME xa. xa = x \<or> xa |\<in>| S'")
+  by simp
+
+lemma recognises_cons_step:
+  "recognises e s r (h # t) \<Longrightarrow> step e s r (fst h) (snd h) \<noteq>  None"
+  by (simp add: recognises_must_be_step)
+
+lemma no_step_none:
+  "step e s r aa ba = None \<Longrightarrow> \<not> recognises e s r ((aa, ba) # p)"
+  using recognises_cons_step by fastforce
+
+lemma step_none_rejects:
+  "step e s d (fst h) (snd h) = None \<Longrightarrow> \<not> recognises e s d (h#t)"
+  using no_step_none surjective_pairing by fastforce
+
+lemma trace_reject:
+  "(\<not> recognises e s d ((a, b)#t)) = (possible_steps e s d a b = {||} \<or> (\<forall>(s', T) |\<in>| possible_steps e s d a b. \<not> recognises e s' (apply_updates (Updates T) (join_ir b d) d) t))"
+  using recognises_prim by fastforce
+
+lemma trace_reject_no_possible_steps_atomic:
+  "possible_steps e s d (fst a) (snd a) = {||} \<Longrightarrow> \<not> recognises e s d (a#t)"
+  using recognises_possible_steps_not_empty by auto
+
+lemma trace_reject_later:
+  "\<forall>(s', T) |\<in>| possible_steps e s d a b. \<not> recognises e s' (apply_updates (Updates T) (join_ir b d) d) t \<Longrightarrow>
+   \<not> recognises e s d ((a, b)#t)"
+  using trace_reject by auto
+
+lemma recognition_prefix_closure: "recognises e s d (t@t') \<Longrightarrow> recognises e s d t"
+proof(induct t arbitrary: s d)
+  case Nil
+  then show ?case
+    by (simp add: recognises.base)
+next
+  case (Cons a t)
+  then show ?case
+    apply (cases a, clarsimp)
+    apply (rule recognises.cases)
+      apply simp
+     apply simp
+    by (rule recognises.step, auto)
+qed
+
+lemma rejects_prefix: "\<not> recognises e s d t \<Longrightarrow> \<not> recognises e s d (t @ t')"
+  using recognition_prefix_closure by blast
+
+lemma recognises_head: "recognises e s d (h#t) \<Longrightarrow> recognises e s d [h]"
+  by (metis recognises.simps recognises_must_be_possible_step prod.exhaust_sel)
+
+subsubsection\<open>Trace Acceptance\<close>
+text\<open>The \texttt{accepts} function returns true if the given EFSM accepts a given trace. That is,
+the EFSM is able to respond to each event in sequence \emph{and} is able to produce the expected
+output. Accepted traces represent valid runs of an EFSM.\<close>
+
 inductive accepts_trace :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> trace \<Rightarrow> bool" where
   base: "accepts_trace e s d []" |
   step: "\<exists>(s', T) |\<in>| possible_steps e s d l i.
@@ -196,6 +481,12 @@ lemma accepts_trace_step:
   apply (rule accepts_trace.cases)
   by auto
 
+lemma accepts_trace_exists_possible_step:
+  "accepts_trace e1 s1 r1 ((aa, b, c) # t) \<Longrightarrow>
+       \<exists>(s1', t1)|\<in>|possible_steps e1 s1 r1 aa b.
+          evaluate_outputs t1 b r1 = map Some c"
+  using accepts_trace_step by auto
+
 lemma rejects_trace_step:
 "rejects_trace e s d ((l, i, p)#t) = (
   (\<forall>(s', T) |\<in>| possible_steps e s d l i.  evaluate_outputs T i d \<noteq> map Some p \<or> rejects_trace e s' (apply_updates (Updates T) (join_ir i d) d) t)
@@ -203,6 +494,11 @@ lemma rejects_trace_step:
   apply (simp add: accepts_trace_step)
   by auto
 
+definition accepts_log :: "trace set \<Rightarrow> transition_matrix \<Rightarrow> bool" where
+  "accepts_log T e = (\<forall>t \<in> T. accepts_trace e 0 <> t)"
+
+text\<open>For code generation, it is much more efficient to re-implement the \texttt{accepts\_trace}
+function primitively than to use the code generator's default setup for inductive definitions.\<close>
 fun accepts_trace_prim :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> trace \<Rightarrow> bool" where
   "accepts_trace_prim _ _ _ [] = True" |
   "accepts_trace_prim e s d ((l, i, p)#t) = (
@@ -230,388 +526,31 @@ next
     by auto
 qed
 
-definition accepts_log :: "trace set \<Rightarrow> transition_matrix \<Rightarrow> bool" where
-  "accepts_log T e = (\<forall>t \<in> T. accepts_trace e 0 <> t)"
+subsection\<open>EFSM Comparison\<close>
+text\<open>Here, we define some different metrics of EFSM equality.\<close>
 
-inductive execution_equivalence :: "transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
-  base: "execution_equivalence e1 s1 r1 e2 s2 r2 []" |
-  step: "\<forall>(s1', t1) |\<in>| possible_steps e1 s1 r1 l i.
-           \<exists>(s2', t2) |\<in>| possible_steps e2 s2 r2 l i.
-            execution_equivalence e1 s1' (apply_updates (Updates t1) (join_ir i r1) r1) e2 s2' (apply_updates (Updates t2) (join_ir i r2) r2) es \<Longrightarrow>
-
-         execution_equivalence e1 s1 r1 e2 s2 r2 ((l, i)#es)"
-
-lemma execution_equivalence_induct:
-  "(\<And>l i t. execution_equivalence e1 s1 r1 e2 s2 r2 t \<Longrightarrow>
-   execution_equivalence e1 s1 r1 e2 s2 r2 ((l, i) # t)) \<Longrightarrow>
-
-execution_equivalence e1 s1 r1 e2 s2 r2 t"
-  using execution_equivalence.base by (induct t, auto)
-
-lemma execution_equivalence_acceptance:
-  "execution_equivalence e1 s1 r1 e2 s2 r2 t \<Longrightarrow>
-   recognises e1 s1 r1 t \<Longrightarrow>
-   recognises e2 s2 r2 t"
-proof(induct t arbitrary: s1 r1 s2 r2)
-  case Nil
-  then show ?case
-    by (simp add: recognises.base)
-next
-  case (Cons a t)
-  then show ?case
-    apply (cases a, clarify)
-    apply simp
-    apply (rule execution_equivalence.cases)
-       apply simp
-      apply simp
-    apply (simp add: no_possible_steps_rejects)
-    apply clarify
-    apply simp
-    apply (simp add: recognises_step_equiv[of e1])
-    apply clarify
-    apply (erule_tac x="(aa, b)" in fBallE)
-     apply simp
-     apply clarify
-    subgoal for l i s1' t1 s2' t2
-      apply (rule recognises.step[of s2' t2])
-      by auto
-    by simp
-qed
-
-definition execution_equivalent :: "transition_matrix \<Rightarrow> transition_matrix \<Rightarrow> bool" where
-  "execution_equivalent e1 e2 \<equiv> \<forall>t. execution_equivalence e1 0 <> e2 0 <> t"
-
-lemma execution_equivalent_induct:
-  "(\<And>l i t. execution_equivalence e1 0 <> e2 0 <> t \<Longrightarrow>
-   execution_equivalence e1 0 <> e2 0 <> ((l, i) # t)) \<Longrightarrow>
-
-execution_equivalent e1 e2"
-  using execution_equivalent_def execution_equivalence_induct by blast
-
-lemma execution_equivalent_recognises_trace:
-  "execution_equivalent e1 e2 \<Longrightarrow>
-   recognises_trace e1 t \<Longrightarrow>
-   recognises_trace e2 t"
-  apply (simp add: execution_equivalent_def)
-  using execution_equivalence_acceptance by blast
-
-definition random_member :: "'a fset \<Rightarrow> 'a option" where
-  "random_member f = (if f = {||} then None else Some (Eps (\<lambda>x. x |\<in>| f)))"
-
-lemma random_member_nonempty: "s \<noteq> {||} = (random_member s \<noteq> None)"
-  by (simp add: random_member_def)
-
-lemma random_member_singleton [simp]: "random_member {|a|} = Some a"
-  by (simp add: random_member_def)
-
-lemma random_member_is_member:
-  "random_member ss = Some s \<Longrightarrow> s |\<in>| ss"
-  apply (simp add: random_member_def)
-  by (metis equalsffemptyI option.distinct(1) option.inject verit_sko_ex_indirect)
-
-lemma random_member_None[simp]: "random_member ss = None = (ss = {||})"
-  by (simp add: random_member_def)
-
-lemma random_member_empty[simp]: "random_member {||} = None"
-  by simp
-
-definition step :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> label \<Rightarrow> inputs \<Rightarrow> (transition \<times> cfstate \<times> outputs \<times> registers) option" where
-  "step e s r l i = (case random_member (possible_steps e s r l i) of
-      None \<Rightarrow> None |
-      Some (s', t) \<Rightarrow>  Some (t, s', apply_outputs (Outputs t) (join_ir i r), apply_updates (Updates t) (join_ir i r) r)
-  )"
-
-lemma step_member: "step e s r l i = Some (t, s', p, r') \<Longrightarrow> (s', t) |\<in>| possible_steps e s r l i"
-  apply (simp add: step_def)
-  apply (case_tac "random_member (possible_steps e s r l i)")
-   apply simp
-  by (case_tac a, simp add: random_member_is_member)
-
-lemma step_outputs: "step e s r l i = Some (t, s', p, r') \<Longrightarrow> evaluate_outputs t i r = p"
-  apply (simp add: step_def)
-  apply (case_tac "random_member (possible_steps e s r l i)")
-  by auto
-
-lemma step_some: "possibilities = (possible_steps e s r l i) \<Longrightarrow>
-   random_member possibilities = Some (s', t) \<Longrightarrow>
-   apply_outputs (Outputs t) (join_ir i r) = p \<Longrightarrow>
-   apply_updates (Updates t) (join_ir i r) r = r' \<Longrightarrow>
-   step e s r l i = Some (t, s', p, r')"
-  by (simp add: step_def)
-
-lemma step_None: "step e s r l i = None = (possible_steps e s r l i = {||})"
-  by (simp add: step_def prod.case_eq_if random_member_def)
-
-lemma step_Some: "step e s r l i = Some (t, s', p, r') =
-  (
-    random_member (possible_steps e s r l i) = Some (s', t) \<and>
-    apply_outputs (Outputs t) (join_ir i r) = p \<and>
-    apply_updates (Updates t) (join_ir i r) r = r'
-  )"
-  apply (simp add: step_def)
-  apply (case_tac "random_member (possible_steps e s r l i)")
-   apply simp
-  by (case_tac a, auto)
-
-lemma no_possible_steps_1:
-  "possible_steps e s r l i = {||} \<Longrightarrow> step e s r l i = None"
-  by (simp add: step_def random_member_def)
-
-primrec observe_all :: "transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> (transition \<times> nat \<times> outputs \<times> registers) list" where
-  "observe_all _ _ _ [] = []" |
-  "observe_all e s r (h#t)  =
-    (case (step e s r (fst h) (snd h)) of
-      (Some (transition, s', outputs, updated)) \<Rightarrow> (((transition, s', outputs, updated)#(observe_all e s' updated t))) |
-      _ \<Rightarrow> []
-    )"
-
-fun execute :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> trace" where
-  "execute _ _ _ [] = []" |
-  "execute e s r ((l, i)#as)  = (
-    let
-      viable = possible_steps e s r l i;
-      output_viable = ffilter (\<lambda>(_, t). \<forall>p \<in> set (evaluate_outputs t i r). p \<noteq> None) viable
-    in
-    if viable = {||} then
-      []
-    else
-      let (s', t) = Eps (\<lambda>x. x |\<in>| viable) in
-      (l, i, map (\<lambda>p. case p of Some o \<Rightarrow> o) (evaluate_outputs t i r))#(execute e s' (evaluate_updates t i r) as)
-    )"
-
-fun observe_execution :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> outputs list" where
-  "observe_execution _ _ _ [] = []" |
-  "observe_execution e s r ((l, i)#as)  = (
-    let viable = possible_steps e s r l i in
-    if viable = {||} then
-      []
-    else
-      let (s', t) = Eps (\<lambda>x. x |\<in>| viable) in
-      (evaluate_outputs t i r)#(observe_execution e s' (evaluate_updates t i r) as)
-    )"
-
-lemma observe_execution_step_def: "observe_execution e s r ((l, i)#as)  = (
-    case step e s r l i of
-      None \<Rightarrow> []|
-      Some (t, s', p, r') \<Rightarrow> p#(observe_execution e s' r' as)
-    )"
-  apply (simp add: step_def)
-  apply (case_tac "possible_steps e s r l i")
-   apply simp
-  apply (simp add: random_member_def)
-  apply (case_tac "SOME xa. xa = x \<or> xa |\<in>| S'")
-  by simp
-
-lemma observe_execution_step:
-  "step e s r (fst h) (snd h) = Some (t, s', p, r') \<Longrightarrow>
-   observe_execution e s' r' es = obs \<Longrightarrow>
-   observe_execution e s r (h#es) = p#obs"
-  apply (cases h, simp add: step_def)
-  apply (case_tac "possible_steps e s r a b = {||}")
-   apply simp
-  apply (case_tac "SOME x. x |\<in>| possible_steps e s r a b")
-  apply (simp add: random_member_def)
-  by auto
-
-lemma observe_execution_possible_step:
-  "possible_steps e s r (fst h) (snd h) = {|(s', t)|} \<Longrightarrow>
-   apply_outputs (Outputs t) (join_ir (snd h) r) = p \<Longrightarrow>
-   apply_updates (Updates t) (join_ir (snd h) r) r = r' \<Longrightarrow>
-   observe_execution e s' r' es = obs \<Longrightarrow>
-   observe_execution e s r (h#es) = p#obs"
-  by (simp add: observe_execution_step step_some)
-
-lemma observe_execution_no_possible_step:
-  "possible_steps e s r (fst h) (snd h) = {||} \<Longrightarrow>
-   observe_execution e s r (h#es) = []"
-  by (cases h, simp)
-
-lemma observe_execution_no_possible_steps:
-  "possible_steps e1 s1 r1 (fst h) (snd h) = {||} \<Longrightarrow>
-   possible_steps e2 s2 r2 (fst h) (snd h) = {||} \<Longrightarrow>
-   (observe_execution e1 s1 r1 (h#t)) = (observe_execution e2 s2 r2 (h#t))"
-  by (simp add: observe_execution_no_possible_step)
-
-lemma observe_execution_one_possible_step:
-  "possible_steps e1 s1 r (fst h) (snd h) = {|(s1', t1)|} \<Longrightarrow>
-   possible_steps e2 s2 r (fst h) (snd h) = {|(s2', t2)|} \<Longrightarrow>
-   apply_outputs (Outputs t1) (join_ir (snd h) r) = apply_outputs (Outputs t2) (join_ir (snd h) r) \<Longrightarrow>
-
-   apply_updates (Updates t1) (join_ir (snd h) r) r = r' \<Longrightarrow>
-   apply_updates (Updates t2) (join_ir (snd h) r) r = r' \<Longrightarrow>
-   (observe_execution e1 s1' r' t) = (observe_execution e2 s2' r' t) \<Longrightarrow>
-   (observe_execution e1 s1 r (h#t)) = (observe_execution e2 s2 r (h#t))"
-  by (simp add: observe_execution_possible_step)
-
-lemma observe_execution_preserves_length:
-  "length (observe_all e s r as) = length (observe_execution e s r as)"
-proof(induct as arbitrary: s r)
-  case Nil
-  then show ?case by simp
-next
-  case (Cons a as)
-  then show ?case
-    apply (cases a, simp add: step_def)
-    apply (case_tac "possible_steps e s r aa b = {||}")
-     apply simp
-    apply (simp add: random_member_def)
-    apply (case_tac "SOME x. x |\<in>| possible_steps e s r aa b")
-    by simp
-qed
-
-lemma length_observation_leq_length_trace:
-  "\<And>s r. length (observe_all e s r t) \<le> length t"
-proof (induction t)
-  case Nil
-  then show ?case by simp
-next
-  case (Cons a t)
-  then show ?case
-    by (case_tac "step e s r (fst a) (snd a)", auto)
-qed
-
-lemma recognises_possible_steps_not_empty:
-  "recognises e s d (h#t) \<Longrightarrow> possible_steps e s d (fst h) (snd h) \<noteq> {||}"
-  apply (rule recognises.cases)
-  by auto
-
-lemma recognises_must_be_step:
-  "recognises e s d (h#ts) \<Longrightarrow>
-   \<exists>t s' p d'. step e s d (fst h) (snd h) = Some (t, s', p, d')"
-  apply (cases h)
-  apply (simp add: recognises_step_equiv step_def)
-  apply clarify
-  apply (case_tac "(possible_steps e s d a b)")
-   apply (simp add: random_member_def)
-  apply (simp add: random_member_def)
-  apply (case_tac "SOME xa. xa = x \<or> xa |\<in>| S'")
-  by simp
-
-lemma recognises_cons_step:
-  "recognises e s r (h # t) \<Longrightarrow> step e s r (fst h) (snd h) \<noteq>  None"
-  by (simp add: recognises_must_be_step)
-
-lemma no_step_none:
-  "step e s r aa ba = None \<Longrightarrow> rejects e s r ((aa, ba) # p)"
-  using recognises_cons_step by fastforce
-
-lemma step_none_rejects:
-  "step e s d (fst h) (snd h) = None \<Longrightarrow> rejects e s d (h#t)"
-  using no_step_none surjective_pairing by fastforce
-
-lemma possible_steps_not_empty_iff:
-  "step e s d a b \<noteq> None \<Longrightarrow>
-   \<exists>aa ba. (aa, ba) |\<in>| possible_steps e s d a b"
-  apply (simp add: step_def)
-  apply (case_tac "possible_steps e s d a b")
-   apply (simp add: random_member_def)
-  by auto
-
-lemma trace_reject:
-  "(rejects e s d ((a, b)#t)) = (possible_steps e s d a b = {||} \<or> (\<forall>(s', T) |\<in>| possible_steps e s d a b. rejects e s' (apply_updates (Updates T) (join_ir b d) d) t))"
-  using recognises_prim by fastforce
-
-lemma trace_reject_no_possible_steps_atomic:
-  "possible_steps e s d (fst a) (snd a) = {||} \<Longrightarrow> rejects e s d (a#t)"
-  using recognises_possible_steps_not_empty by auto
-
-lemma trace_reject_later:
-  "\<forall>(s', T) |\<in>| possible_steps e s d a b. rejects e s' (apply_updates (Updates T) (join_ir b d) d) t \<Longrightarrow>
-   rejects e s d ((a, b)#t)"
-  using trace_reject by auto
-
-lemma prefix_closure: "recognises e s d (t@t') \<Longrightarrow> recognises e s d t"
-proof(induct t arbitrary: s d)
-  case Nil
-  then show ?case
-    by (simp add: recognises.base)
-next
-  case (Cons a t)
-  then show ?case
-    apply (cases a, clarsimp)
-    apply (rule recognises.cases)
-      apply simp
-     apply simp
-    by (rule recognises.step, auto)
-qed
-
-lemma rejects_prefix: "rejects e s d t \<Longrightarrow> rejects e s d (t @ t')"
-  using prefix_closure by blast
-
-lemma recognises_head: "recognises e s d (h#t) \<Longrightarrow> recognises e s d [h]"
-  by (metis recognises.simps recognises_must_be_possible_step prod.exhaust_sel)
-
-inductive gets_us_to :: "cfstate \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
-  base: "s = target \<Longrightarrow> gets_us_to target _ s _ []" |
-  step_some: "\<exists>(s', T) |\<in>| possible_steps e s d (fst h) (snd h). gets_us_to target e s' (apply_updates (Updates T) (join_ir i r) r) t \<Longrightarrow>
-   gets_us_to target e s r (h#t)" |
-  step_none: "step e s r (fst h) (snd h) = None \<Longrightarrow>
-   s = target \<Longrightarrow>
-   gets_us_to target e s r (h#t)"
-
-definition "trace_gets_us_to s e = gets_us_to s e 0 <>"
-
-lemma no_further_steps:
-  "s \<noteq> s' \<Longrightarrow> \<not> gets_us_to s e s' r []"
-  apply safe
-  apply (rule gets_us_to.cases)
-  by auto
-
-lemma observe_execution_empty_iff:
-  "(observe_execution e s r t = []) = (observe_all e s r t = [])"
-  by (metis length_greater_0_conv observe_execution_preserves_length)
-
-definition max_reg :: "transition_matrix \<Rightarrow> nat option" where
-  "max_reg e = (let maxes = (fimage (\<lambda>(_, t). Transition.max_reg t) e) in if maxes = {||} then None else fMax maxes)"
-
-definition enumerate_ints :: "transition_matrix \<Rightarrow> int set" where
-  "enumerate_ints e = \<Union> (image (\<lambda>(_, t). Transition.enumerate_ints t) (fset e))"
-
-definition max_int :: "transition_matrix \<Rightarrow> int" where
-  "max_int e = Max (insert 0 (enumerate_ints e))"
-
-definition max_output :: "transition_matrix \<Rightarrow> nat" where
-  "max_output e = fMax (fimage (\<lambda>(_, t). length (Outputs t)) e)"
-
-definition all_regs :: "transition_matrix \<Rightarrow> nat set" where
-  "all_regs e = \<Union> (image (\<lambda>(_, t). enumerate_regs t) (fset e))"
-
-definition max_input :: "transition_matrix \<Rightarrow> nat option" where
-  "max_input e = fMax (fimage (\<lambda>(_, t). Transition.max_input t) e)"
-
-fun maxS :: "transition_matrix \<Rightarrow> nat" where
-  "maxS t = (if t = {||} then 0 else fMax ((fimage (\<lambda>((origin, dest), t). origin) t) |\<union>| (fimage (\<lambda>((origin, dest), t). dest) t)))"
-
-lemma finite_all_regs: "finite (all_regs e)"
-  apply (simp add: all_regs_def enumerate_regs_def)
-  apply clarify
-  apply standard
-   apply (rule finite_UnI)+
-  using GExp.finite_enumerate_regs apply blast
-  using AExp.finite_enumerate_regs apply blast
-   apply (simp add: AExp.finite_enumerate_regs prod.case_eq_if)
-  by auto
+subsubsection\<open>State Isomporphism\<close>
+text\<open>Two EFSMs are isomorphic with respect to states if there exists a bijective function between
+the state names of the two EFSMs, i.e. the only difference between the two models is the way the
+states are indexed.\<close>
 
 definition isomorphic :: "transition_matrix \<Rightarrow> transition_matrix \<Rightarrow> bool" where
   "isomorphic e1 e2 = (\<exists>f. bij f \<and> (\<forall>((s1, s2), t) |\<in>| e1. ((f s1, f s2), t) |\<in>| e2))"
 
+subsubsection\<open>Register Isomporphism\<close>
+text\<open>Two EFSMs are isomorphic with respect to registers if there exists a bijective function between
+the indices of the registers in the two EFSMs, i.e. the only difference between the two models is
+the way the registers are indexed.\<close>
 definition rename_regs :: "(nat \<Rightarrow> nat) \<Rightarrow> transition_matrix \<Rightarrow> transition_matrix" where
   "rename_regs f e = fimage (\<lambda>(tf, t). (tf, Transition.rename_regs f t)) e"
 
 definition eq_upto_rename_strong :: "transition_matrix \<Rightarrow> transition_matrix \<Rightarrow> bool" where
   "eq_upto_rename_strong e1 e2 = (\<exists>f. bij f \<and> rename_regs f e1 = e2)"
 
-lemma observe_execution_first_outputs_equiv:
-  "observe_execution e1 s1 r1 ((l, i) # ts) = observe_execution e2 s2 r2 ((l, i) # ts) \<Longrightarrow>
-   step e1 s1 r1 l i = Some (t, s', p, r') \<Longrightarrow>
-   \<exists>(s2', t2)|\<in>|possible_steps e2 s2 r2 l i. evaluate_outputs t2 i r2 = p"
-  apply (simp only: observe_execution_step_def)
-  apply (case_tac "step e2 s2 r2 l i")
-   apply simp
-  apply simp
-  apply (case_tac a)
-  apply clarsimp
-  by (meson step_member case_prodI rev_fBexI step_outputs)
+subsubsection\<open>Trace Simulation\<close>
+text\<open>An EFSM, $e_1$ simulates another EFSM $e_2$ if there is a function between the states of the
+states of $e_1$ and $e_1$ such that in each state, if $e_1$ can respond to the event and produce
+the correct output, so can $e_2$.\<close>
 
 inductive trace_simulation :: "(cfstate \<Rightarrow> cfstate) \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> trace \<Rightarrow> bool" where
   base: "s2 = f s1 \<Longrightarrow> trace_simulation f e1 s1 r1 e2 s2 r2 []" |
@@ -621,8 +560,22 @@ inductive trace_simulation :: "(cfstate \<Rightarrow> cfstate) \<Rightarrow> tra
          trace_simulation f e1 s1' (evaluate_updates t1 i r1) e2 s2' (evaluate_updates t2 i r2) es) \<Longrightarrow>
          trace_simulation f e1 s1 r1 e2 s2 r2 ((l, i, o)#es)"
 
-lemma step_none: "s2 = f s1 \<Longrightarrow> \<nexists>(s1', t1) |\<in>| possible_steps e1 s1 r1 l i. evaluate_outputs t1 i r1 = map Some o \<Longrightarrow>
-trace_simulation f e1 s1 r1 e2 s2 r2 ((l, i, o)#es)"
+lemma trace_simulation_step:
+"trace_simulation f e1 s1 r1 e2 s2 r2 ((l, i, o)#es) = (
+  (s2 = f s1) \<and> (\<forall>(s1', t1) |\<in>| ffilter (\<lambda>(s1', t1). evaluate_outputs t1 i r1 = map Some o) (possible_steps e1 s1 r1 l i).
+         (\<exists>(s2', t2) |\<in>| possible_steps e2 s2 r2 l i. evaluate_outputs t2 i r2 = map Some o \<and>
+         trace_simulation f e1 s1' (evaluate_updates t1 i r1) e2 s2' (evaluate_updates t2 i r2) es))
+)"
+  apply standard
+   apply (rule trace_simulation.cases, simp+)
+  apply (rule trace_simulation.step)
+   apply simp
+  by blast
+
+lemma trace_simulation_step_none:
+  "s2 = f s1 \<Longrightarrow>
+   \<nexists>(s1', t1) |\<in>| possible_steps e1 s1 r1 l i. evaluate_outputs t1 i r1 = map Some o \<Longrightarrow>
+   trace_simulation f e1 s1 r1 e2 s2 r2 ((l, i, o)#es)"
   apply (rule trace_simulation.step)
    apply simp
   apply (case_tac "ffilter (\<lambda>(s1', t1). evaluate_outputs t1 i r1 = map Some o) (possible_steps e1 s1 r1 l i)")
@@ -631,24 +584,15 @@ trace_simulation f e1 s1 r1 e2 s2 r2 ((l, i, o)#es)"
 
 definition "simulates e1 e2 = (\<exists>f. \<forall>t. trace_simulation f e1 0 <> e2 0 <> t)"
 
+subsubsection\<open>Trace Equivalence\<close>
+text\<open>Two EFSMs are trace equivalent if they accept the same traces. This is the intuitive definition
+of ``observable equivalence'' between the behaviours of the two models. If two EFSMs are trace
+equivalent, there is no trace which can distinguish the two.\<close>
+
 definition T :: "transition_matrix \<Rightarrow> trace set" where
   "T e = {t. accepts_trace e 0 <> t}"
 
 definition "trace_equivalent e1 e2 = (T e1 = T e2)"
-
-lemma pair_list_induct [case_names Nil Cons]:
-  "f [] \<Longrightarrow> (\<And>l i as. f as \<Longrightarrow> f ((l, i) # as)) \<Longrightarrow> f l"
-  by (induct l, auto)
-
-lemma triple_list_induct [case_names Nil Cons]:
-  "f [] \<Longrightarrow> (\<And>l i o as. f as \<Longrightarrow> f ((l, i, o) # as)) \<Longrightarrow> f l"
-  by (induct l, auto)
-
-lemma accepts_trace_exists_possible_step:
-  "accepts_trace e1 s1 r1 ((aa, b, c) # t) \<Longrightarrow>
-       \<exists>(s1', t1)|\<in>|possible_steps e1 s1 r1 aa b.
-          evaluate_outputs t1 b r1 = map Some c"
-  using accepts_trace_step by auto
 
 lemma rejects_trace_simulation:
   "rejects_trace e2 s2 r2 t \<Longrightarrow>
@@ -675,7 +619,9 @@ next
 qed
 
 lemma accepts_trace_simulation:
-"accepts_trace e1 s1 r1 t \<Longrightarrow> trace_simulation f e1 s1 r1 e2 s2 r2 t \<Longrightarrow> accepts_trace e2 s2 r2 t"
+  "accepts_trace e1 s1 r1 t \<Longrightarrow>
+   trace_simulation f e1 s1 r1 e2 s2 r2 t \<Longrightarrow>
+   accepts_trace e2 s2 r2 t"
   using rejects_trace_simulation by blast
 
 lemma simulates_trace_subset: "simulates e1 e2 \<Longrightarrow> T e1 \<subseteq> T e2"
@@ -698,6 +644,7 @@ lemma trace_equivalent_transitive:
    trace_equivalent e1 e3"
   by (simp add: trace_equivalent_def)
 
+text\<open>Two EFSMs are trace equivalent if they accept the same traces.\<close>
 lemma trace_equivalent:
   "\<forall>t. accepts_trace e1 0 <> t = accepts_trace e2 0 <> t \<Longrightarrow> trace_equivalent e1 e2"
   by (simp add: T_def trace_equivalent_def)
@@ -708,43 +655,48 @@ lemma accepts_trace_step_2: "(s2', t2) |\<in>| possible_steps e2 s2 r2 l i \<Lon
        accepts_trace e2 s2 r2 ((l, i, p)#t)"
   by (rule accepts_trace.step, auto)
 
-inductive exec_simulation :: "(cfstate \<Rightarrow> cfstate) \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
-  base: "s2 = f s1 \<Longrightarrow> exec_simulation f e1 s1 r1 e2 s2 r2 []" |
+subsubsection\<open>Execution Simulation\<close>
+text\<open>Execution simulation is similar to trace simulation but for executions rather than traces.
+Execution simulation has no notion of ``expected'' output. It simply requires that the simulating
+EFSM must be able to produce equivalent output for each action.\<close>
+
+inductive execution_simulation :: "(cfstate \<Rightarrow> cfstate) \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
+  base: "s2 = f s1 \<Longrightarrow> execution_simulation f e1 s1 r1 e2 s2 r2 []" |
   step: "s2 = f s1 \<Longrightarrow>
          \<forall>(s1', t1) |\<in>| (possible_steps e1 s1 r1 l i).
          (\<exists>(s2', t2) |\<in>| possible_steps e2 s2 r2 l i. evaluate_outputs t1 i r1 = evaluate_outputs t2 i r2 \<and>
-         exec_simulation f e1 s1' (evaluate_updates t1 i r1) e2 s2' (evaluate_updates t2 i r2) es) \<Longrightarrow>
-         exec_simulation f e1 s1 r1 e2 s2 r2 ((l, i)#es)"
+         execution_simulation f e1 s1' (evaluate_updates t1 i r1) e2 s2' (evaluate_updates t2 i r2) es) \<Longrightarrow>
+         execution_simulation f e1 s1 r1 e2 s2 r2 ((l, i)#es)"
 
-lemma exec_simulation_step:
-"exec_simulation f e1 s1 r1 e2 s2 r2 ((l, i)#es) =
+lemma execution_simulation_step:
+"execution_simulation f e1 s1 r1 e2 s2 r2 ((l, i)#es) =
  (s2 = f s1 \<and>
  (\<forall>(s1', t1) |\<in>| (possible_steps e1 s1 r1 l i).
          (\<exists>(s2', t2) |\<in>| possible_steps e2 s2 r2 l i. evaluate_outputs t1 i r1 = evaluate_outputs t2 i r2 \<and>
-         exec_simulation f e1 s1' (evaluate_updates t1 i r1) e2 s2' (evaluate_updates t2 i r2) es))
+         execution_simulation f e1 s1' (evaluate_updates t1 i r1) e2 s2' (evaluate_updates t2 i r2) es))
 )"
   apply standard
-   apply (rule exec_simulation.cases)
+   apply (rule execution_simulation.cases)
      apply simp
     apply simp
    apply simp
-  apply (rule exec_simulation.step)
+  apply (rule execution_simulation.step)
    apply simp
   by blast
 
-lemma exec_simulation_trace_simulation:
-  "exec_simulation f e1 s1 r1 e2 s2 r2 (map (\<lambda>(l, i, o). (l, i)) t) \<Longrightarrow> trace_simulation f e1 s1 r1 e2 s2 r2 t"
+lemma execution_simulation_trace_simulation:
+  "execution_simulation f e1 s1 r1 e2 s2 r2 (map (\<lambda>(l, i, o). (l, i)) t) \<Longrightarrow> trace_simulation f e1 s1 r1 e2 s2 r2 t"
 proof(induct t arbitrary: s1 s2 r1 r2)
 case Nil
   then show ?case
-    apply (rule exec_simulation.cases)
+    apply (rule execution_simulation.cases)
      apply (simp add: trace_simulation.base)
     by simp
 next
   case (Cons a t)
   then show ?case
     apply (cases a, clarsimp)
-    apply (rule exec_simulation.cases)
+    apply (rule execution_simulation.cases)
       apply simp
      apply simp
     apply (rule trace_simulation.step)
@@ -755,6 +707,10 @@ next
      apply blast
     by simp
 qed
+
+subsubsection\<open>Executional Equivalence\<close>
+text\<open>Two EFSMs are executionally equivalent if there is no execution which can distinguish between
+the two. That is, for every execution, they must produce equivalent outputs.\<close>
 
 inductive executionally_equivalent :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
   base [simp]: "executionally_equivalent e1 s1 r1 e2 s2 r2 []" |
@@ -788,14 +744,16 @@ lemma execution_end:
   executionally_equivalent e1 s1 r1 e2 s2 r2 ((l, i)#es)"
   by (simp add: executionally_equivalent_step)
 
-lemma "possible_steps e1 s1 r1 l i \<noteq> {||} \<Longrightarrow>
+lemma possible_steps_disparity:
+"possible_steps e1 s1 r1 l i \<noteq> {||} \<Longrightarrow>
 possible_steps e2 s2 r2 l i = {||} \<Longrightarrow>
 \<not>executionally_equivalent e1 s1 r1 e2 s2 r2 ((l, i)#es)"
   apply (simp add: executionally_equivalent_step)
   by auto
 
 lemma executionally_equivalent_acceptance:
-  "executionally_equivalent e1 s1 r1 e2 s2 r2 (map (\<lambda>(l, i, o). (l, i)) t) \<Longrightarrow> accepts_trace e2 s2 r2 t = accepts_trace e1 s1 r1 t"
+  "executionally_equivalent e1 s1 r1 e2 s2 r2 (map (\<lambda>(l, i, o). (l, i)) t) \<Longrightarrow>
+   accepts_trace e2 s2 r2 t = accepts_trace e1 s1 r1 t"
 proof(induct t arbitrary: s1 s2 r1 r2)
   case Nil
   then show ?case
@@ -836,6 +794,74 @@ lemma executionally_equivalent_trace_equivalent:
   apply (erule_tac x="map (\<lambda>(l, i, o). (l, i)) t" in allE)
   by (simp add: executionally_equivalent_acceptance)
 
+lemma executionally_equivalent_symmetry:
+  "executionally_equivalent e1 s1 r1 e2 s2 r2 x \<Longrightarrow>
+   executionally_equivalent e2 s2 r2 e1 s1 r1 x"
+proof(induct x arbitrary: s1 s2 r1 r2)
+  case Nil
+  then show ?case
+    by simp
+next
+  case (Cons a x)
+  then show ?case
+    apply (cases a, clarsimp)
+    apply (simp add: executionally_equivalent_step)
+    apply (case_tac "possible_steps e2 s2 r2 aa b = {||}")
+     apply auto[1]
+    apply (case_tac "possible_steps e1 s1 r1 aa b = {||}")
+     apply auto[1]
+    apply standard
+     apply clarsimp
+    subgoal for l i s2' t2 s1' t1
+      apply (erule_tac x="(s1', t1)" in fBallE[of "possible_steps e1 s1 r1 l i"])
+       apply (erule_tac x="(s2', t2)" in fBallE[of "possible_steps e2 s2 r2 l i"])
+        apply simp
+        apply (erule_tac x="(s1', t1)" in fBallE[of "possible_steps e1 s1 r1 l i"])
+         apply (erule_tac x="(s2', t2)" in fBallE[of "possible_steps e2 s2 r2 l i"])
+      by auto
+    apply clarsimp
+    subgoal for l i s1' t1 s2' t2
+      apply (erule_tac x="(s1', t1)" in fBallE[of "possible_steps e1 s1 r1 l i"])
+       apply (erule_tac x="(s2', t2)" in fBallE[of "possible_steps e2 s2 r2 l i"])
+        apply simp
+        apply (erule_tac x="(s1', t1)" in fBallE[of "possible_steps e1 s1 r1 l i"])
+         apply (erule_tac x="(s2', t2)" in fBallE[of "possible_steps e2 s2 r2 l i"])
+      by auto
+    done
+qed
 
+lemma executionally_equivalent_transitivity:
+  "executionally_equivalent e1 s1 r1 e2 s2 r2 x \<Longrightarrow>
+   executionally_equivalent e2 s2 r2 e3 s3 r3 x \<Longrightarrow>
+   executionally_equivalent e1 s1 r1 e3 s3 r3 x"
+proof(induct x arbitrary: s1 s2 s3 r1 r2 r3)
+  case Nil
+  then show ?case
+    by simp
+next
+  case (Cons a x)
+  then show ?case
+    apply (cases a, clarsimp)
+    apply (simp add: executionally_equivalent_step)
+    apply clarsimp
+    apply (case_tac "possible_steps e2 s2 r2 aa b")
+     apply auto[1]
+    apply (case_tac "possible_steps e1 s1 r1 aa b = {||}")
+     apply auto[1]
+    apply (case_tac "possible_steps e3 s3 r3 aa b = {||}")
+     apply auto[1]
+    apply standard
+     apply clarsimp
+    subgoal for l i s2' t2 S s1' t1 s3' t3
+      apply (erule_tac x="(s1', t1)" in fBallE[of "possible_steps e1 s1 r1 l i"])+
+        apply (erule_tac x="(s3', t3)" in fBallE[of "possible_steps e3 s3 r3 l i"])+
+      by auto
+     apply clarsimp
+    subgoal for l i s2' t2 S s3' t3 s1' t1
+      apply (erule_tac x="(s1', t1)" in fBallE[of "possible_steps e1 s1 r1 l i"])+
+        apply (erule_tac x="(s3', t3)" in fBallE[of "possible_steps e3 s3 r3 l i"])+
+      by auto
+    done
+qed
 
 end

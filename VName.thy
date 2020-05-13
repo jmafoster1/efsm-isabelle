@@ -1,12 +1,12 @@
+section\<open>Variables\<close>
+text\<open>Variables can either be inputs or registers. Here we define the \texttt{vname} datatype which
+allows us to write expressions in terms of variables and case match during evaluation. We also make
+the \texttt{vname} datatype a member of linorder such that we can establish a linear order on
+arithmetic expressions, guards, and subsequently transitions.\<close>
+
 theory VName
 imports Main
 begin
-
-section\<open>Variables\<close>
-text\<open>Variables can either be inputs or registers. Here we define the vname datatype which allows
-us to write expressions in terms of variables and case match during evaluation. We also make the
-vname datatype a member of linorder such that we can establish a linear order on arithmetic
-expressions and subsequently transitions.\<close>
 
 text_raw\<open>\snip{vnametype}{1}{2}{%\<close>
 datatype vname = I nat | R nat

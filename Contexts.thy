@@ -152,7 +152,7 @@ lemma posterior_sequence_none_accepting_sequence_none:
   by (simp add: posterior_sequence_def)
 
 lemma rejects_gives_no_accepting_sequence:
-  "rejects e s r t \<Longrightarrow> accepting_sequence e s r t [] = None"
+  "\<not> recognises e s r t \<Longrightarrow> accepting_sequence e s r t [] = None"
 proof(induct t arbitrary: s r)
   case Nil
   then show ?case
@@ -169,11 +169,11 @@ next
 qed
 
 lemma rejects_gives_no_posterior_sequence:
-  "rejects e s d t \<Longrightarrow> posterior_sequence e s d t = None"
+  "\<not> recognises e s d t \<Longrightarrow> posterior_sequence e s d t = None"
   using posterior_sequence_gives_accept by blast
 
 lemma no_accepting_sequence_rejected:
-  "accepting_sequence e s d t seq = None \<longrightarrow> rejects e s d t"
+  "accepting_sequence e s d t seq = None \<longrightarrow> \<not> recognises e s d t"
 proof(induct t arbitrary: s d seq)
   case Nil
   then show ?case

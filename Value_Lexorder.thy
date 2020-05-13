@@ -1,3 +1,9 @@
+subsection\<open>Value Lexorder\<close>
+
+text\<open>This theory defines a lexicographical ordering on values such that we can build orderings for
+arithmetic expressions and guards. Here, numbers are defined as less than strings, else the natural
+ordering on the respective datatypes is used.\<close>
+
 theory Value_Lexorder
 imports Value
 begin

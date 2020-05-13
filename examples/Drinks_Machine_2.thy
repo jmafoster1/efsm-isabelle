@@ -112,99 +112,12 @@ lemma drinks_reject_0_2:
   apply (rule drinks_0_rejects)
   by (cases a, case_tac "snd a", auto)
 
-(*Here's the lemma for which
-proof(induction t rule: execution_equivalence_induct arbitrary: r)
-breaks
-*)
-
-lemma execution_equivalence_1_2: "execution_equivalence drinks 1 r drinks2 2 r t"
-proof(induction t arbitrary: r)
-  case Nil
-  then show ?case
-    by (simp add: execution_equivalence.base)
-next
-  case (Cons a t)
-  then show ?case
-    apply (cases a, clarify)
-    apply simp
-    subgoal for l i
-      apply (rule execution_equivalence.step)
-      apply (case_tac "l = STR ''coin'' \<and> length i = 1")
-       apply (simp add: possible_steps_1_coin possible_steps_2_coin coin_def)
-      apply (case_tac "a=(STR ''vend'', [])")
-       apply (case_tac "r$2")
-      using drinks_vend_invalid apply simp
-       apply (case_tac aa)
-        apply (case_tac "x1 < 100")
-         apply (clarify, simp add: drinks_vend_insufficient drinks2_vend_insufficient2)
-        apply (clarify, simp add: drinks_vend_sufficient drinks2_vend_sufficient)
-        apply (induct t)
-         apply (simp add: execution_equivalence.base)
-        apply (case_tac aa, clarify)
-        apply (rule execution_equivalence.step)
-        apply (simp add: drinks_end)
-      using drinks_vend_invalid apply simp
-      using drinks_1_rejects by auto
-    done
-qed
-
-lemma execution_equivalence_1_1:
-  "execution_equivalence drinks 1 <2 $:= Some (Num 0), 1 $:= i> drinks2 1 <2 $:= Some (Num 0), 1 $:= i> t"
-proof(induction rule: execution_equivalence_induct)
-  case (1 l i t)
-  then show ?case
-    apply (case_tac "l = STR ''coin'' \<and> length i = 1")
-     apply (rule execution_equivalence.step)
-     apply (simp add: possible_steps_1_coin possible_steps_1 execution_equivalence_1_2)
-    apply (case_tac "l = STR ''vend'' \<and> i = []")
-     apply (rule execution_equivalence.step)
-     apply (simp add: drinks_vend_insufficient drinks2_vend_insufficient transitions finfun_update_twist apply_updates_def)
-     apply (rule execution_equivalence.step)
-    using drinks_1_rejects by auto
-qed
-
-lemma execution_equivalence: "execution_equivalent drinks drinks2"
-proof(induction rule: execution_equivalent_induct)
-  case (1 l i t)
-  then show ?case
-    apply (case_tac "l = STR ''select'' \<and> length i = 1")
-     apply simp
-     apply (rule execution_equivalence.step)
-     apply (simp add: possible_steps_0 Drinks_Machine.possible_steps_0 select_def apply_updates_def)
-    using execution_equivalence_1_1
-    apply (simp add: finfun_update_twist)
-     apply (rule execution_equivalence.step)
-    using drinks_0_rejects by auto
-qed
-
-lemma acceptance:
-  "recognises_trace drinks t \<Longrightarrow> recognises_trace drinks2 t"
-  using execution_equivalence execution_equivalent_recognises_trace
-  by simp
-
 lemma purchase_coke:
   "observe_execution drinks2 0 <> [((STR ''select''), [Str ''coke'']), ((STR ''coin''), [Num 50]), ((STR ''coin''), [Num 50]), ((STR ''vend''), [])] =
                        [[], [Some (Num 50)], [Some (Num 100)], [Some (Str ''coke'')]]"
-  apply (rule observe_execution_possible_step)
-     apply (simp add: possible_steps_0)
-     apply (simp add: select_def join_ir_def input2state_def recognises_from_1 acceptance)
-    apply (simp add: select_def)
-  apply (rule observe_execution_possible_step)
-      apply (simp add: possible_steps_1)
-     apply (simp add: coin_def value_plus_def join_ir_def input2state_def)
-  using recognises_1_2 recognises_from_1a
-    apply (simp add: coin_def value_plus_def join_ir_def input2state_def apply_outputs_def apply_updates_def)
-   apply (simp add: coin_def value_plus_def join_ir_def input2state_def)
-  apply (rule observe_execution_possible_step)
-      apply (simp add: possible_steps_2_coin)
-     apply (simp add: coin_def value_plus_def join_ir_def input2state_def recognises_from_2 recognises_1_2)
-    apply (simp add: coin_def value_plus_def join_ir_def input2state_def apply_outputs_def apply_updates_def)
-   apply (simp add: coin_def value_plus_def join_ir_def input2state_def)
-  apply (rule observe_execution_possible_step)
-     apply (simp add: possible_steps_2_vend apply_updates_def value_plus_def input2state_def)
-    apply (simp add: apply_outputs_def vend_def apply_updates_def input2state_def)
-   apply (simp add: vend_def apply_updates_def)
-  by simp
+  by (simp add: possible_steps_0 select_def apply_updates_def
+                   possible_steps_1 coin_def apply_outputs finfun_update_twist
+                   possible_steps_2_coin possible_steps_2_vend vend_def)
 
 lemma drinks2_0_invalid:
   "\<not> (aa = (STR ''select'') \<and> length (b) = 1) \<Longrightarrow>

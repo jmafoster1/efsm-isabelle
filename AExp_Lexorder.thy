@@ -1,3 +1,9 @@
+subsection\<open>AExp Lexorder\<close>
+
+text\<open>This theory defines a lexicographical ordering on arithmetic expressions such that we can build
+orderings for guards and, subsequently, transitions. We make use of the previously established
+orderings on variable names and values.\<close>
+
 theory AExp_Lexorder
 imports AExp Value_Lexorder
 begin

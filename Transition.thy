@@ -1,10 +1,11 @@
+section\<open>Transitions\<close>
+text\<open>Here we define the transitions which make up EFSMs. As per \cite{foster2018}, each transition
+has a label and an arity and, optionally, guards, outputs, and updates. To implement this, we use
+the record type such that each component of the transition can be accessed.\<close>
+
 theory Transition
 imports GExp
 begin
-section\<open>Transitions\<close>
-text\<open>Here we define the transitions which make up EFSMs. As per \cite{foster2018}, each transitions
-has a label and an arity and optionally, guards, outputs, and Updates. To implement this, we use
-the record type such that each component of the transition can be accessed.\<close>
 
 type_synonym label = String.literal
 type_synonym arity = nat
@@ -99,7 +100,7 @@ lemma apply_outputs_nth:
   "i < length p \<Longrightarrow> apply_outputs p s ! i = aval (p ! i) s"
   by (simp add: apply_outputs_def)
 
-lemmas apply_outputs = datastate apply_outputs_def
+lemmas apply_outputs = datastate apply_outputs_def value_plus_def value_minus_def value_times_def
 
 lemma apply_outputs_empty [simp]: "apply_outputs [] s = []"
   by (simp add: apply_outputs_def)

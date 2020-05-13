@@ -1,3 +1,9 @@
+subsection\<open>GExp Lexorder\<close>
+
+text\<open>This theory defines a lexicographical ordering on guard expressions such that we can build
+orderings for transitions. We make use of the previously established orderings on arithmetic
+expressions.\<close>
+
 theory
 GExp_Lexorder
 imports

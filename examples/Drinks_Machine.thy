@@ -224,13 +224,13 @@ lemma drinks_1_rejects:
   apply (simp add: possible_steps_empty drinks_def can_take_transition_def can_take_def transitions)
   by (metis decompose_pair)
 
-lemma drinks_rejects_future: "rejects drinks 2 d ((l, i)#t)"
+lemma drinks_rejects_future: "\<not> recognises drinks 2 d ((l, i)#t)"
   apply (rule no_possible_steps_rejects)
   by (simp add: possible_steps_empty drinks_def)
 
 lemma drinks_1_rejects_trace: assumes not_vend: "e \<noteq> (STR ''vend'', [])"
       and not_coin: "\<nexists>i. e = (STR ''coin'', [i])"
-  shows "rejects drinks 1 r (e # es)"
+  shows "\<not> recognises drinks 1 r (e # es)"
 proof-
   show ?thesis
     apply (cases e, simp)
@@ -246,7 +246,7 @@ lemma rejects_state_step: "s > 1 \<Longrightarrow> step drinks s r l i = None"
   by (simp add: possible_steps_empty drinks_def)
 
 lemma invalid_other_states:
-  "s > 1 \<Longrightarrow> rejects drinks s r ((aa, b) # t)"
+  "s > 1 \<Longrightarrow> \<not> recognises drinks s r ((aa, b) # t)"
   apply (rule no_possible_steps_rejects)
   by (simp add: possible_steps_empty drinks_def)
 

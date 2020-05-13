@@ -1,13 +1,12 @@
+section\<open>Three-Valued Logic\<close>
+
+text\<open>The \texttt{trilean} datatype is used to implement three-valued Bochvar logic
+\cite{bochvar1981}. Here we prove that the logic is an idempotent semiring, define a partial order,
+and prove some other useful lemmas.\<close>
+
 theory Trilean
 imports Main
 begin
-
-section\<open>Three-Valued Logic\<close>
-
-(* TODO: Can we cite Bochvar? *)
-text\<open>The \texttt{trilean} datatype is used to implement three-valued Bochvar logic. Here we prove
-that the logic is an idempotent semiring, define a partial order, and prove some other useful
-lemmas.\<close>
 
 datatype trilean = true | false | invalid
 
