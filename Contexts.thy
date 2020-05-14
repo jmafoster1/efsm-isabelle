@@ -1,8 +1,8 @@
 subsection \<open>Contexts\<close>
 text\<open>
 This theory defines contexts as a way of relating possible constraints on register values to
-observable output. We then use contexts to extendthe idea of transition subsumption to EFSM
-transitions with register update functions.
+observable output. We then use contexts to extend the idea of transition subsumption from
+\cite{lorenzoli2008} to EFSM transitions with register update functions.
 \<close>
 
 theory Contexts
@@ -53,8 +53,7 @@ lemma inconsistent_updates:
 
 lemma bad_outputs:
   "\<exists>i. can_take_transition t1 i r \<and> evaluate_outputs t1 i r \<noteq> evaluate_outputs t2 i r \<Longrightarrow>
-
- \<not> subsumes t2 r t1"
+   \<not> subsumes t2 r t1"
   by (simp add: subsumes_def)
 
 lemma transition_subsumes_self: "subsumes t c t"
@@ -112,13 +111,9 @@ next
 qed
 
 lemma posterior_sequence_recognises_execution:
-  "posterior_sequence e s d t = Some ca \<longrightarrow> recognises_execution e s d t"
+  "posterior_sequence e s d t = Some ca \<Longrightarrow> recognises_execution e s d t"
   using posterior_sequence_implies_accepting_sequence[of e s d t ca]
-  apply simp
-  apply clarify
-  apply simp
-  using accepting_sequence_recognises_execution
-  by auto
+  using accepting_sequence_recognises_execution by auto
 
 lemma anterior_context_recognises_execution:
   "\<exists>c. anterior_context e p = Some c \<Longrightarrow> recognises_execution e 0 <> p"
@@ -243,19 +238,9 @@ lemma subsumes_update_equality:
   apply (erule_tac x=r' in allE)
   by auto
 
-lemma subsumption_def_alt2: "subsumes t1 c t2 = (Label t2 = Label t1 \<and>
-    Arity t2 = Arity t1 \<and>
-    (\<forall>i. can_take_transition t2 i c \<longrightarrow> can_take_transition t1 i c) \<and>
-    (\<forall>i. can_take_transition t2 i c \<longrightarrow> evaluate_outputs t2 i c = evaluate_outputs t1 i c) \<and>
-    (\<forall>i. can_take_transition t2 i c \<longrightarrow>
-         (\<forall>r'. ((evaluate_updates t1 i c $ r') = (evaluate_updates t2 i c $ r')) \<or>
-             evaluate_updates t2 i c $ r' = None)))"
-  apply (simp add: subsumes_def)
-  apply standard
-   apply (simp add: subsumes_update_equality subsumption)
-  by (metis can_take_transition_def option.sel posterior_separate_def)
-
-lemma subsumes_trans: assumes p1: "subsumes t1 c t2" and p2: "subsumes t2 c t3"
+lemma subsumes_trans:
+  assumes p1: "subsumes t1 c t2"
+      and p2: "subsumes t2 c t3"
   shows "subsumes t1 c t3"
   using p1 p2
   apply (simp add: subsumes_def)

@@ -1,3 +1,8 @@
+subsection\<open>Transition Lexorder\<close>
+
+text\<open>This theory defines a lexicographical ordering on transitions such that we can convert from
+the set representation of EFSMs to a sorted list that we can recurse over.\<close>
+
 theory Transition_Lexorder
   imports "EFSM.Transition"
     GExp_Lexorder
