@@ -1,6 +1,6 @@
 subsection \<open>Contexts\<close>
 text\<open>
-tthis theory defines contexts as a way of relating possible constraints on register values to
+This theory defines contexts as a way of relating possible constraints on register values to
 observable output. We then use contexts to extendthe idea of transition subsumption to EFSM
 transitions with register update functions.
 \<close>
@@ -9,13 +9,6 @@ theory Contexts
   imports
     EFSM GExp
 begin
-
-lemma medial_subset: "length i = Arity t \<Longrightarrow>
-   Arity t = Arity t' \<Longrightarrow>
-   set (Guards t') \<subseteq> set (Guards t) \<Longrightarrow>
-   can_take_transition t i r \<Longrightarrow>
-   can_take_transition t' i r"
-  by (simp add: can_take_transition_def can_take_def apply_guards_subset)
 
 definition posterior_separate :: "nat \<Rightarrow> vname gexp list \<Rightarrow> update_function list \<Rightarrow> inputs \<Rightarrow> registers \<Rightarrow> registers option" where
   "posterior_separate a g u i r = (if can_take a g i r then Some (apply_updates u (join_ir i r) r) else None)"

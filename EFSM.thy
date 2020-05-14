@@ -586,7 +586,7 @@ lemma trace_simulation_step_none:
    apply simp
   by fastforce
 
-definition "simulates e1 e2 = (\<exists>f. \<forall>t. trace_simulation f e1 0 <> e2 0 <> t)"
+definition "trace_simulates e1 e2 = (\<exists>f. \<forall>t. trace_simulation f e1 0 <> e2 0 <> t)"
 
 lemma rejects_trace_simulation:
   "rejects_trace e2 s2 r2 t \<Longrightarrow>
@@ -618,8 +618,8 @@ lemma accepts_trace_simulation:
    accepts_trace e2 s2 r2 t"
   using rejects_trace_simulation by blast
 
-lemma simulates_trace_subset: "simulates e1 e2 \<Longrightarrow> T e1 \<subseteq> T e2"
-  using T_def accepts_trace_simulation simulates_def by fastforce
+lemma simulates_trace_subset: "trace_simulates e1 e2 \<Longrightarrow> T e1 \<subseteq> T e2"
+  using T_def accepts_trace_simulation trace_simulates_def by fastforce
 
 subsubsection\<open>Trace Equivalence\<close>
 text\<open>Two EFSMs are trace equivalent if they accept the same traces. This is the intuitive definition
@@ -629,7 +629,7 @@ equivalent, there is no trace which can distinguish the two.\<close>
 definition "trace_equivalent e1 e2 = (T e1 = T e2)"
 
 lemma simulation_implies_trace_equivalent:
-  "simulates e1 e2 \<Longrightarrow> simulates e2 e1 \<Longrightarrow> trace_equivalent e1 e2"
+  "trace_simulates e1 e2 \<Longrightarrow> trace_simulates e2 e1 \<Longrightarrow> trace_equivalent e1 e2"
   using simulates_trace_subset trace_equivalent_def by auto
 
 lemma trace_equivalent_reflexive: "trace_equivalent e1 e1"
@@ -668,6 +668,8 @@ inductive execution_simulation :: "(cfstate \<Rightarrow> cfstate) \<Rightarrow>
          (\<exists>(s2', t2) |\<in>| possible_steps e2 s2 r2 l i. evaluate_outputs t1 i r1 = evaluate_outputs t2 i r2 \<and>
          execution_simulation f e1 s1' (evaluate_updates t1 i r1) e2 s2' (evaluate_updates t2 i r2) es) \<Longrightarrow>
          execution_simulation f e1 s1 r1 e2 s2 r2 ((l, i)#es)"
+
+definition "execution_simulates e1 e2 = (\<exists>f. \<forall>t. execution_simulation f e1 0 <> e2 0 <> t)"
 
 lemma execution_simulation_step:
 "execution_simulation f e1 s1 r1 e2 s2 r2 ((l, i)#es) =
@@ -708,6 +710,11 @@ next
      apply blast
     by simp
 qed
+
+lemma execution_simulates_trace_simulates:
+  "execution_simulates e1 e2 \<Longrightarrow> trace_simulates e1 e2"
+  apply (simp add: execution_simulates_def trace_simulates_def)
+  using execution_simulation_trace_simulation by blast
 
 subsubsection\<open>Executional Equivalence\<close>
 text\<open>Two EFSMs are executionally equivalent if there is no execution which can distinguish between

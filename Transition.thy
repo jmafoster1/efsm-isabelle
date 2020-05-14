@@ -82,6 +82,13 @@ lemma can_take_transition_empty_guard:
   "Guards t = [] \<Longrightarrow> \<exists>i. can_take_transition t i c"
   by (simp add: can_take_transition_def can_take_def Ex_list_of_length)
 
+lemma can_take_subset: "length i = Arity t \<Longrightarrow>
+   Arity t = Arity t' \<Longrightarrow>
+   set (Guards t') \<subseteq> set (Guards t) \<Longrightarrow>
+   can_take_transition t i r \<Longrightarrow>
+   can_take_transition t' i r"
+  by (simp add: can_take_transition_def can_take_def apply_guards_subset)
+
 lemma valid_list_can_take:
   "\<forall>g \<in> set (Guards t). valid g \<Longrightarrow> \<exists>i. can_take_transition t i c"
   by (simp add: can_take_transition_def can_take_def apply_guards_def valid_def Ex_list_of_length)
