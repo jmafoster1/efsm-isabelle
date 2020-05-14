@@ -31,6 +31,7 @@ fun gval :: "'a gexp \<Rightarrow> 'a datastate \<Rightarrow> trilean" where
   "gval (In v l) s = (if s v \<in> set (map Some l) then true else false)" |
   "gval (Nor a\<^sub>1 a\<^sub>2) s = \<not>\<^sub>? ((gval a\<^sub>1 s) \<or>\<^sub>? (gval a\<^sub>2 s))"
 
+text_raw\<open>\snip{connectives}{1}{2}{%\<close>
 definition gNot :: "'a gexp \<Rightarrow> 'a gexp"  where
   "gNot g \<equiv> Nor g g"
 
@@ -53,19 +54,20 @@ lemma gval_Lt [simp]:
 definition Le :: "'a aexp \<Rightarrow> 'a aexp \<Rightarrow> 'a gexp" (*infix "\<le>" 60*) where
   "Le v va \<equiv> gNot (Gt v va)"
 
+definition Ge :: "'a aexp \<Rightarrow> 'a aexp \<Rightarrow> 'a gexp" (*infix "\<ge>" 60*) where
+  "Ge v va \<equiv> gNot (Lt v va)"
+
+definition Ne :: "'a aexp \<Rightarrow> 'a aexp \<Rightarrow> 'a gexp" (*infix "\<noteq>" 60*) where
+  "Ne v va \<equiv> gNot (Eq v va)"
+text_raw\<open>}%endsnip\<close>
+
 lemma gval_Le [simp]:
   "gval (Le a\<^sub>1 a\<^sub>2) s = \<not>\<^sub>? (value_gt (aval a\<^sub>1 s) (aval a\<^sub>2 s))"
   by (simp add: Le_def value_gt_def gNot_def maybe_or_idempotent)
 
-definition Ge :: "'a aexp \<Rightarrow> 'a aexp \<Rightarrow> 'a gexp" (*infix "\<ge>" 60*) where
-  "Ge v va \<equiv> gNot (Lt v va)"
-
 lemma gval_Ge [simp]:
   "gval (Ge a\<^sub>1 a\<^sub>2) s = \<not>\<^sub>? (value_gt (aval a\<^sub>2 s) (aval a\<^sub>1 s))"
   by (simp add: Ge_def value_gt_def gNot_def maybe_or_idempotent)
-
-definition Ne :: "'a aexp \<Rightarrow> 'a aexp \<Rightarrow> 'a gexp" (*infix "\<noteq>" 60*) where
-  "Ne v va \<equiv> gNot (Eq v va)"
 
 lemma gval_Ne [simp]:
   "gval (Ne a\<^sub>1 a\<^sub>2) s = \<not>\<^sub>? (value_eq (aval a\<^sub>2 s) (aval a\<^sub>1 s))"

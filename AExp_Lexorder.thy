@@ -8,12 +8,14 @@ theory AExp_Lexorder
 imports AExp Value_Lexorder
 begin
 
+text_raw\<open>\snip{height}{1}{2}{%\<close>
 fun height :: "'a aexp \<Rightarrow> nat"  where
   "height (L l2) = 1" |
   "height (V v2) = 1" |
   "height (Plus e1 e2) = 1 + max (height e1) (height e2)" |
   "height (Minus e1 e2) = 1 + max (height e1) (height e2)" |
   "height (Times e1 e2) = 1 + max (height e1) (height e2)"
+text_raw\<open>}%endsnip\<close>
 
 instantiation aexp :: (linorder) linorder begin
 fun less_aexp_aux :: "'a aexp \<Rightarrow> 'a aexp \<Rightarrow> bool"  where

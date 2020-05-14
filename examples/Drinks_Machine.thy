@@ -29,7 +29,7 @@ definition select :: "transition" where
                   ]
       \<rparr>"
 
-text_raw\<open>\snip{coin}{1}{2}{%\<close>
+text_raw\<open>\snip{coindef}{1}{2}{%\<close>
 definition coin :: "transition" where
 "coin \<equiv> \<lparr>
         Label = STR ''coin'',

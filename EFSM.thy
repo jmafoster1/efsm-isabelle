@@ -197,6 +197,7 @@ text\<open>One of the key features of this formalisation of EFSMs is their abili
 \emph{outputs}, which represent function return values. When action sequences are executed in an
 EFSM, they produce a corresponding \emph{observation}.\<close>
 
+text_raw\<open>\snip{observe}{1}{2}{%\<close>
 fun observe_execution :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> outputs list" where
   "observe_execution _ _ _ [] = []" |
   "observe_execution e s r ((l, i)#as)  = (
@@ -207,6 +208,7 @@ fun observe_execution :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> 
       let (s', t) = Eps (\<lambda>x. x |\<in>| viable) in
       (evaluate_outputs t i r)#(observe_execution e s' (evaluate_updates t i r) as)
     )"
+text_raw\<open>}%endsnip\<close>
 
 lemma observe_execution_step_def: "observe_execution e s r ((l, i)#as)  = (
     case step e s r l i of
@@ -309,6 +311,7 @@ definition max_output :: "transition_matrix \<Rightarrow> nat" where
 definition all_regs :: "transition_matrix \<Rightarrow> nat set" where
   "all_regs e = \<Union> (image (\<lambda>(_, t). enumerate_regs t) (fset e))"
 
+text_raw\<open>\snip{finiteRegs}{1}{2}{%\<close>
 lemma finite_all_regs: "finite (all_regs e)"
   apply (simp add: all_regs_def enumerate_regs_def)
   apply clarify
@@ -318,6 +321,7 @@ lemma finite_all_regs: "finite (all_regs e)"
   using AExp.finite_enumerate_regs apply blast
    apply (simp add: AExp.finite_enumerate_regs prod.case_eq_if)
   by auto
+text_raw\<open>}%endsnip\<close>
 
 definition max_input :: "transition_matrix \<Rightarrow> nat option" where
   "max_input e = fMax (fimage (\<lambda>(_, t). Transition.max_input t) e)"
@@ -331,11 +335,13 @@ That is, the EFSM is able to respond to each event in sequence. There is no rest
 outputs produced. When a recognised execution is observed, it produces an accepted trace of the
 EFSM.\<close>
 
+text_raw\<open>\snip{recognises}{1}{2}{%\<close>
 inductive recognises_execution :: "transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
   base: "recognises_execution e s d []" |
   step: "(s', t) |\<in>| possible_steps e s r l i \<Longrightarrow>
          recognises_execution e s' (evaluate_updates t i r) ts \<Longrightarrow>
          recognises_execution e s r ((l, i)#ts)"
+text_raw\<open>}%endsnip\<close>
 
 abbreviation "recognises e t \<equiv> recognises_execution e 0 <> t"
 
@@ -463,15 +469,19 @@ text\<open>The \texttt{accepts} function returns true if the given EFSM accepts 
 the EFSM is able to respond to each event in sequence \emph{and} is able to produce the expected
 output. Accepted traces represent valid runs of an EFSM.\<close>
 
+text_raw\<open>\snip{accepts}{1}{2}{%\<close>
 inductive accepts_trace :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> trace \<Rightarrow> bool" where
   base: "accepts_trace e s d []" |
   step: "\<exists>(s', T) |\<in>| possible_steps e s d l i.
          evaluate_outputs T i d = map Some p \<and>
          accepts_trace e s' (evaluate_updates T i d) t \<Longrightarrow>
          accepts_trace e s d ((l, i, p)#t)"
+text_raw\<open>}%endsnip\<close>
 
+text_raw\<open>\snip{T}{1}{2}{%\<close>
 definition T :: "transition_matrix \<Rightarrow> trace set" where
   "T e = {t. accepts_trace e 0 <> t}"
+text_raw\<open>}%endsnip\<close>
 
 abbreviation "rejects_trace e s d t \<equiv> \<not> accepts_trace e s d t"
 
@@ -500,6 +510,21 @@ lemma rejects_trace_step:
 
 definition accepts_log :: "trace set \<Rightarrow> transition_matrix \<Rightarrow> bool" where
   "accepts_log l e = (\<forall>t \<in> l. accepts_trace e 0 <> t)"
+
+text_raw\<open>\snip{prefixClosure}{1}{2}{%\<close>
+lemma prefix_closure: "accepts_trace e s r (t@t') \<Longrightarrow> accepts_trace e s r t"
+proof(induct t arbitrary: s r)
+  case Nil
+  then show ?case
+    by (simp add: accepts_trace.base)
+next
+  case (Cons a t)
+  then show ?case
+    apply (cases a, clarsimp)
+    apply (simp add: accepts_trace_step)
+    by auto
+qed
+text_raw\<open>}%endsnip\<close>
 
 text\<open>For code generation, it is much more efficient to re-implement the \texttt{accepts\_trace}
 function primitively than to use the code generator's default setup for inductive definitions.\<close>
@@ -626,11 +651,15 @@ text\<open>Two EFSMs are trace equivalent if they accept the same traces. This i
 of ``observable equivalence'' between the behaviours of the two models. If two EFSMs are trace
 equivalent, there is no trace which can distinguish the two.\<close>
 
+text_raw\<open>\snip{traceEquiv}{1}{2}{%\<close>
 definition "trace_equivalent e1 e2 = (T e1 = T e2)"
+text_raw\<open>}%endsnip\<close>
 
+text_raw\<open>\snip{simEquiv}{1}{2}{%\<close>
 lemma simulation_implies_trace_equivalent:
   "trace_simulates e1 e2 \<Longrightarrow> trace_simulates e2 e1 \<Longrightarrow> trace_equivalent e1 e2"
   using simulates_trace_subset trace_equivalent_def by auto
+text_raw\<open>}%endsnip\<close>
 
 lemma trace_equivalent_reflexive: "trace_equivalent e1 e1"
   by (simp add: trace_equivalent_def)
@@ -687,6 +716,7 @@ lemma execution_simulation_step:
    apply simp
   by blast
 
+text_raw\<open>\snip{execTraceSim}{1}{2}{%\<close>
 lemma execution_simulation_trace_simulation:
   "execution_simulation f e1 s1 r1 e2 s2 r2 (map (\<lambda>(l, i, o). (l, i)) t) \<Longrightarrow> trace_simulation f e1 s1 r1 e2 s2 r2 t"
 proof(induct t arbitrary: s1 s2 r1 r2)
@@ -710,6 +740,7 @@ next
      apply blast
     by simp
 qed
+text_raw\<open>}%endsnip\<close>
 
 lemma execution_simulates_trace_simulates:
   "execution_simulates e1 e2 \<Longrightarrow> trace_simulates e1 e2"
@@ -753,11 +784,10 @@ lemma execution_end:
   by (simp add: executionally_equivalent_step)
 
 lemma possible_steps_disparity:
-"possible_steps e1 s1 r1 l i \<noteq> {||} \<Longrightarrow>
-possible_steps e2 s2 r2 l i = {||} \<Longrightarrow>
-\<not>executionally_equivalent e1 s1 r1 e2 s2 r2 ((l, i)#es)"
-  apply (simp add: executionally_equivalent_step)
-  by auto
+  "possible_steps e1 s1 r1 l i \<noteq> {||} \<Longrightarrow>
+   possible_steps e2 s2 r2 l i = {||} \<Longrightarrow>
+   \<not>executionally_equivalent e1 s1 r1 e2 s2 r2 ((l, i)#es)"
+  by (simp add: executionally_equivalent_step, auto)
 
 lemma executionally_equivalent_acceptance:
   "executionally_equivalent e1 s1 r1 e2 s2 r2 (map (\<lambda>(l, i, o). (l, i)) t) \<Longrightarrow>
