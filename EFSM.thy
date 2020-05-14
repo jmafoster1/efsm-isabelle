@@ -144,7 +144,7 @@ lemma random_member_empty[simp]: "random_member {||} = None"
 definition step :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> label \<Rightarrow> inputs \<Rightarrow> (transition \<times> cfstate \<times> outputs \<times> registers) option" where
   "step e s r l i = (case random_member (possible_steps e s r l i) of
       None \<Rightarrow> None |
-      Some (s', t) \<Rightarrow>  Some (t, s', apply_outputs (Outputs t) (join_ir i r), apply_updates (Updates t) (join_ir i r) r)
+      Some (s', t) \<Rightarrow>  Some (t, s', evaluate_outputs t i r, evaluate_updates t i r)
   )"
 
 lemma possible_steps_not_empty_iff:
@@ -169,8 +169,8 @@ lemma step_outputs: "step e s r l i = Some (t, s', p, r') \<Longrightarrow> eval
 lemma step_some:
   "possibilities = (possible_steps e s r l i) \<Longrightarrow>
    random_member possibilities = Some (s', t) \<Longrightarrow>
-   apply_outputs (Outputs t) (join_ir i r) = p \<Longrightarrow>
-   apply_updates (Updates t) (join_ir i r) r = r' \<Longrightarrow>
+   evaluate_outputs t i r = p \<Longrightarrow>
+   evaluate_updates t i r = r' \<Longrightarrow>
    step e s r l i = Some (t, s', p, r')"
   by (simp add: step_def)
 
@@ -180,8 +180,8 @@ lemma step_None: "step e s r l i = None = (possible_steps e s r l i = {||})"
 lemma step_Some: "step e s r l i = Some (t, s', p, r') =
   (
     random_member (possible_steps e s r l i) = Some (s', t) \<and>
-    apply_outputs (Outputs t) (join_ir i r) = p \<and>
-    apply_updates (Updates t) (join_ir i r) r = r'
+    evaluate_outputs t i r = p \<and>
+    evaluate_updates t i r = r'
   )"
   apply (simp add: step_def)
   apply (case_tac "random_member (possible_steps e s r l i)")
@@ -279,7 +279,7 @@ leaves the given EFSM in the given state.\<close>
 
 inductive gets_us_to :: "cfstate \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
   base: "s = target \<Longrightarrow> gets_us_to target _ s _ []" |
-  step_some: "\<exists>(s', T) |\<in>| possible_steps e s d (fst h) (snd h). gets_us_to target e s' (apply_updates (Updates T) (join_ir i r) r) t \<Longrightarrow>
+  step_some: "\<exists>(s', T) |\<in>| possible_steps e s d (fst h) (snd h). gets_us_to target e s' (evaluate_updates T i r) t \<Longrightarrow>
    gets_us_to target e s r (h#t)" |
   step_none: "step e s r (fst h) (snd h) = None \<Longrightarrow>
    s = target \<Longrightarrow>
@@ -334,7 +334,7 @@ EFSM.\<close>
 inductive recognises_execution :: "transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
   base: "recognises_execution e s d []" |
   step: "(s', t) |\<in>| possible_steps e s r l i \<Longrightarrow>
-         recognises_execution e s' (apply_updates (Updates t) (join_ir i r) r) ts \<Longrightarrow>
+         recognises_execution e s' (evaluate_updates t i r) ts \<Longrightarrow>
          recognises_execution e s r ((l, i)#ts)"
 
 abbreviation "recognises e t \<equiv> recognises_execution e 0 <> t"
@@ -346,7 +346,7 @@ lemma no_possible_steps_rejects:
   using recognises_execution.cases by blast
 
 lemma recognises_step_equiv: "recognises_execution e s d ((l, i)#t) =
-   (\<exists>(s', T) |\<in>| possible_steps e s d l i. recognises_execution e s' (apply_updates (Updates T) (join_ir i d) d) t)"
+   (\<exists>(s', T) |\<in>| possible_steps e s d l i. recognises_execution e s' (evaluate_updates T i d) t)"
   apply standard
    apply (rule recognises_execution.cases, simp)
     apply simp
@@ -357,7 +357,7 @@ fun recognises_prim :: "transition_matrix \<Rightarrow> nat \<Rightarrow> regist
   "recognises_prim e s d [] = True" |
   "recognises_prim e s d ((l, i)#t) = (
     let poss_steps = possible_steps e s d l i in
-    (\<exists>(s', T) |\<in>| poss_steps. recognises_prim e s' (apply_updates (Updates T) (join_ir i d) d) t)
+    (\<exists>(s', T) |\<in>| poss_steps. recognises_prim e s' (evaluate_updates T i d) t)
   )"
 
 lemma recognises_prim [code]: "recognises_execution e s r t = recognises_prim e s r t"
@@ -379,7 +379,7 @@ qed
 
 lemma recognises_single_possible_step:
   assumes "possible_steps e s d l i = {|(s', t)|}"
-      and "recognises_execution e s' (apply_updates (Updates t) (join_ir i d) d) trace"
+      and "recognises_execution e s' (evaluate_updates t i d) trace"
     shows "recognises_execution e s d ((l, i)#trace)"
   apply (rule recognises_execution.step[of s' t])
   using assms by auto
@@ -425,7 +425,7 @@ lemma step_none_rejects:
   using no_step_none surjective_pairing by fastforce
 
 lemma trace_reject:
-  "(\<not> recognises_execution e s d ((a, b)#t)) = (possible_steps e s d a b = {||} \<or> (\<forall>(s', T) |\<in>| possible_steps e s d a b. \<not> recognises_execution e s' (apply_updates (Updates T) (join_ir b d) d) t))"
+  "(\<not> recognises_execution e s d ((a, b)#t)) = (possible_steps e s d a b = {||} \<or> (\<forall>(s', T) |\<in>| possible_steps e s d a b. \<not> recognises_execution e s' (evaluate_updates T b d) t))"
   using recognises_prim by fastforce
 
 lemma trace_reject_no_possible_steps_atomic:
@@ -433,7 +433,7 @@ lemma trace_reject_no_possible_steps_atomic:
   using recognises_possible_steps_not_empty by auto
 
 lemma trace_reject_later:
-  "\<forall>(s', T) |\<in>| possible_steps e s d a b. \<not> recognises_execution e s' (apply_updates (Updates T) (join_ir b d) d) t \<Longrightarrow>
+  "\<forall>(s', T) |\<in>| possible_steps e s d a b. \<not> recognises_execution e s' (evaluate_updates T b d) t \<Longrightarrow>
    \<not> recognises_execution e s d ((a, b)#t)"
   using trace_reject by auto
 
@@ -467,7 +467,7 @@ inductive accepts_trace :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow
   base: "accepts_trace e s d []" |
   step: "\<exists>(s', T) |\<in>| possible_steps e s d l i.
          evaluate_outputs T i d = map Some p \<and>
-         accepts_trace e s' (apply_updates (Updates T) (join_ir i d) d) t \<Longrightarrow>
+         accepts_trace e s' (evaluate_updates T i d) t \<Longrightarrow>
          accepts_trace e s d ((l, i, p)#t)"
 
 definition T :: "transition_matrix \<Rightarrow> trace set" where
@@ -478,7 +478,7 @@ abbreviation "rejects_trace e s d t \<equiv> \<not> accepts_trace e s d t"
 lemma accepts_trace_step:
   "accepts_trace e s d ((l, i, p)#t) = (\<exists>(s', T) |\<in>| possible_steps e s d l i.
          evaluate_outputs T i d = map Some p \<and>
-         accepts_trace e s' (apply_updates (Updates T) (join_ir i d) d) t)"
+         accepts_trace e s' (evaluate_updates T i d) t)"
   apply standard
    defer
    apply (simp add: accepts_trace.step)
@@ -493,7 +493,7 @@ lemma accepts_trace_exists_possible_step:
 
 lemma rejects_trace_step:
 "rejects_trace e s d ((l, i, p)#t) = (
-  (\<forall>(s', T) |\<in>| possible_steps e s d l i.  evaluate_outputs T i d \<noteq> map Some p \<or> rejects_trace e s' (apply_updates (Updates T) (join_ir i d) d) t)
+  (\<forall>(s', T) |\<in>| possible_steps e s d l i.  evaluate_outputs T i d \<noteq> map Some p \<or> rejects_trace e s' (evaluate_updates T i d) t)
 )"
   apply (simp add: accepts_trace_step)
   by auto
@@ -510,12 +510,12 @@ fun accepts_trace_prim :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow>
     if fis_singleton poss_steps then
       let (s', T) = fthe_elem poss_steps in
       if evaluate_outputs T i d = map Some p then
-        accepts_trace_prim e s' (apply_updates (Updates T) (join_ir i d) d) t
+        accepts_trace_prim e s' (evaluate_updates T i d) t
       else False
     else
       (\<exists>(s', T) |\<in>| poss_steps.
-         apply_outputs (Outputs T) (join_ir i d) = (map Some p) \<and>
-         accepts_trace_prim e s' (apply_updates (Updates T) (join_ir i d) d) t))"
+         evaluate_outputs T i d = (map Some p) \<and>
+         accepts_trace_prim e s' (evaluate_updates T i d) t))"
 
 lemma accepts_trace_prim [code]: "accepts_trace e s d l = accepts_trace_prim e s d l"
 proof(induct l arbitrary: s d)

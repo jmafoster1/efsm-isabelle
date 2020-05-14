@@ -20,7 +20,7 @@ definition subsumes :: "transition \<Rightarrow> registers \<Rightarrow> transit
   "subsumes t2 r t1 = (Label t1 = Label t2 \<and> Arity t1 = Arity t2 \<and>
                        (\<forall>i. can_take_transition t1 i r \<longrightarrow> can_take_transition t2 i r) \<and>
                        (\<forall>i. can_take_transition t1 i r \<longrightarrow>
-                            apply_outputs (Outputs t1) (join_ir i r) = apply_outputs (Outputs t2) (join_ir i r)) \<and>
+                            evaluate_outputs t1 i r = evaluate_outputs t2 i r) \<and>
                        (\<forall>p1 p2 i. posterior_separate (Arity t1) (Guards t1) (Updates t2) i r = Some p2 \<longrightarrow>
                                   posterior_separate (Arity t1) (Guards t1) (Updates t1) i r = Some p1 \<longrightarrow>
                                   (\<forall>P r'. (p1 $ r' = None) \<or> (P (p2 $ r') \<longrightarrow> P (p1 $ r'))))
@@ -30,7 +30,7 @@ lemma subsumption:
   "(Label t1 = Label t2 \<and> Arity t1 = Arity t2) \<Longrightarrow>
    (\<forall>i. can_take_transition t1 i r \<longrightarrow> can_take_transition t2 i r) \<Longrightarrow>
    (\<forall>i. can_take_transition t1 i r \<longrightarrow>
-        apply_outputs (Outputs t1) (join_ir i r) = apply_outputs (Outputs t2) (join_ir i r)) \<Longrightarrow>
+        evaluate_outputs t1 i r = evaluate_outputs t2 i r) \<Longrightarrow>
 
    (\<forall>p1 p2 i. posterior_separate (Arity t1) (Guards t1) (Updates t2) i r = Some p2 \<longrightarrow>
               posterior_separate (Arity t1) (Guards t1) (Updates t1) i r = Some p1 \<longrightarrow>
@@ -52,7 +52,7 @@ lemma inconsistent_updates:
   by (metis (no_types, hide_lams) option.simps(3) subsumes_def)
 
 lemma bad_outputs:
-  "\<exists>i. can_take_transition t1 i r \<and> apply_outputs (Outputs t1) (join_ir i r) \<noteq> apply_outputs (Outputs t2) (join_ir i r) \<Longrightarrow>
+  "\<exists>i. can_take_transition t1 i r \<and> evaluate_outputs t1 i r \<noteq> evaluate_outputs t2 i r \<Longrightarrow>
 
  \<not> subsumes t2 r t1"
   by (simp add: subsumes_def)
@@ -106,7 +106,7 @@ next
     apply (cases a)
       apply simp
       apply (case_tac "random_member
-              (ffilter (\<lambda>(s', tt). recognises_execution e s' (apply_updates (Updates tt) (join_ir b r) r) ts) (possible_steps e s r aa b))")
+              (ffilter (\<lambda>(s', tt). recognises_execution e s' (evaluate_updates tt b r) ts) (possible_steps e s r aa b))")
      apply simp
     using recognises_execution.step random_member_is_member by fastforce
 qed
@@ -156,7 +156,7 @@ next
     apply (cases a)
     apply simp
     apply (case_tac "random_member
-              (ffilter (\<lambda>(s', tt). recognises_execution e s' (apply_updates (Updates tt) (join_ir b r) r) t) (possible_steps e s r aa b))")
+              (ffilter (\<lambda>(s', tt). recognises_execution e s' (evaluate_updates tt b r) t) (possible_steps e s r aa b))")
      apply simp
     using recognises_execution.step random_member_is_member by fastforce
 qed
@@ -177,7 +177,7 @@ next
     apply (cases a)
     apply simp
     apply (case_tac "random_member
-              (ffilter (\<lambda>(s', tt). recognises_execution e s' (apply_updates (Updates tt) (join_ir b d) d) t) (possible_steps e s d aa b))")
+              (ffilter (\<lambda>(s', tt). recognises_execution e s' (evaluate_updates tt b d) t) (possible_steps e s d aa b))")
      apply simp
      apply clarify
      apply (rule recognises_execution.cases)
@@ -223,19 +223,19 @@ lemma no_choice_no_subsumption: "Label t = Label t' \<Longrightarrow>
 lemma subsumption_def_alt: "subsumes t1 c t2 = (Label t2 = Label t1 \<and>
     Arity t2 = Arity t1 \<and>
     (\<forall>i. can_take_transition t2 i c \<longrightarrow> can_take_transition t1 i c) \<and>
-    (\<forall>i. can_take_transition t2 i c \<longrightarrow> apply_outputs (Outputs t2) (join_ir i c) = apply_outputs (Outputs t1) (join_ir i c)) \<and>
+    (\<forall>i. can_take_transition t2 i c \<longrightarrow> evaluate_outputs t2 i c = evaluate_outputs t1 i c) \<and>
     (\<forall>i. can_take_transition t2 i c \<longrightarrow>
          (\<forall>r' P.
-             P (apply_updates (Updates t1) (join_ir i c) c $ r') \<longrightarrow>
-             apply_updates (Updates t2) (join_ir i c) c $ r' = None \<or> P (apply_updates (Updates t2) (join_ir i c) c $ r'))))"
+             P (evaluate_updates t1 i c $ r') \<longrightarrow>
+             evaluate_updates t2 i c $ r' = None \<or> P (evaluate_updates t2 i c $ r'))))"
   apply (simp add: subsumes_def posterior_separate_def can_take_transition_def[symmetric])
   by blast
 
 lemma subsumes_update_equality:
   "subsumes t1 c t2 \<Longrightarrow> (\<forall>i. can_take_transition t2 i c \<longrightarrow>
          (\<forall>r'.
-             ((apply_updates (Updates t1) (join_ir i c) c $ r') = (apply_updates (Updates t2) (join_ir i c) c $ r')) \<or>
-             apply_updates (Updates t2) (join_ir i c) c $ r' = None))"
+             ((evaluate_updates t1 i c $ r') = (evaluate_updates t2 i c $ r')) \<or>
+             evaluate_updates t2 i c $ r' = None))"
   apply (simp add: subsumption_def_alt)
   apply clarify
   apply (erule_tac x=i in allE)+
@@ -246,10 +246,10 @@ lemma subsumes_update_equality:
 lemma subsumption_def_alt2: "subsumes t1 c t2 = (Label t2 = Label t1 \<and>
     Arity t2 = Arity t1 \<and>
     (\<forall>i. can_take_transition t2 i c \<longrightarrow> can_take_transition t1 i c) \<and>
-    (\<forall>i. can_take_transition t2 i c \<longrightarrow> apply_outputs (Outputs t2) (join_ir i c) = apply_outputs (Outputs t1) (join_ir i c)) \<and>
+    (\<forall>i. can_take_transition t2 i c \<longrightarrow> evaluate_outputs t2 i c = evaluate_outputs t1 i c) \<and>
     (\<forall>i. can_take_transition t2 i c \<longrightarrow>
-         (\<forall>r'. ((apply_updates (Updates t1) (join_ir i c) c $ r') = (apply_updates (Updates t2) (join_ir i c) c $ r')) \<or>
-             apply_updates (Updates t2) (join_ir i c) c $ r' = None)))"
+         (\<forall>r'. ((evaluate_updates t1 i c $ r') = (evaluate_updates t2 i c $ r')) \<or>
+             evaluate_updates t2 i c $ r' = None)))"
   apply (simp add: subsumes_def)
   apply standard
    apply (simp add: subsumes_update_equality subsumption)

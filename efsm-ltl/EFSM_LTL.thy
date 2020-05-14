@@ -22,7 +22,7 @@ fun ltl_step :: "transition_matrix \<Rightarrow> nat option \<Rightarrow> regist
                    if possibilities = {||} then (None, [], r)
                    else
                      let (s', t) = Eps (\<lambda>x. x |\<in>| possibilities) in
-                     (Some s', (apply_outputs (Outputs t) (join_ir i r)), (apply_updates (Updates t) (join_ir i r) r))
+                     (Some s', (evaluate_outputs t i r), (evaluate_updates t i r))
                   )"
 
 lemma ltl_step_alt:
@@ -41,13 +41,13 @@ lemma ltl_step_none:
   by (simp add: ltl_step_alt)
 
 lemma ltl_step_some: assumes "possible_steps e s r l i = {|(s', t)|}"
-      and "apply_outputs (Outputs t) (join_ir i r) = p"
-      and "apply_updates (Updates t) (join_ir i r) r = r'"
+      and "evaluate_outputs t i r = p"
+      and "evaluate_updates t i r = r'"
     shows "ltl_step e (Some s) r (l, i) = (Some s', p, r')"
   by (simp add: assms)
 
 lemma ltl_step_cases: assumes invalid: "P (None, [], r)"
-  assumes valid: "\<forall>(s', t) |\<in>| (possible_steps e s r l i). P (Some s', (apply_outputs (Outputs t) (join_ir i r)), (apply_updates (Updates t) (join_ir i r) r))"
+  assumes valid: "\<forall>(s', t) |\<in>| (possible_steps e s r l i). P (Some s', (evaluate_outputs t i r), (evaluate_updates t i r))"
   shows "P (ltl_step e (Some s) r (l, i))"
   apply simp
   apply (case_tac "possible_steps e s r l i")
