@@ -56,7 +56,7 @@ lemma possible_steps_2_vend:
   by (simp_all add: transitions apply_guards_def value_gt_def join_ir_def connectives)
 
 lemma recognises_first_select:
-  "recognises drinks 0 r ((aa, b) # as) \<Longrightarrow> aa = STR ''select'' \<and> length b = 1"
+  "recognises_execution drinks 0 r ((aa, b) # as) \<Longrightarrow> aa = STR ''select'' \<and> length b = 1"
   using recognises_must_be_possible_step[of drinks 0 r "(aa, b)" as]
   apply simp
   apply clarify
@@ -82,11 +82,11 @@ lemma drinks2_vend_sufficient: "r $ 2 = Some (Num x1) \<Longrightarrow>
   apply safe
   by (simp_all add: transitions apply_guards_def value_gt_def join_ir_def connectives)
 
-lemma recognises_1_2: "recognises drinks 1 r t \<longrightarrow> recognises drinks2 2 r t"
+lemma recognises_1_2: "recognises_execution drinks 1 r t \<longrightarrow> recognises_execution drinks2 2 r t"
 proof(induct t arbitrary: r)
   case Nil
   then show ?case
-    by (simp add: recognises.base)
+    by (simp add: recognises_execution.base)
 next
   case (Cons a as)
   then show ?case
@@ -103,7 +103,7 @@ next
     apply (case_tac "\<exists>i. a=(STR ''coin'', [i])")
      apply clarify
      apply (simp add: possible_steps_1_coin possible_steps_2_coin)
-    by (metis recognises.simps drinks_1_rejects_trace fBexE old.prod.exhaust)
+    by (metis recognises_execution.simps drinks_1_rejects_trace fBexE old.prod.exhaust)
 qed
 
 lemma drinks_reject_0_2:

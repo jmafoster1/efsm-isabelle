@@ -331,26 +331,27 @@ That is, the EFSM is able to respond to each event in sequence. There is no rest
 outputs produced. When a recognised execution is observed, it produces an accepted trace of the
 EFSM.\<close>
 
-inductive recognises :: "transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
-  base: "recognises e s d []" |
+inductive recognises_execution :: "transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
+  base: "recognises_execution e s d []" |
   step: "(s', t) |\<in>| possible_steps e s r l i \<Longrightarrow>
-         recognises e s' (apply_updates (Updates t) (join_ir i r) r) ts \<Longrightarrow>
-         recognises e s r ((l, i)#ts)"
+         recognises_execution e s' (apply_updates (Updates t) (join_ir i r) r) ts \<Longrightarrow>
+         recognises_execution e s r ((l, i)#ts)"
 
-abbreviation recognises_trace :: "transition_matrix \<Rightarrow> execution \<Rightarrow> bool" where
-  "recognises_trace e t \<equiv> recognises e 0 <> t"
+abbreviation "recognises e t \<equiv> recognises_execution e 0 <> t"
+
+definition "E e = {x. recognises e x}"
 
 lemma no_possible_steps_rejects:
-  "possible_steps e s d l i = {||} \<Longrightarrow> \<not> recognises e s d ((l, i)#t)"
-  using recognises.cases by blast
+  "possible_steps e s d l i = {||} \<Longrightarrow> \<not> recognises_execution e s d ((l, i)#t)"
+  using recognises_execution.cases by blast
 
-lemma recognises_step_equiv: "recognises e s d ((l, i)#t) =
-   (\<exists>(s', T) |\<in>| possible_steps e s d l i. recognises e s' (apply_updates (Updates T) (join_ir i d) d) t)"
+lemma recognises_step_equiv: "recognises_execution e s d ((l, i)#t) =
+   (\<exists>(s', T) |\<in>| possible_steps e s d l i. recognises_execution e s' (apply_updates (Updates T) (join_ir i d) d) t)"
   apply standard
-   apply (rule recognises.cases, simp)
+   apply (rule recognises_execution.cases, simp)
     apply simp
    apply auto[1]
-  using recognises.step by blast
+  using recognises_execution.step by blast
 
 fun recognises_prim :: "transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
   "recognises_prim e s d [] = True" |
@@ -359,48 +360,48 @@ fun recognises_prim :: "transition_matrix \<Rightarrow> nat \<Rightarrow> regist
     (\<exists>(s', T) |\<in>| poss_steps. recognises_prim e s' (apply_updates (Updates T) (join_ir i d) d) t)
   )"
 
-lemma recognises_prim [code]: "recognises e s r t = recognises_prim e s r t"
+lemma recognises_prim [code]: "recognises_execution e s r t = recognises_prim e s r t"
 proof(induct t arbitrary: r s)
   case Nil
   then show ?case
-    by (simp add: recognises.base)
+    by (simp add: recognises_execution.base)
 next
   case (Cons h t)
   then show ?case
     apply (cases h)
     apply simp
     apply standard
-     apply (rule recognises.cases, simp)
+     apply (rule recognises_execution.cases, simp)
       apply simp
      apply auto[1]
-    using recognises.step by blast
+    using recognises_execution.step by blast
 qed
 
 lemma recognises_single_possible_step:
   assumes "possible_steps e s d l i = {|(s', t)|}"
-      and "recognises e s' (apply_updates (Updates t) (join_ir i d) d) trace"
-    shows "recognises e s d ((l, i)#trace)"
-  apply (rule recognises.step[of s' t])
+      and "recognises_execution e s' (apply_updates (Updates t) (join_ir i d) d) trace"
+    shows "recognises_execution e s d ((l, i)#trace)"
+  apply (rule recognises_execution.step[of s' t])
   using assms by auto
 
 lemma recognises_single_possible_step_atomic:
   assumes "possible_steps e s d (fst h) (snd h) = {|(s', t)|}"
-      and "recognises e s' (apply_updates (Updates t) (join_ir (snd h) d) d) trace"
-    shows "recognises e s d (h#trace)"
+      and "recognises_execution e s' (apply_updates (Updates t) (join_ir (snd h) d) d) trace"
+    shows "recognises_execution e s d (h#trace)"
   by (metis recognises_single_possible_step assms(1) assms(2) prod.collapse)
 
 lemma recognises_must_be_possible_step:
-  "recognises e s r (h # t) \<Longrightarrow>
+  "recognises_execution e s r (h # t) \<Longrightarrow>
    \<exists>aa ba. (aa, ba) |\<in>| possible_steps e s r (fst h) (snd h)"
   using recognises_step_equiv by fastforce
 
 lemma recognises_possible_steps_not_empty:
-  "recognises e s d (h#t) \<Longrightarrow> possible_steps e s d (fst h) (snd h) \<noteq> {||}"
-  apply (rule recognises.cases)
+  "recognises_execution e s d (h#t) \<Longrightarrow> possible_steps e s d (fst h) (snd h) \<noteq> {||}"
+  apply (rule recognises_execution.cases)
   by auto
 
 lemma recognises_must_be_step:
-  "recognises e s d (h#ts) \<Longrightarrow>
+  "recognises_execution e s d (h#ts) \<Longrightarrow>
    \<exists>t s' p d'. step e s d (fst h) (snd h) = Some (t, s', p, d')"
   apply (cases h)
   apply (simp add: recognises_step_equiv step_def)
@@ -412,50 +413,50 @@ lemma recognises_must_be_step:
   by simp
 
 lemma recognises_cons_step:
-  "recognises e s r (h # t) \<Longrightarrow> step e s r (fst h) (snd h) \<noteq>  None"
+  "recognises_execution e s r (h # t) \<Longrightarrow> step e s r (fst h) (snd h) \<noteq>  None"
   by (simp add: recognises_must_be_step)
 
 lemma no_step_none:
-  "step e s r aa ba = None \<Longrightarrow> \<not> recognises e s r ((aa, ba) # p)"
+  "step e s r aa ba = None \<Longrightarrow> \<not> recognises_execution e s r ((aa, ba) # p)"
   using recognises_cons_step by fastforce
 
 lemma step_none_rejects:
-  "step e s d (fst h) (snd h) = None \<Longrightarrow> \<not> recognises e s d (h#t)"
+  "step e s d (fst h) (snd h) = None \<Longrightarrow> \<not> recognises_execution e s d (h#t)"
   using no_step_none surjective_pairing by fastforce
 
 lemma trace_reject:
-  "(\<not> recognises e s d ((a, b)#t)) = (possible_steps e s d a b = {||} \<or> (\<forall>(s', T) |\<in>| possible_steps e s d a b. \<not> recognises e s' (apply_updates (Updates T) (join_ir b d) d) t))"
+  "(\<not> recognises_execution e s d ((a, b)#t)) = (possible_steps e s d a b = {||} \<or> (\<forall>(s', T) |\<in>| possible_steps e s d a b. \<not> recognises_execution e s' (apply_updates (Updates T) (join_ir b d) d) t))"
   using recognises_prim by fastforce
 
 lemma trace_reject_no_possible_steps_atomic:
-  "possible_steps e s d (fst a) (snd a) = {||} \<Longrightarrow> \<not> recognises e s d (a#t)"
+  "possible_steps e s d (fst a) (snd a) = {||} \<Longrightarrow> \<not> recognises_execution e s d (a#t)"
   using recognises_possible_steps_not_empty by auto
 
 lemma trace_reject_later:
-  "\<forall>(s', T) |\<in>| possible_steps e s d a b. \<not> recognises e s' (apply_updates (Updates T) (join_ir b d) d) t \<Longrightarrow>
-   \<not> recognises e s d ((a, b)#t)"
+  "\<forall>(s', T) |\<in>| possible_steps e s d a b. \<not> recognises_execution e s' (apply_updates (Updates T) (join_ir b d) d) t \<Longrightarrow>
+   \<not> recognises_execution e s d ((a, b)#t)"
   using trace_reject by auto
 
-lemma recognition_prefix_closure: "recognises e s d (t@t') \<Longrightarrow> recognises e s d t"
+lemma recognition_prefix_closure: "recognises_execution e s d (t@t') \<Longrightarrow> recognises_execution e s d t"
 proof(induct t arbitrary: s d)
   case Nil
   then show ?case
-    by (simp add: recognises.base)
+    by (simp add: recognises_execution.base)
 next
   case (Cons a t)
   then show ?case
     apply (cases a, clarsimp)
-    apply (rule recognises.cases)
+    apply (rule recognises_execution.cases)
       apply simp
      apply simp
-    by (rule recognises.step, auto)
+    by (rule recognises_execution.step, auto)
 qed
 
-lemma rejects_prefix: "\<not> recognises e s d t \<Longrightarrow> \<not> recognises e s d (t @ t')"
+lemma rejects_prefix: "\<not> recognises_execution e s d t \<Longrightarrow> \<not> recognises_execution e s d (t @ t')"
   using recognition_prefix_closure by blast
 
-lemma recognises_head: "recognises e s d (h#t) \<Longrightarrow> recognises e s d [h]"
-  by (metis recognises.simps recognises_must_be_possible_step prod.exhaust_sel)
+lemma recognises_head: "recognises_execution e s d (h#t) \<Longrightarrow> recognises_execution e s d [h]"
+  by (metis recognises_execution.simps recognises_must_be_possible_step prod.exhaust_sel)
 
 subsubsection\<open>Trace Acceptance\<close>
 text\<open>The \texttt{accepts} function returns true if the given EFSM accepts a given trace. That is,
@@ -468,6 +469,9 @@ inductive accepts_trace :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow
          evaluate_outputs T i d = map Some p \<and>
          accepts_trace e s' (apply_updates (Updates T) (join_ir i d) d) t \<Longrightarrow>
          accepts_trace e s d ((l, i, p)#t)"
+
+definition T :: "transition_matrix \<Rightarrow> trace set" where
+  "T e = {t. accepts_trace e 0 <> t}"
 
 abbreviation "rejects_trace e s d t \<equiv> \<not> accepts_trace e s d t"
 
@@ -495,7 +499,7 @@ lemma rejects_trace_step:
   by auto
 
 definition accepts_log :: "trace set \<Rightarrow> transition_matrix \<Rightarrow> bool" where
-  "accepts_log T e = (\<forall>t \<in> T. accepts_trace e 0 <> t)"
+  "accepts_log l e = (\<forall>t \<in> l. accepts_trace e 0 <> t)"
 
 text\<open>For code generation, it is much more efficient to re-implement the \texttt{accepts\_trace}
 function primitively than to use the code generator's default setup for inductive definitions.\<close>
@@ -584,16 +588,6 @@ lemma trace_simulation_step_none:
 
 definition "simulates e1 e2 = (\<exists>f. \<forall>t. trace_simulation f e1 0 <> e2 0 <> t)"
 
-subsubsection\<open>Trace Equivalence\<close>
-text\<open>Two EFSMs are trace equivalent if they accept the same traces. This is the intuitive definition
-of ``observable equivalence'' between the behaviours of the two models. If two EFSMs are trace
-equivalent, there is no trace which can distinguish the two.\<close>
-
-definition T :: "transition_matrix \<Rightarrow> trace set" where
-  "T e = {t. accepts_trace e 0 <> t}"
-
-definition "trace_equivalent e1 e2 = (T e1 = T e2)"
-
 lemma rejects_trace_simulation:
   "rejects_trace e2 s2 r2 t \<Longrightarrow>
    accepts_trace e1 s1 r1 t \<Longrightarrow>
@@ -626,6 +620,13 @@ lemma accepts_trace_simulation:
 
 lemma simulates_trace_subset: "simulates e1 e2 \<Longrightarrow> T e1 \<subseteq> T e2"
   using T_def accepts_trace_simulation simulates_def by fastforce
+
+subsubsection\<open>Trace Equivalence\<close>
+text\<open>Two EFSMs are trace equivalent if they accept the same traces. This is the intuitive definition
+of ``observable equivalence'' between the behaviours of the two models. If two EFSMs are trace
+equivalent, there is no trace which can distinguish the two.\<close>
+
+definition "trace_equivalent e1 e2 = (T e1 = T e2)"
 
 lemma simulation_implies_trace_equivalent:
   "simulates e1 e2 \<Longrightarrow> simulates e2 e1 \<Longrightarrow> trace_equivalent e1 e2"

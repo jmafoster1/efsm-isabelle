@@ -116,21 +116,21 @@ lemma possible_steps_2_vend:
   by (simp_all add: transitions apply_guards_def value_gt_def join_ir_def connectives)
 
 lemma recognises_from_2:
-  "recognises drinks 1 <1 $:= d, 2 $:= Some (Num 100)> [(STR ''vend'', [])]"
-  apply (rule recognises.step[of 2 vend])
+  "recognises_execution drinks 1 <1 $:= d, 2 $:= Some (Num 100)> [(STR ''vend'', [])]"
+  apply (rule recognises_execution.step[of 2 vend])
    apply (simp add: possible_steps_2_vend)
-  by (simp add: recognises.base)
+  by (simp add: recognises_execution.base)
 
 lemma recognises_from_1a:
-  "recognises drinks 1 <1 $:= d, 2 $:= Some (Num 50)> [(STR ''coin'', [Num 50]), (STR ''vend'', [])]"
-  apply (rule recognises.step[of 1 coin])
+  "recognises_execution drinks 1 <1 $:= d, 2 $:= Some (Num 50)> [(STR ''coin'', [Num 50]), (STR ''vend'', [])]"
+  apply (rule recognises_execution.step[of 1 coin])
    apply (simp add: possible_steps_1_coin)
   apply (simp add: apply_updates_def coin_def finfun_update_twist value_plus_def)
   using recognises_from_2 by auto
 
-lemma recognises_from_1: "recognises drinks 1 <2 $:= Some (Num 0), 1 $:= Some d>
+lemma recognises_from_1: "recognises_execution drinks 1 <2 $:= Some (Num 0), 1 $:= Some d>
      [(STR ''coin'', [Num 50]), (STR ''coin'', [Num 50]), (STR ''vend'', [])]"
-  apply (rule recognises.step[of 1 coin])
+  apply (rule recognises_execution.step[of 1 coin])
    apply (simp add: possible_steps_1_coin)
   apply (simp add: apply_updates_def coin_def value_plus_def finfun_update_twist)
   using recognises_from_1a by auto
@@ -156,18 +156,18 @@ lemma purchase_coke:
      apply (simp add: possible_steps_2_vend apply_updates_def value_plus_def finfun_update_twist input2state_def)
     apply (simp add: vend_def apply_updates_def apply_outputs_def)
    apply simp
-  by (simp add: recognises.base)
+  by (simp add: recognises_execution.base)
 
 lemma rejects_input:
   "l \<noteq> STR ''coin'' \<Longrightarrow>
    l \<noteq> STR ''vend'' \<Longrightarrow>
-   \<not> recognises drinks 1 d' [(l, i)]"
+   \<not> recognises_execution drinks 1 d' [(l, i)]"
   apply (rule no_possible_steps_rejects)
   by (simp add: possible_steps_empty drinks_def can_take_transition_def can_take_def transitions)
 
 lemma rejects_recognises_prefix: "l \<noteq> STR ''coin'' \<Longrightarrow>
    l \<noteq> STR ''vend'' \<Longrightarrow>
-   \<not> (recognises_trace drinks [(STR ''select'', [Str ''coke'']), (l, i)])"
+   \<not> (recognises drinks [(STR ''select'', [Str ''coke'']), (l, i)])"
   apply (rule trace_reject_later)
   apply (simp add: possible_steps_0 select_def join_ir_def input2state_def)
   using rejects_input by blast
@@ -224,13 +224,13 @@ lemma drinks_1_rejects:
   apply (simp add: possible_steps_empty drinks_def can_take_transition_def can_take_def transitions)
   by (metis decompose_pair)
 
-lemma drinks_rejects_future: "\<not> recognises drinks 2 d ((l, i)#t)"
+lemma drinks_rejects_future: "\<not> recognises_execution drinks 2 d ((l, i)#t)"
   apply (rule no_possible_steps_rejects)
   by (simp add: possible_steps_empty drinks_def)
 
 lemma drinks_1_rejects_trace: assumes not_vend: "e \<noteq> (STR ''vend'', [])"
       and not_coin: "\<nexists>i. e = (STR ''coin'', [i])"
-  shows "\<not> recognises drinks 1 r (e # es)"
+  shows "\<not> recognises_execution drinks 1 r (e # es)"
 proof-
   show ?thesis
     apply (cases e, simp)
@@ -246,7 +246,7 @@ lemma rejects_state_step: "s > 1 \<Longrightarrow> step drinks s r l i = None"
   by (simp add: possible_steps_empty drinks_def)
 
 lemma invalid_other_states:
-  "s > 1 \<Longrightarrow> \<not> recognises drinks s r ((aa, b) # t)"
+  "s > 1 \<Longrightarrow> \<not> recognises_execution drinks s r ((aa, b) # t)"
   apply (rule no_possible_steps_rejects)
   by (simp add: possible_steps_empty drinks_def)
 

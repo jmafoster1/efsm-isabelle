@@ -71,7 +71,7 @@ primrec accepting_sequence :: "transition_matrix \<Rightarrow> cfstate \<Rightar
   "accepting_sequence _ _ r [] obs = Some (rev obs)" |
   "accepting_sequence e s r (a#t) obs = (let
     poss = possible_steps e s r (fst a) (snd a);
-    accepting = ffilter (\<lambda>(s', tt). recognises e s' (apply_updates (Updates tt) (join_ir (snd a) r) r) t) poss in
+    accepting = ffilter (\<lambda>(s', tt). recognises_execution e s' (apply_updates (Updates tt) (join_ir (snd a) r) r) t) poss in
     case random_member accepting of
     None \<Rightarrow> None |
     Some (s', tt) \<Rightarrow> let
@@ -101,39 +101,39 @@ lemma posterior_sequence_implies_accepting_sequence:
   apply (simp add: posterior_sequence_def)
   by (cases "accepting_sequence e s d t []", auto)
 
-lemma accepting_sequence_recognises:
-  "accepting_sequence e s r t [] = Some y \<Longrightarrow> recognises e s r t"
+lemma accepting_sequence_recognises_execution:
+  "accepting_sequence e s r t [] = Some y \<Longrightarrow> recognises_execution e s r t"
 proof(induct t arbitrary: r)
   case Nil
   then show ?case
-    by (simp add: recognises.base)
+    by (simp add: recognises_execution.base)
 next
   case (Cons a ts)
   then show ?case
     apply (cases a)
       apply simp
       apply (case_tac "random_member
-              (ffilter (\<lambda>(s', tt). recognises e s' (apply_updates (Updates tt) (join_ir b r) r) ts) (possible_steps e s r aa b))")
+              (ffilter (\<lambda>(s', tt). recognises_execution e s' (apply_updates (Updates tt) (join_ir b r) r) ts) (possible_steps e s r aa b))")
      apply simp
-    using recognises.step random_member_is_member by fastforce
+    using recognises_execution.step random_member_is_member by fastforce
 qed
 
-lemma posterior_sequence_recognises:
-  "posterior_sequence e s d t = Some ca \<longrightarrow> recognises e s d t"
+lemma posterior_sequence_recognises_execution:
+  "posterior_sequence e s d t = Some ca \<longrightarrow> recognises_execution e s d t"
   using posterior_sequence_implies_accepting_sequence[of e s d t ca]
   apply simp
   apply clarify
   apply simp
-  using accepting_sequence_recognises
+  using accepting_sequence_recognises_execution
   by auto
 
-lemma anterior_context_recognises:
-  "\<exists>c. anterior_context e p = Some c \<Longrightarrow> recognises_trace e p"
-  using posterior_sequence_recognises by blast
+lemma anterior_context_recognises_execution:
+  "\<exists>c. anterior_context e p = Some c \<Longrightarrow> recognises_execution e 0 <> p"
+  using posterior_sequence_recognises_execution by blast
 
 lemma posterior_sequence_gives_accept:
-  "posterior_sequence e s d t \<noteq> None \<Longrightarrow> recognises e s d t"
-  using option.discI posterior_sequence_recognises by auto
+  "posterior_sequence e s d t \<noteq> None \<Longrightarrow> recognises_execution e s d t"
+  using option.discI posterior_sequence_recognises_execution by auto
 
 lemma accepting_sequence_posterior_sequence_not_none:
   "accepting_sequence e s d t [] \<noteq> None \<Longrightarrow>
@@ -152,28 +152,28 @@ lemma posterior_sequence_none_accepting_sequence_none:
   by (simp add: posterior_sequence_def)
 
 lemma rejects_gives_no_accepting_sequence:
-  "\<not> recognises e s r t \<Longrightarrow> accepting_sequence e s r t [] = None"
+  "\<not> recognises_execution e s r t \<Longrightarrow> accepting_sequence e s r t [] = None"
 proof(induct t arbitrary: s r)
   case Nil
   then show ?case
-    by (simp add: recognises.base)
+    by (simp add: recognises_execution.base)
 next
   case (Cons a t)
   then show ?case
     apply (cases a)
     apply simp
     apply (case_tac "random_member
-              (ffilter (\<lambda>(s', tt). recognises e s' (apply_updates (Updates tt) (join_ir b r) r) t) (possible_steps e s r aa b))")
+              (ffilter (\<lambda>(s', tt). recognises_execution e s' (apply_updates (Updates tt) (join_ir b r) r) t) (possible_steps e s r aa b))")
      apply simp
-    using recognises.step random_member_is_member by fastforce
+    using recognises_execution.step random_member_is_member by fastforce
 qed
 
 lemma rejects_gives_no_posterior_sequence:
-  "\<not> recognises e s d t \<Longrightarrow> posterior_sequence e s d t = None"
+  "\<not> recognises_execution e s d t \<Longrightarrow> posterior_sequence e s d t = None"
   using posterior_sequence_gives_accept by blast
 
 lemma no_accepting_sequence_rejected:
-  "accepting_sequence e s d t seq = None \<longrightarrow> \<not> recognises e s d t"
+  "accepting_sequence e s d t seq = None \<longrightarrow> \<not> recognises_execution e s d t"
 proof(induct t arbitrary: s d seq)
   case Nil
   then show ?case
@@ -184,17 +184,17 @@ next
     apply (cases a)
     apply simp
     apply (case_tac "random_member
-              (ffilter (\<lambda>(s', tt). recognises e s' (apply_updates (Updates tt) (join_ir b d) d) t) (possible_steps e s d aa b))")
+              (ffilter (\<lambda>(s', tt). recognises_execution e s' (apply_updates (Updates tt) (join_ir b d) d) t) (possible_steps e s d aa b))")
      apply simp
      apply clarify
-     apply (rule recognises.cases)
+     apply (rule recognises_execution.cases)
        apply simp
       apply simp
      apply auto[1]
     apply simp
     apply (case_tac aaa)
     apply clarify
-    apply (rule recognises.cases)
+    apply (rule recognises_execution.cases)
       apply simp
      apply simp
     apply clarify
@@ -203,22 +203,22 @@ next
 qed
 
 lemma no_posterior_sequence_reject:
-  "posterior_sequence e s d t = None \<Longrightarrow> \<not>recognises e s d t"
+  "posterior_sequence e s d t = None \<Longrightarrow> \<not>recognises_execution e s d t"
   apply (simp add: posterior_sequence_none_accepting_sequence_none)
   using no_accepting_sequence_rejected
   by blast
 
-lemma recognises_gives_context:
-  "\<forall>s d. recognises e s d t \<longrightarrow> (\<exists>c. posterior_sequence e s d t = Some c)"
+lemma recognises_execution_gives_context:
+  "\<forall>s d. recognises_execution e s d t \<longrightarrow> (\<exists>c. posterior_sequence e s d t = Some c)"
   using no_posterior_sequence_reject by blast
 
-lemma recognises_trace_gives_context:
-  "recognises_trace e p \<Longrightarrow> (\<exists>c. anterior_context e p = Some c)"
-  using recognises_gives_context by auto
+lemma recognises_execution_trace_gives_context:
+  "recognises_execution e 0 <> p \<Longrightarrow> (\<exists>c. anterior_context e p = Some c)"
+  using recognises_execution_gives_context by auto
 
-lemma recognises_trace_anterior_not_none:
-  "recognises_trace e p \<Longrightarrow> anterior_context e p \<noteq> None"
-  using recognises_trace_gives_context by blast
+lemma recognises_execution_trace_anterior_not_none:
+  "recognises_execution e 0 <> p \<Longrightarrow> anterior_context e p \<noteq> None"
+  using recognises_execution_trace_gives_context by blast
 
 lemma no_choice_no_subsumption: "Label t = Label t' \<Longrightarrow>
    Arity t = Arity t' \<Longrightarrow>
