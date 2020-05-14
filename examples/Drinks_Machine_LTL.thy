@@ -284,11 +284,11 @@ lemma stop_at_none:
    apply (simp add: no_output_none_nxt)
   by (simp add: output_eq_def)
 
-text\<open>The approach here is to split ltl_steps down to its various cases such that we can analyse
-them all separately rather than having to do cases on label and inputs in LTL proofs. Here, the
-vend_fail, coin, and invalid cases don't need guards because they either don't change the state, or
-don't have a guard we care about. We need the antecedent of the vendcase since vendhas a guard
-which affects the truth value of drinks_cost_money."\<close>
+text\<open>The approach here is to split \texttt{ltl\_step} down to its various cases such that we can
+analyse them all separately rather than having to do cases on label and inputs in LTL proofs. Here,
+the \texttt{vend\_fail}, \texttt{coin}, and \texttt{invalid} cases don't need guards because they
+either don't change the state, or don't have a guard we care about. We need the antecedent of the
+vend case since vend has a guard which affects the truth value of \texttt{drinks\_cost\_money}.\<close>
 
 lemma ltl_steps_1: assumes vend_fail: "P (Some 1, [], r)"
   assumes coin: "P (Some 1, [value_plus (r$2) (Some (i!0))], r(2 $:= value_plus (r$2) (Some (i!0))))"
