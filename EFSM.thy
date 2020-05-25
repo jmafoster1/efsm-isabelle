@@ -581,6 +581,7 @@ text\<open>An EFSM, $e_1$ simulates another EFSM $e_2$ if there is a function be
 states of $e_1$ and $e_1$ such that in each state, if $e_1$ can respond to the event and produce
 the correct output, so can $e_2$.\<close>
 
+text_raw\<open>\snip{traceSim}{1}{2}{%\<close>
 inductive trace_simulation :: "(cfstate \<Rightarrow> cfstate) \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> trace \<Rightarrow> bool" where
   base: "s2 = f s1 \<Longrightarrow> trace_simulation f e1 s1 r1 e2 s2 r2 []" |
   step: "s2 = f s1 \<Longrightarrow>
@@ -588,6 +589,7 @@ inductive trace_simulation :: "(cfstate \<Rightarrow> cfstate) \<Rightarrow> tra
          (\<exists>(s2', t2) |\<in>| possible_steps e2 s2 r2 l i. evaluate_outputs t2 i r2 = map Some o \<and>
          trace_simulation f e1 s1' (evaluate_updates t1 i r1) e2 s2' (evaluate_updates t2 i r2) es) \<Longrightarrow>
          trace_simulation f e1 s1 r1 e2 s2 r2 ((l, i, o)#es)"
+text_raw\<open>}%endsnip\<close>
 
 lemma trace_simulation_step:
 "trace_simulation f e1 s1 r1 e2 s2 r2 ((l, i, o)#es) = (
@@ -690,6 +692,7 @@ text\<open>Execution simulation is similar to trace simulation but for execution
 Execution simulation has no notion of ``expected'' output. It simply requires that the simulating
 EFSM must be able to produce equivalent output for each action.\<close>
 
+text_raw\<open>\snip{execSim}{1}{2}{%\<close>
 inductive execution_simulation :: "(cfstate \<Rightarrow> cfstate) \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
   base: "s2 = f s1 \<Longrightarrow> execution_simulation f e1 s1 r1 e2 s2 r2 []" |
   step: "s2 = f s1 \<Longrightarrow>
@@ -697,6 +700,7 @@ inductive execution_simulation :: "(cfstate \<Rightarrow> cfstate) \<Rightarrow>
          (\<exists>(s2', t2) |\<in>| possible_steps e2 s2 r2 l i. evaluate_outputs t1 i r1 = evaluate_outputs t2 i r2 \<and>
          execution_simulation f e1 s1' (evaluate_updates t1 i r1) e2 s2' (evaluate_updates t2 i r2) es) \<Longrightarrow>
          execution_simulation f e1 s1 r1 e2 s2 r2 ((l, i)#es)"
+text_raw\<open>}%endsnip\<close>
 
 definition "execution_simulates e1 e2 = (\<exists>f. \<forall>t. execution_simulation f e1 0 <> e2 0 <> t)"
 
@@ -751,6 +755,7 @@ subsubsection\<open>Executional Equivalence\<close>
 text\<open>Two EFSMs are executionally equivalent if there is no execution which can distinguish between
 the two. That is, for every execution, they must produce equivalent outputs.\<close>
 
+text_raw\<open>\snip{execEquiv}{1}{2}{%\<close>
 inductive executionally_equivalent :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
   base [simp]: "executionally_equivalent e1 s1 r1 e2 s2 r2 []" |
   step: "((\<forall>(s1', t1) |\<in>| (possible_steps e1 s1 r1 l i). possible_steps e2 s2 r2 l i \<noteq> {||} \<and>
@@ -760,6 +765,7 @@ inductive executionally_equivalent :: "transition_matrix \<Rightarrow> cfstate \
            (\<forall>(s1', t1) |\<in>| possible_steps e1 s1 r1 l i. evaluate_outputs t1 i r1 = evaluate_outputs t2 i r2 \<and>
            executionally_equivalent e1 s1' (evaluate_updates t1 i r1) e2 s2' (evaluate_updates t2 i r2) es))) \<Longrightarrow>
          executionally_equivalent e1 s1 r1 e2 s2 r2 ((l, i)#es)"
+text_raw\<open>}%endsnip\<close>
 
 lemma executionally_equivalent_step:
 "executionally_equivalent e1 s1 r1 e2 s2 r2 ((l, i)#es) = (

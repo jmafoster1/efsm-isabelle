@@ -173,9 +173,9 @@ next
     apply (cases a, clarsimp)
     apply (rule executionally_equivalent.step)
     apply (case_tac "fst a = STR ''coin'' \<and> length (snd a) = 1")
-     defer apply (case_tac "a = (STR ''vend'', [])")
+     apply (simp add: Drinks_Machine.possible_steps_1_coin possible_steps_2_coin)
+    apply (case_tac "a = (STR ''vend'', [])")
       defer using drinks2_2_invalid drinks_no_possible_steps_1 apply auto[1]
-    apply (simp add: Drinks_Machine.possible_steps_1_coin possible_steps_2_coin)
     apply (case_tac "\<exists>n. r $ 2 = Some (Num n)")
      defer using drinks_vend_invalid drinks2_vend_invalid apply simp
     apply clarify
@@ -199,27 +199,33 @@ next
     apply (cases a, clarsimp)
     apply (rule executionally_equivalent.step)
     apply (case_tac "aa = STR ''coin'' \<and> length b = 1")
-     defer apply (case_tac "a = (STR ''vend'', [])")
-      defer apply (simp add: drinks2_1_invalid drinks_no_possible_steps_1)
-     apply (simp add: Drinks_Machine.possible_steps_1_coin possible_steps_1 equiv_1_2)
-    apply clarsimp
-    apply (simp add: drinks_vend_insufficient drinks2_vend_insufficient)
-    apply (simp add: vend_fail_def vend_nothing_def apply_updates_def)
-    by (metis finfun_upd_triv)
+     apply (simp add: possible_steps_1_coin possible_steps_1 equiv_1_2)
+    apply (case_tac "a = (STR ''vend'', [])")
+     apply clarsimp
+     apply (simp add: drinks_vend_insufficient drinks2_vend_insufficient)
+     apply (simp add: vend_fail_def vend_nothing_def apply_updates_def)
+     apply (metis finfun_upd_triv)
+    by (simp add: drinks2_1_invalid drinks_no_possible_steps_1)
 qed
 
 (* Corresponds to Example 3 in Foster et. al. *)
-lemma observational_equivalence: "trace_equivalent drinks drinks2"
-  apply (rule executionally_equivalent_trace_equivalent, clarify)
-  subgoal for x
-    apply (induct x)
-     apply simp
-    apply (case_tac a, clarify)
+lemma executional_equivalence: "executionally_equivalent drinks 0 <> drinks2 0 <> t"
+proof(induct t)
+  case Nil
+  then show ?case
+    by simp
+next
+  case (Cons a t)
+  then show ?case
+    apply (cases a, clarify)
     apply (rule executionally_equivalent.step)
-    apply (case_tac "aa = STR ''select'' \<and> length ba = 1")
-     defer using drinks2_0_invalid possible_steps_0_invalid apply auto[1]
-    apply (simp add: Drinks_Machine.possible_steps_0 possible_steps_0)
-    by (simp add: apply_updates_def select_def equiv_1_1)
-  done
+    apply (case_tac "aa = STR ''select'' \<and> length b = 1")
+     apply (simp add: Drinks_Machine.possible_steps_0 possible_steps_0)
+     apply (simp add: apply_updates_def select_def equiv_1_1)
+    by (simp add: drinks2_0_invalid possible_steps_0_invalid)
+qed
+
+lemma observational_equivalence: "trace_equivalent drinks drinks2"
+  by (simp add: executional_equivalence executionally_equivalent_trace_equivalent)
 
 end
