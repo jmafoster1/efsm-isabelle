@@ -290,7 +290,8 @@ the \texttt{vend\_fail}, \texttt{coin}, and \texttt{invalid} cases don't need gu
 either don't change the state, or don't have a guard we care about. We need the antecedent of the
 vend case since vend has a guard which affects the truth value of \texttt{drinks\_cost\_money}.\<close>
 
-lemma ltl_steps_1: assumes vend_fail: "P (Some 1, [], r)"
+lemma ltl_steps_1:
+  assumes vend_fail: "P (Some 1, [], r)"
   assumes coin: "P (Some 1, [value_plus (r$2) (Some (i!0))], r(2 $:= value_plus (r$2) (Some (i!0))))"
   assumes invalid: "P (None, [], r)"
   assumes vend: "possible_steps drinks 1 r l i = {|(2, vend)|} \<longrightarrow> P (Some 2, [r$1], r)"
@@ -333,7 +334,7 @@ lemma drink_costs_money_aux:
   apply (rule disjI2, coinduction)
   by (simp add: drinks_step_2_none stop_at_none)
 
-lemma drinks_cost_money:
+lemma LTL_drinks_cost_money:
   "alw (nxt (output_eq [Some (Str drink)]) impl (check_exp (Ge (V (Rg 2)) (L (Num 100))))) (watch drinks t)"
 proof(coinduction)
   case alw
@@ -347,5 +348,66 @@ proof(coinduction)
     apply (rule disjI2)
     using drink_costs_money_aux by blast
 qed
+
+lemma output_vend_aux:
+  assumes "\<exists>p r t. j = make_full_observation drinks (Some 1) r p t"
+  shows "alw (\<lambda>xs. label_eq ''vend'' xs \<and> output (shd (stl xs)) = [Some d] \<longrightarrow> check_exp (Ge (V (Rg 2)) (L (Num 100))) xs) j"
+proof-
+  have steps_1_invalid:
+      "\<And>a b r. \<nexists>i. (a, b) = (STR ''coin'', [i]) \<Longrightarrow>
+       \<nexists>i. (a, b) = (STR ''vend'', []) \<Longrightarrow>
+       possible_steps drinks 1 r a b = {||}"
+    subgoal for a b r
+      apply (simp add: possible_steps_empty drinks_def transitions can_take_transition_def can_take_def)
+      by (induct b, auto)
+    done
+  show ?thesis
+  using assms apply coinduct
+  apply clarsimp
+  apply (case_tac "\<exists>i. shd t = (STR ''coin'', [i])")
+   apply clarsimp
+   apply (simp add: possible_steps_1_coin label_eq_def implode_vend)
+   apply auto[1]
+  apply (case_tac "\<exists>i. shd t = (STR ''vend'', [])")
+   apply (case_tac "\<exists>n. r$2 = Some (Num n)")
+    apply clarify
+    apply (case_tac "n < 100")
+     apply (simp add: drinks_vend_insufficient vend_fail_def output_eq_def)
+     apply auto[1]
+    apply (simp add: drinks_vend_sufficient output_eq_def check_exp_def value_gt_def)
+    apply (rule disjI2, rule alw_mono[of "nxt (output_eq [])"])
+     apply coinduction
+     apply (simp add: alwD drinks_step_2_none no_output_none_if_empty no_output_none_nxt)
+    apply (simp add: output_eq_def)
+   apply (simp add: drinks_vend_invalid output_eq_def)
+   apply (rule disjI2, rule alw_mono[of "nxt (output_eq [])"])
+    apply (simp add: no_output_none_nxt)
+   apply (simp add: output_eq_def)
+  apply (case_tac "shd t")
+  apply (simp add: steps_1_invalid output_eq_def)
+  apply (rule disjI2, rule alw_mono[of "nxt (output_eq [])"])
+   apply (simp add: no_output_none_nxt)
+  by (simp add: output_eq_def)
+qed
+
+lemma LTL_output_vend:
+  "alw (((label_eq ''vend'') aand (nxt (output_eq [Some d]))) impl (check_exp (Ge (V (Rg 2)) (L (Num 100)))))
+  (watch drinks t)"
+proof(coinduction)
+  case alw
+  then show ?case
+    apply (simp add: watch_def output_eq_def)
+    apply (case_tac "\<nexists>i. shd t = (STR ''select'', [i])")
+     apply (simp add: ltl_step_not_select)
+     apply (rule disjI2)
+     apply (rule alw_mono[of "nxt (output_eq [])"])
+      apply (simp add: no_output_none_nxt)
+     apply (simp add: output_eq_def)
+    apply simp
+    apply (erule exE)
+    apply (simp only: ltl_step_select, simp)
+    using output_vend_aux by blast
+qed
+
 
 end
