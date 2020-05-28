@@ -8,7 +8,11 @@ record state =
   action :: action
   "output" :: outputs
 
-type_synonym property = "state stream \<Rightarrow> bool"
+text_raw\<open>\snip{whitebox}{1}{2}{%\<close>
+type_synonym whitebox_trace = "state stream"
+text_raw\<open>}%endsnip\<close>
+
+type_synonym property = "whitebox_trace \<Rightarrow> bool"
 
 abbreviation label :: "state \<Rightarrow> String.literal" where
   "label s \<equiv> fst (action s)"
@@ -16,6 +20,7 @@ abbreviation label :: "state \<Rightarrow> String.literal" where
 abbreviation inputs :: "state \<Rightarrow> value list" where
   "inputs s \<equiv> snd (action s)"
 
+text_raw\<open>\snip{ltlStep}{1}{2}{%\<close>
 fun ltl_step :: "transition_matrix \<Rightarrow> nat option \<Rightarrow> registers \<Rightarrow> action \<Rightarrow> (nat option \<times> outputs \<times> registers)" where
   "ltl_step _ None r _ = (None, [], r)" |
   "ltl_step e (Some s) r (l, i) = (let possibilities = possible_steps e s r l i in
@@ -24,6 +29,7 @@ fun ltl_step :: "transition_matrix \<Rightarrow> nat option \<Rightarrow> regist
                      let (s', t) = Eps (\<lambda>x. x |\<in>| possibilities) in
                      (Some s', (evaluate_outputs t i r), (evaluate_updates t i r))
                   )"
+text_raw\<open>}%endsnip\<close>
 
 lemma ltl_step_alt:
   "ltl_step e (Some s) r t = (let possibilities = possible_steps e s r (fst t) (snd t) in
@@ -59,16 +65,20 @@ lemma ltl_step_cases: assumes invalid: "P (None, [], r)"
   apply (simp add: fBall_def Ball_def fmember_def)
   by (metis (mono_tags, lifting) fst_conv prod.case_eq_if snd_conv someI_ex)
 
-primcorec make_full_observation :: "transition_matrix \<Rightarrow> nat option \<Rightarrow> registers \<Rightarrow> outputs \<Rightarrow> action stream \<Rightarrow> state stream" where
+text_raw\<open>\snip{makeFullObservation}{1}{2}{%\<close>
+primcorec make_full_observation :: "transition_matrix \<Rightarrow> cfstate option \<Rightarrow> registers \<Rightarrow> outputs \<Rightarrow> action stream \<Rightarrow> whitebox_trace" where
   "make_full_observation e s d p i = (
     let (s', o', d') = ltl_step e s d (shd i) in
     \<lparr>statename = s, datastate = d, action=(shd i), output = p\<rparr>##(make_full_observation e s' d' o' (stl i))
   )"
+text_raw\<open>}%endsnip\<close>
 
-definition watch :: "transition_matrix \<Rightarrow> action stream \<Rightarrow> state stream" where
+text_raw\<open>\snip{watch}{1}{2}{%\<close>
+definition watch :: "transition_matrix \<Rightarrow> action stream \<Rightarrow> whitebox_trace" where
   "watch e i \<equiv> (make_full_observation e (Some 0) <> [] i)"
+text_raw\<open>}%endsnip\<close>
 
-definition state_eq :: "nat option \<Rightarrow> state stream \<Rightarrow> bool" where
+definition state_eq :: "nat option \<Rightarrow> whitebox_trace \<Rightarrow> bool" where
   "state_eq v s \<equiv> statename (shd s) = v"
 
 lemma state_eq_holds: "state_eq s = holds (\<lambda>x. statename x = s)"
@@ -79,21 +89,21 @@ lemma state_eq_None_not_Some:
   "state_eq None s \<Longrightarrow> \<not> state_eq (Some n) s"
   by (simp add: state_eq_def)
 
-definition label_eq :: "string \<Rightarrow> state stream \<Rightarrow> bool" where
+definition label_eq :: "string \<Rightarrow> whitebox_trace \<Rightarrow> bool" where
   "label_eq v s \<equiv> fst (action (shd s)) = (String.implode v)"
 
 lemma watch_label: "label_eq l (watch e t) = (fst (shd t) = String.implode l)"
   by (simp add: label_eq_def watch_def)
 
-definition input_eq :: "value list \<Rightarrow> state stream \<Rightarrow> bool" where
+definition input_eq :: "value list \<Rightarrow> whitebox_trace \<Rightarrow> bool" where
   "input_eq v s \<equiv> inputs (shd s) = v"
 
-definition action_eq :: "(string \<times> inputs) \<Rightarrow> state stream \<Rightarrow> bool" where
+definition action_eq :: "(string \<times> inputs) \<Rightarrow> whitebox_trace \<Rightarrow> bool" where
   "action_eq e = label_eq (fst e) aand input_eq (snd e)"
 
 lemmas action_eq = action_eq_def label_eq_def input_eq_def
 
-definition output_eq :: "value option list \<Rightarrow> state stream \<Rightarrow> bool" where
+definition output_eq :: "value option list \<Rightarrow> whitebox_trace \<Rightarrow> bool" where
   "output_eq v s \<equiv> output (shd s) = v"
 
 lemma shd_state_is_none: "(state_eq None) (make_full_observation e None r p t)"
@@ -106,7 +116,7 @@ lemma unfold_observe_none:
 lemma once_none_always_none:
   "alw (state_eq None) (make_full_observation e None r p t)"
 proof -
-  obtain ssa :: "((String.literal \<times> value list) stream \<Rightarrow> state stream) \<Rightarrow> (String.literal \<times> value list) stream" where
+  obtain ssa :: "((String.literal \<times> value list) stream \<Rightarrow> whitebox_trace) \<Rightarrow> (String.literal \<times> value list) stream" where
       "\<forall>f p s. f (stl (ssa f)) \<noteq> stl (f (ssa f)) \<or> alw p (f s) = alw (\<lambda>s. p (f s)) s"
     by (metis (no_types) alw_inv)
   then have "alw (state_eq None) (make_full_observation e None r [] (stl t))"
@@ -127,7 +137,7 @@ qed
 lemma no_output_none:
   "nxt (alw (output_eq [])) (make_full_observation e None r p t)"
 proof -
-  obtain ss :: "((String.literal \<times> value list) stream \<Rightarrow> state stream) \<Rightarrow> (String.literal \<times> value list) stream" where
+  obtain ss :: "((String.literal \<times> value list) stream \<Rightarrow> whitebox_trace) \<Rightarrow> (String.literal \<times> value list) stream" where
     "\<forall>f p s. f (stl (ss f)) \<noteq> stl (f (ss f)) \<or> alw p (f s) = alw (\<lambda>s. p (f s)) s"
     by (metis (no_types) alw_inv)
   then show ?thesis
@@ -147,7 +157,7 @@ lemma no_updates_none:
 proof -
   have "alw (\<lambda>x. datastate (shd x) = r) (make_full_observation e None r [] (stl t))"
     proof -
-      obtain ss :: "((String.literal \<times> value list) stream \<Rightarrow> state stream) \<Rightarrow> (String.literal \<times> value list) stream" where
+      obtain ss :: "((String.literal \<times> value list) stream \<Rightarrow> whitebox_trace) \<Rightarrow> (String.literal \<times> value list) stream" where
         "\<forall>f p s. f (stl (ss f)) \<noteq> stl (f (ss f)) \<or> alw p (f s) = alw (\<lambda>s. p (f s)) s"
         by (metis (no_types) alw_inv)
       then show ?thesis
@@ -182,7 +192,9 @@ lemma state_none_2:
 lemma decompose_pair: "e \<noteq> (l, i) = (\<not> (fst e =l \<and> snd e = i))"
   by (metis fst_conv prod.collapse sndI)
 
+text_raw\<open>\snip{ltlVName}{1}{2}{%\<close>
 datatype ltl_vname = Ip nat | Op nat | Rg nat
+text_raw\<open>}%endsnip\<close>
 
 type_synonym ltl_gexp = "ltl_vname gexp"
 
@@ -196,7 +208,7 @@ definition join_iro :: "value list \<Rightarrow> registers \<Rightarrow> outputs
 lemma join_iro_R [simp]: "join_iro i r p (Rg n) = r $ n"
   by (simp add: join_iro_def)
 
-definition check_exp :: "ltl_gexp \<Rightarrow> state stream \<Rightarrow> bool" where
+definition check_exp :: "ltl_gexp \<Rightarrow> whitebox_trace \<Rightarrow> bool" where
   "check_exp g s = (gval g (join_iro (snd (action (shd s))) (datastate (shd s)) (output (shd s))) = trilean.true)"
 
 lemma alw_ev: "alw f = not (ev (\<lambda>s. \<not>f s))"

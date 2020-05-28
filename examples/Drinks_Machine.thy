@@ -17,6 +17,7 @@ begin
 
 declare One_nat_def [simp del]
 
+text_raw\<open>\snip{selectdef}{1}{2}{%\<close>
 definition select :: "transition" where
 "select \<equiv> \<lparr>
         Label = STR ''select'',
@@ -28,6 +29,7 @@ definition select :: "transition" where
                     (2, L (Num 0)) \<comment> \<open> Secondly set the value of r2 to literal zero \<close>
                   ]
       \<rparr>"
+text_raw\<open>}%endsnip\<close>
 
 text_raw\<open>\snip{coindef}{1}{2}{%\<close>
 definition coin :: "transition" where
@@ -43,6 +45,7 @@ definition coin :: "transition" where
       \<rparr>"
 text_raw\<open>}%endsnip\<close>
 
+text_raw\<open>\snip{venddef}{1}{2}{%\<close>
 definition vend:: "transition" where
 "vend\<equiv> \<lparr>
         Label = STR ''vend'',
@@ -51,7 +54,9 @@ definition vend:: "transition" where
         Outputs =  [(V (R 1))],
         Updates = [(1, V (R 1)), (2, V (R 2))]
       \<rparr>"
+text_raw\<open>}%endsnip\<close>
 
+text_raw\<open>\snip{vendfaildef}{1}{2}{%\<close>
 definition vend_fail :: "transition" where
 "vend_fail \<equiv> \<lparr>
         Label = STR ''vend'',
@@ -60,7 +65,9 @@ definition vend_fail :: "transition" where
         Outputs =  [],
         Updates = [(1, V (R 1)), (2, V (R 2))]
       \<rparr>"
+text_raw\<open>}%endsnip\<close>
 
+text_raw\<open>\snip{drinksdef}{1}{2}{%\<close>
 definition drinks :: "transition_matrix" where
 "drinks \<equiv> {|
           ((0,1), select),    \<comment> \<open> If we want to go from state 1 to state 2 then select will do that \<close>
@@ -68,6 +75,7 @@ definition drinks :: "transition_matrix" where
           ((1,1), vend_fail), \<comment> \<open> If we want to go from state 2 to state 2 then coin will do that \<close>
           ((1,2), vend) \<comment> \<open> If we want to go from state 2 to state 3 then vendwill do that \<close>
          |}"
+text_raw\<open>}%endsnip\<close>
 
 lemmas transitions = select_def coin_def vend_def vend_fail_def
 
@@ -255,5 +263,9 @@ lemma vend_ge_100:
    \<not>\<^sub>? value_gt (Some (Num 100)) (r $ 2) = trilean.true"
   apply (insert possible_steps_apply_guards[of drinks 1 r l i 2 vend])
   by (simp add: possible_steps_def apply_guards_def vend_def)
+
+lemma LTL_output_vend:
+  "alw (((label_eq ''vend'') aand (nxt (output_eq [Some (Str ''d'')]))) impl (check_exp (Ge (V (Rg 2)) (L (Num 100))))) (watch drinks t)"
+oops
 
 end

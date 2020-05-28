@@ -390,6 +390,7 @@ proof-
   by (simp add: output_eq_def)
 qed
 
+text_raw\<open>\snip{outputVend}{1}{2}{%\<close>
 lemma LTL_output_vend:
   "alw (((label_eq ''vend'') aand (nxt (output_eq [Some d]))) impl (check_exp (Ge (V (Rg 2)) (L (Num 100)))))
   (watch drinks t)"
@@ -397,17 +398,25 @@ proof(coinduction)
   case alw
   then show ?case
     apply (simp add: watch_def output_eq_def)
-    apply (case_tac "\<nexists>i. shd t = (STR ''select'', [i])")
-     apply (simp add: ltl_step_not_select)
-     apply (rule disjI2)
-     apply (rule alw_mono[of "nxt (output_eq [])"])
-      apply (simp add: no_output_none_nxt)
-     apply (simp add: output_eq_def)
-    apply simp
-    apply (erule exE)
-    apply (simp only: ltl_step_select, simp)
-    using output_vend_aux by blast
+    apply (case_tac "\<exists>i. shd t = (STR ''select'', [i])")
+     apply (erule exE)
+     apply (simp only: ltl_step_select, simp)
+    using output_vend_aux apply blast
+    apply (simp add: ltl_step_not_select)
+    apply (rule disjI2)
+    apply (rule alw_mono[of "nxt (output_eq [])"])
+     apply (simp add: no_output_none_nxt)
+    by (simp add: output_eq_def)
 qed
+text_raw\<open>}%endsnip\<close>
 
+text_raw\<open>\snip{outputVendUnfolded}{1}{2}{%\<close>
+lemma LTL_output_vend_unfolded:
+  "alw (\<lambda>xs. label (shd xs) = STR ''vend'' \<and> nxt (\<lambda>s. output (shd s) = [Some d]) xs \<longrightarrow>
+              \<not>\<^sub>? value_gt (Some (Num 100)) (datastate (shd xs) $ 2) = trilean.true)
+     (watch drinks t)"
+  apply (insert LTL_output_vend[of d t])
+  by (simp add: label_eq_def implode_vend output_eq_def check_exp_def)
+text_raw\<open>}%endsnip\<close>
 
 end

@@ -18,12 +18,12 @@
 \newcommand{\eg}{e.\,g.\xspace}
 \newcommand{\thy}{\isabellecontext}
 \renewcommand{\isamarkupsection}[1]{%
-  \begingroup% 
+  \begingroup%
   \def\isacharunderscore{\textunderscore}%
   \section{#1 (\thy)}%
   \def\isacharunderscore{-}%
   \expandafter\label{sec:\isabellecontext}%
-  \endgroup% 
+  \endgroup%
 }
 
 \newcommand{\orcidID}[1]{} % temp. hack
@@ -31,6 +31,17 @@
 \newcommand{\repeatisanl}[1]
 {\ifnum#1=0\else\isanewline\repeatisanl{\numexpr#1-1}\fi}
 \newcommand{\snip}[4]{\repeatisanl#2#4\repeatisanl#3}
+
+ \newcommand{\DefineSnippet}[2]{%
+   \expandafter\newcommand\csname snippet--#1\endcsname{%
+     \begin{quote}
+     \begin{isabelle}
+     #2
+     \end{isabelle}
+     \end{quote}}}
+ \newcommand{\Snippet}[1]{%
+   \ifcsname snippet--#1\endcsname{\csname snippet--#1\endcsname}%
+   \else+++++++ERROR: Snippet ``#1 not defined+++++++ \fi}
 
 \title{A Formal Model of Extended Finite State Machine}%
 \author{Michael~Foster\orcidID{0000-0001-8233-9873} \and
@@ -50,14 +61,14 @@
 }
 
 \begin{document}
-  \maketitle
-  \begin{abstract}
-    \begin{quote}
-      
+\maketitle
+\begin{abstract}
+  \begin{quote}
+
     \bigskip
-    \noindent{\textbf{Keywords:}} 
-    \end{quote}
-  \end{abstract}
+    \noindent{\textbf{Keywords:}}
+  \end{quote}
+\end{abstract}
 
 
 \tableofcontents
@@ -65,15 +76,15 @@
 
 \chapter{Introduction}
 
-  \begin{figure}
-    \centering
-    \includegraphics[height=\textheight]{session_graph}
-    \caption{The Dependency Graph of the Isabelle Theories.\label{fig:session-graph}}
-  \end{figure}
-  The rest of this document is automatically generated from the
-  formalization in Isabelle/HOL, i.e., all content is checked by
-  Isabelle.  Overall, the structure of this document follows the
-  theory dependencies (see \autoref{fig:session-graph}): 
+\begin{figure}
+  \centering
+  \includegraphics[height=\textheight]{session_graph}
+  \caption{The Dependency Graph of the Isabelle Theories.\label{fig:session-graph}}
+\end{figure}
+The rest of this document is automatically generated from the
+formalization in Isabelle/HOL, i.e., all content is checked by
+Isabelle.  Overall, the structure of this document follows the
+theory dependencies (see \autoref{fig:session-graph}):
 
 \nocite{foster.ea:efsm:2018}
 
@@ -88,9 +99,8 @@
   \bibliography{root}
 }
 \end{document}
-\endinput 
+\endinput
 %%% Local Variables:
 %%% mode: latex
 %%% TeX-master: t
 %%% End:
-
