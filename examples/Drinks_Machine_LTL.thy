@@ -349,19 +349,16 @@ proof(coinduction)
     using drink_costs_money_aux by blast
 qed
 
+lemma steps_1_invalid:
+      "\<nexists>i. (a, b) = (STR ''coin'', [i]) \<Longrightarrow>
+       \<nexists>i. (a, b) = (STR ''vend'', []) \<Longrightarrow>
+       possible_steps drinks 1 r a b = {||}"
+  apply (simp add: possible_steps_empty drinks_def transitions can_take_transition_def can_take_def)
+  by (induct b, auto)
+
 lemma output_vend_aux:
   assumes "\<exists>p r t. j = make_full_observation drinks (Some 1) r p t"
   shows "alw (\<lambda>xs. label_eq ''vend'' xs \<and> output (shd (stl xs)) = [Some d] \<longrightarrow> check_exp (Ge (V (Rg 2)) (L (Num 100))) xs) j"
-proof-
-  have steps_1_invalid:
-      "\<And>a b r. \<nexists>i. (a, b) = (STR ''coin'', [i]) \<Longrightarrow>
-       \<nexists>i. (a, b) = (STR ''vend'', []) \<Longrightarrow>
-       possible_steps drinks 1 r a b = {||}"
-    subgoal for a b r
-      apply (simp add: possible_steps_empty drinks_def transitions can_take_transition_def can_take_def)
-      by (induct b, auto)
-    done
-  show ?thesis
   using assms apply coinduct
   apply clarsimp
   apply (case_tac "\<exists>i. shd t = (STR ''coin'', [i])")
@@ -388,7 +385,6 @@ proof-
   apply (rule disjI2, rule alw_mono[of "nxt (output_eq [])"])
    apply (simp add: no_output_none_nxt)
   by (simp add: output_eq_def)
-qed
 
 text_raw\<open>\snip{outputVend}{1}{2}{%\<close>
 lemma LTL_output_vend:

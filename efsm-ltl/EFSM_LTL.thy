@@ -2,11 +2,13 @@ theory EFSM_LTL
 imports "../EFSM" "HOL-Library.Linear_Temporal_Logic_on_Streams"
 begin
 
+text_raw\<open>\snip{statedef}{1}{2}{%\<close>
 record state =
   statename :: "nat option"
   datastate :: registers
   action :: action
   "output" :: outputs
+text_raw\<open>}%endsnip\<close>
 
 text_raw\<open>\snip{whitebox}{1}{2}{%\<close>
 type_synonym whitebox_trace = "state stream"
@@ -21,7 +23,7 @@ abbreviation inputs :: "state \<Rightarrow> value list" where
   "inputs s \<equiv> snd (action s)"
 
 text_raw\<open>\snip{ltlStep}{1}{2}{%\<close>
-fun ltl_step :: "transition_matrix \<Rightarrow> nat option \<Rightarrow> registers \<Rightarrow> action \<Rightarrow> (nat option \<times> outputs \<times> registers)" where
+fun ltl_step :: "transition_matrix \<Rightarrow> cfstate option \<Rightarrow> registers \<Rightarrow> action \<Rightarrow> (nat option \<times> outputs \<times> registers)" where
   "ltl_step _ None r _ = (None, [], r)" |
   "ltl_step e (Some s) r (l, i) = (let possibilities = possible_steps e s r l i in
                    if possibilities = {||} then (None, [], r)
