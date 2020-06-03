@@ -10,6 +10,15 @@
 \usepackage{xcolor}
 \usepackage{hyperref}
 
+\usepackage{enumitem} % Mess about with itemize, enumerate, description styles
+\newcommand\mydescriptionlabel[1]{\hspace{\leftmargini}\textbf{#1}}
+\newenvironment{where}{%
+  \let\descriptionlabel\mydescriptionlabel
+  \description[itemsep=0em, font=\normalfont]
+}{%
+  \enddescription
+}
+
 
 \pagestyle{headings}
 \isabellestyle{default}
@@ -63,10 +72,11 @@
 \begin{document}
 \maketitle
 \begin{abstract}
-  \begin{quote}
+  This theory defines extended finite state machines (EFSMs) as per \cite{foster2018}. Various simulation and equivalence relations are defined over EFSMs. Additionally, we provide some infrastructure to help define and prove LTL properties over EFSMs. Finally, some examples EFSMs and proofs of their properties are shown.
 
+  \begin{quote}
     \bigskip
-    \noindent{\textbf{Keywords:}}
+    \noindent{\textbf{Keywords:} Extended Finite State Machines, Automata, Linear Temporal Logic}
   \end{quote}
 \end{abstract}
 
@@ -75,6 +85,28 @@
 \cleardoublepage
 
 \chapter{Introduction}
+This theory defines extended finite state machines (EFSMs). As defined in \cite{foster2018}, an EFSM is a tuple, $(S, s_0, T)$ where
+\begin{where}
+  \item [$S$] is a finite non-empty set of states.
+  \item [$s_0 \in S$]is the initial state.
+  \item [$T$] is the transition matrix $T:(S \times S) \to \mathcal{P}(L \times \mathbb{N} \times G \times F \times U)$ with rows representing origin states and columns representing destination states.
+\end{where}
+In $T$
+\begin{where}
+  \item [$L$] is a finite set of transition labels
+  \item [$\mathbb{N}$] gives the transition \emph{arity} (the number of input parameters), which may be zero.
+  \item [$G$] is a finite set of Boolean guard functions $G:(I \times R) \to \mathbb{B}$.
+  \item [$F$] is a finite set of \emph{output functions} $F:(I \times R) \to O$.
+  \item [$U$] is a finite set of \emph{update functions} $U:(I \times R) \to R$.
+\end{where}
+In $G$, $F$, and $U$
+\begin{where}
+  \item [$I$] is a list $[i_0, i_1, \ldots, i_{m-1}]$ of values representing the inputs of a transition, which is empty if the arity is zero.
+  \item [$R$] is a mapping from variables $[r_0, r_1, \ldots]$, representing each register of the machine, to their values.
+  \item [$O$] is a list $[o_0, o_1, \ldots, o_{n-1}]$ of values, which may be empty, representing the outputs of a transition.
+\end{where}
+
+EFSM transitions have five components: label, arity, guards, outputs, and updates. Transition labels are strings, and the arities natural numbers. Guards have a defined type of \emph{guard expression} (\texttt{gexp}) and the outputs and updates are defined using \emph{arithmetic expressions} (\texttt{aexp}). Outputs are simply a list of expressions to be evaluated. Updates are a list of pairs with the first element being the index of the register to be updated, and the second element being an arithmetic expression to be evaluated.
 
 \begin{figure}
   \centering

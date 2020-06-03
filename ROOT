@@ -18,6 +18,7 @@ theories
   "VName"
   "examples/Drinks_Machine"
   "examples/Drinks_Machine_2"
+  "examples/Drinks_Machine_LTL"
   "Trilean"
   "EFSM"
 document_files

@@ -1,4 +1,8 @@
 section\<open>Examples\<close>
+text\<open>The following theories present some examples of EFSMs and proofs over them. I first present a
+formalisation of a simple drinks machine. Next, I prove observational equivalence of an alternative
+model. Finally, I prove some temporal properties of the first example.\<close>
+
 subsection\<open>Drinks Machine\<close>
 text\<open>This theory formalises a simple drinks machine. The \emph{select} operation takes one
 argument - the desired beverage. The \emph{coin} operation also takes one parameter representing
@@ -9,13 +13,10 @@ sufficient funds.
 We first define a datatype \emph{statemane} which corresponds to $S$ in the formal definition.
 Note that, while statename has four elements, the drinks machine presented here only requires three
 states. The fourth element is included here so that the \emph{statename} datatype may be used in
-the next example.
-\<close>
+the next example.\<close>
 theory Drinks_Machine
-  imports "../efsm-ltl/EFSM_LTL"
+  imports EFSM.EFSM
 begin
-
-declare One_nat_def [simp del]
 
 text_raw\<open>\snip{selectdef}{1}{2}{%\<close>
 definition select :: "transition" where
@@ -79,7 +80,10 @@ text_raw\<open>}%endsnip\<close>
 
 lemmas transitions = select_def coin_def vend_def vend_fail_def
 
-lemma "S drinks = {|0, 1, 2|}"
+lemma apply_updates_vend: "apply_updates (Updates vend) (join_ir [] r) r = r"
+  by (simp add: vend_def apply_updates_def)
+
+lemma drinks_states: "S drinks = {|0, 1, 2|}"
   apply (simp add: S_def drinks_def)
   by auto
 
@@ -146,25 +150,8 @@ lemma recognises_from_1: "recognises_execution drinks 1 <2 $:= Some (Num 0), 1 $
 lemma purchase_coke:
   "observe_execution drinks 0 <> [(STR ''select'', [Str ''coke'']), (STR ''coin'', [Num 50]), (STR ''coin'', [Num 50]), (STR ''vend'', [])] =
                        [[], [Some (Num 50)], [Some (Num 100)], [Some (Str ''coke'')]]"
-  apply (rule observe_execution_possible_step)
-     apply (simp add: possible_steps_0)
-     apply (simp add: select_def join_ir_def input2state_def recognises_from_1)
-    apply (simp add: select_def)
-  apply (rule observe_execution_possible_step)
-      apply (simp add: possible_steps_1_coin)
-     apply (simp add: coin_def value_plus_def join_ir_def input2state_def recognises_from_1a)
-    apply (simp add: coin_def value_plus_def join_ir_def input2state_def apply_outputs_def apply_updates_def)
-   apply (simp add: coin_def value_plus_def join_ir_def input2state_def apply_updates_def)
-  apply (rule observe_execution_possible_step)
-      apply (simp add: possible_steps_1_coin)
-     apply (simp add: coin_def value_plus_def join_ir_def input2state_def recognises_from_2)
-    apply (simp add: coin_def value_plus_def join_ir_def input2state_def apply_outputs_def)
-   apply (simp add: coin_def value_plus_def join_ir_def input2state_def)
-  apply (rule observe_execution_possible_step)
-     apply (simp add: possible_steps_2_vend apply_updates_def value_plus_def finfun_update_twist input2state_def)
-    apply (simp add: vend_def apply_updates_def apply_outputs_def)
-   apply simp
-  by (simp add: recognises_execution.base)
+  by (simp add: possible_steps_0 possible_steps_1_coin possible_steps_2_vend transitions
+                   apply_outputs_def apply_updates_def value_plus_def)
 
 lemma rejects_input:
   "l \<noteq> STR ''coin'' \<Longrightarrow>
@@ -230,13 +217,14 @@ lemma drinks_1_rejects:
           a \<noteq> (STR ''vend'', []) \<Longrightarrow>
           possible_steps drinks 1 r (fst a) (snd a) = {||}"
   apply (simp add: possible_steps_empty drinks_def can_take_transition_def can_take_def transitions)
-  by (metis decompose_pair)
+  by (metis prod.collapse)
 
 lemma drinks_rejects_future: "\<not> recognises_execution drinks 2 d ((l, i)#t)"
   apply (rule no_possible_steps_rejects)
   by (simp add: possible_steps_empty drinks_def)
 
-lemma drinks_1_rejects_trace: assumes not_vend: "e \<noteq> (STR ''vend'', [])"
+lemma drinks_1_rejects_trace:
+  assumes not_vend: "e \<noteq> (STR ''vend'', [])"
       and not_coin: "\<nexists>i. e = (STR ''coin'', [i])"
   shows "\<not> recognises_execution drinks 1 r (e # es)"
 proof-
@@ -264,8 +252,28 @@ lemma vend_ge_100:
   apply (insert possible_steps_apply_guards[of drinks 1 r l i 2 vend])
   by (simp add: possible_steps_def apply_guards_def vend_def)
 
-lemma LTL_output_vend:
-  "alw (((label_eq ''vend'') aand (nxt (output_eq [Some (Str ''d'')]))) impl (check_exp (Ge (V (Rg 2)) (L (Num 100))))) (watch drinks t)"
-oops
+lemma drinks_no_possible_steps_1:
+  assumes not_coin: "\<not> (a = STR ''coin'' \<and> length b = 1)"
+      and not_vend: "\<not> (a = STR ''vend'' \<and> b = [])"
+    shows "possible_steps drinks 1 r a b = {||}"
+  using drinks_1_rejects not_coin not_vend by auto
+
+lemma possible_steps_0_not_select: "a \<noteq> STR ''select'' \<Longrightarrow>
+       possible_steps drinks 0 <> a b = {||}"
+  apply (simp add: possible_steps_def ffilter_def fset_both_sides Abs_fset_inverse Set.filter_def drinks_def)
+  apply safe
+  by (simp_all add: select_def)
+
+lemma possible_steps_select_wrong_arity: "a = STR ''select'' \<Longrightarrow>
+       length b \<noteq> 1 \<Longrightarrow>
+       possible_steps drinks 0 <> a b = {||}"
+  apply (simp add: possible_steps_def ffilter_def fset_both_sides Abs_fset_inverse Set.filter_def drinks_def)
+  apply safe
+  by (simp_all add: select_def)
+
+lemma possible_steps_0_invalid:
+  "\<not> (l = STR ''select'' \<and> length i = 1) \<Longrightarrow>
+   possible_steps drinks 0 <> l i = {||}"
+  using possible_steps_0_not_select possible_steps_select_wrong_arity by fastforce
 
 end
