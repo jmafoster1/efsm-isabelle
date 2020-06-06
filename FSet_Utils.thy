@@ -266,4 +266,14 @@ lemma not_singleton_empty [simp]: "\<not> fis_singleton {||}"
 lemma fis_singleton_fthe_elem:
   "fis_singleton A \<longleftrightarrow> A = {|fthe_elem A|}"
   by (metis fis_singleton_alt fthe_felem_eq)
+
+lemma fBall_ffilter:
+  "\<forall>x |\<in>| X. f x \<Longrightarrow> ffilter f X = X"
+  by auto
+
+lemma fBall_ffilter2:
+  "X = Y \<Longrightarrow>
+   \<forall>x |\<in>| X. f x \<Longrightarrow>
+   ffilter f X = Y"
+  by auto
 end
