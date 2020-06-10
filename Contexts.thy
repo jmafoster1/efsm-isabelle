@@ -56,7 +56,7 @@ lemma bad_outputs:
    \<not> subsumes t2 r t1"
   by (simp add: subsumes_def)
 
-lemma transition_subsumes_self: "subsumes t c t"
+lemma subsumes_reflexive: "subsumes t c t"
   by (simp add: subsumes_def)
 
 primrec accepting_sequence :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> (transition \<times> cfstate \<times> outputs \<times> registers) list \<Rightarrow> (transition \<times> cfstate \<times> outputs \<times> registers) list option" where
@@ -238,7 +238,7 @@ lemma subsumes_update_equality:
   apply (erule_tac x=r' in allE)
   by auto
 
-lemma subsumes_trans:
+lemma subsumption_transitive:
   assumes p1: "subsumes t1 c t2"
       and p2: "subsumes t2 c t3"
   shows "subsumes t1 c t3"
