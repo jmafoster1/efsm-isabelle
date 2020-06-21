@@ -78,6 +78,8 @@ lemma can_take_subset_append:
 
 definition "can_take_transition t i r = can_take (Arity t) (Guards t) i r"
 
+lemmas can_take = can_take_def can_take_transition_def
+
 lemma can_take_transition_empty_guard:
   "Guards t = [] \<Longrightarrow> \<exists>i. can_take_transition t i c"
   by (simp add: can_take_transition_def can_take_def Ex_list_of_length)

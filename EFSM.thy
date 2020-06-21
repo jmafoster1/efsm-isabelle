@@ -42,22 +42,6 @@ lemma S_ffUnion: "S e = ffUnion (fimage (\<lambda>((s, s'), _). {|s, s'|}) e)"
   unfolding S_def
   by(induct e, auto)
 
-subsection\<open>Choice\<close>
-text\<open>Here we define the \texttt{choice} operator which determines whether or not two transitions are
-nondeterministic.\<close>
-
-definition choice :: "transition \<Rightarrow> transition \<Rightarrow> bool" where
-  "choice t t' = (\<exists> i r. apply_guards (Guards t) (join_ir i r) \<and> apply_guards (Guards t') (join_ir i r))"
-
-definition choice_alt :: "transition \<Rightarrow> transition \<Rightarrow> bool" where
-  "choice_alt t t' = (\<exists> i r. apply_guards (Guards t@Guards t') (join_ir i r))"
-
-lemma choice_alt: "choice t t' = choice_alt t t'"
-  by (simp add: choice_def choice_alt_def apply_guards_append)
-
-lemma choice_symmetry: "choice x y = choice y x"
-  using choice_def by auto
-
 subsection\<open>Possible Steps\<close>
 text\<open>From a given state, the possible steps for a given action are those transitions with labels
 which correspond to the action label, arities which correspond to the number of inputs, and guards
@@ -65,6 +49,26 @@ which are satisfied by those inputs.\<close>
 
 definition possible_steps :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> label \<Rightarrow> inputs \<Rightarrow> (cfstate \<times> transition) fset" where
   "possible_steps e s r l i = fimage (\<lambda>((origin, dest), t). (dest, t)) (ffilter (\<lambda>((origin, dest), t). origin = s \<and> (Label t) = l \<and> (length i) = (Arity t) \<and> apply_guards (Guards t) (join_ir i r)) e)"
+
+lemma possible_steps_finsert:
+"possible_steps (finsert ((s, s'), t) e) ss r l i = (
+  if s = ss \<and> (Label t) = l \<and> (length i) = (Arity t) \<and> apply_guards (Guards t) (join_ir i r) then
+    finsert (s', t) (possible_steps e s r l i)
+  else
+    possible_steps e ss r l i
+)"
+  by (simp add: possible_steps_def ffilter_finsert)
+
+
+lemma split_origin:
+"ffilter (\<lambda>((origin, dest), t). origin = s \<and> Label t = l \<and> can_take_transition t i r) e =
+ffilter (\<lambda>((origin, dest), t). Label t = l \<and> can_take_transition t i r) (ffilter (\<lambda>((origin, dest), t). origin = s) e)"
+  by auto
+
+lemma split_label:
+"ffilter (\<lambda>((origin, dest), t). origin = s \<and> Label t = l \<and> can_take_transition t i r) e =
+ffilter (\<lambda>((origin, dest), t). origin = s \<and> can_take_transition t i r) (ffilter (\<lambda>((origin, dest), t). Label t = l) e)"
+  by auto
 
 lemma fmember_possible_steps: "(s', t) |\<in>| possible_steps e s r l i = (((s, s'), t) \<in> {((origin, dest), t) \<in> fset e. origin = s \<and> Label t = l \<and> length i = Arity t \<and> apply_guards (Guards t) (join_ir i r)})"
   apply (simp add: possible_steps_def ffilter_def fimage_def fmember_def Abs_fset_inverse)
@@ -94,6 +98,26 @@ lemma possible_steps_alt: "(possible_steps e s r l i = {|(d, t)|}) = (ffilter
    apply (simp add: possible_steps_alt_aux)
   by (simp add: possible_steps_def)
 
+lemma possible_steps_alt_atom: "(possible_steps e s r l i = {|dt|}) = (ffilter
+     (\<lambda>((origin, dest), t). origin = s \<and> Label t = l \<and> can_take_transition t i r)
+     e = {|((s, fst dt), snd dt)|})"
+  apply (cases dt)
+  by (simp add: possible_steps_alt can_take_transition_def can_take_def)
+
+lemma possible_steps_alt2: "(possible_steps e s r l i = {|(d, t)|}) = (
+     (ffilter (\<lambda>((origin, dest), t). Label t = l \<and> length i = Arity t \<and> apply_guards (Guards t) (join_ir i r)) (ffilter (\<lambda>((origin, dest), t). origin = s) e) = {|((s, d), t)|}))"
+  apply (simp add: possible_steps_alt)
+  apply (simp only: filter_filter)
+  apply (rule arg_cong [of "(\<lambda>((origin, dest), t). origin = s \<and> Label t = l \<and> length i = Arity t \<and> apply_guards (Guards t) (join_ir i r))"])
+  by (rule ext, auto)
+
+lemma possible_steps_single_out:
+"ffilter (\<lambda>((origin, dest), t). origin = s) e = {|((s, d), t)|} \<Longrightarrow>
+Label t = l \<and> length i = Arity t \<and> apply_guards (Guards t) (join_ir i r) \<Longrightarrow>
+possible_steps e s r l i = {|(d, t)|}"
+  apply (simp add: possible_steps_alt2 Abs_ffilter)
+  by blast
+
 lemma possible_steps_singleton: "(possible_steps e s r l i = {|(d, t)|}) =
     ({((origin, dest), t) \<in> fset e. origin = s \<and> Label t = l \<and> length i = Arity t \<and> apply_guards (Guards t) (join_ir i r)} = {((s, d), t)})"
   apply (simp add: possible_steps_alt Abs_ffilter Set.filter_def)
@@ -118,6 +142,232 @@ lemma singleton_dest:
   using assms
   apply (simp add: fis_singleton_fthe_elem)
   using possible_steps_alt_aux by force
+
+lemma no_outgoing_transitions:
+"ffilter (\<lambda>((s', _), _). s = s') e = {||} \<Longrightarrow>
+possible_steps e s r l i = {||}"
+  apply (simp add: possible_steps_def)
+  by auto
+
+lemma ffilter_split: "ffilter (\<lambda>((origin, dest), t). origin = s \<and> Label t = l \<and> length i = Arity t \<and> apply_guards (Guards t) (join_ir i r)) e =
+                      ffilter (\<lambda>((origin, dest), t). Label t = l \<and> length i = Arity t \<and> apply_guards (Guards t) (join_ir i r)) (ffilter (\<lambda>((origin, dest), t). origin = s) e)"
+  by auto
+
+lemma one_outgoing_transition:
+  defines "outgoing s \<equiv> (\<lambda>((origin, dest), t). origin = s)"
+  assumes prem: "size (ffilter (outgoing s) e) = 1"
+  shows "size (possible_steps e s r l i) \<le> 1"
+proof-
+  have less_eq_1: "\<And>x::nat. (x \<le> 1) = (x = 1 \<or> x = 0)"
+    by auto
+  have size_empty: "\<And>f. (size f = 0) = (f = {||})"
+    subgoal for f
+      by (induct f, auto)
+    done
+  show ?thesis
+    using prem
+    apply (simp only: possible_steps_def)
+    apply (rule fimage_size_le)
+    apply (simp only: ffilter_split outgoing_def[symmetric])
+    by (metis (no_types, lifting) size_ffilter)
+qed
+
+subsection\<open>Choice\<close>
+text\<open>Here we define the \texttt{choice} operator which determines whether or not two transitions are
+nondeterministic.\<close>
+
+definition choice :: "transition \<Rightarrow> transition \<Rightarrow> bool" where
+  "choice t t' = (\<exists> i r. apply_guards (Guards t) (join_ir i r) \<and> apply_guards (Guards t') (join_ir i r))"
+
+definition choice_alt :: "transition \<Rightarrow> transition \<Rightarrow> bool" where
+  "choice_alt t t' = (\<exists> i r. apply_guards (Guards t@Guards t') (join_ir i r))"
+
+lemma choice_alt: "choice t t' = choice_alt t t'"
+  by (simp add: choice_def choice_alt_def apply_guards_append)
+
+lemma choice_symmetry: "choice x y = choice y x"
+  using choice_def by auto
+
+definition deterministic :: "transition_matrix \<Rightarrow> bool" where
+  "deterministic e = (\<forall>s r l i. size (possible_steps e s r l i) \<le> 1)"
+
+lemma deterministic_alt_aux: "size (possible_steps e s r l i) \<le> 1 =(
+        possible_steps e s r l i = {||} \<or>
+        (\<exists>s' t.
+            ffilter
+             (\<lambda>((origin, dest), t). origin = s \<and> Label t = l \<and> length i = Arity t \<and> apply_guards (Guards t) (join_ir i r)) e =
+            {|((s, s'), t)|}))"
+  apply (case_tac "size (possible_steps e s r l i) = 0")
+   apply (simp add: fset_equiv)
+  apply (case_tac "possible_steps e s r l i = {||}")
+   apply simp
+  apply (simp only: possible_steps_alt[symmetric])
+  by (metis le_neq_implies_less le_numeral_extra(4) less_one prod.collapse size_fsingleton)
+
+lemma deterministic_alt: "deterministic e = (
+  \<forall>s r l i. 
+    possible_steps e s r l i = {||} \<or>
+    (\<exists>s' t. ffilter (\<lambda>((origin, dest), t). origin = s \<and> (Label t) = l \<and> (length i) = (Arity t) \<and> apply_guards (Guards t) (join_ir i r)) e = {|((s, s'), t)|})
+)"
+  using deterministic_alt_aux
+  by (simp add: deterministic_def)
+
+lemma size_le_1: "size f \<le> 1 = (f = {||} \<or> (\<exists>e. f = {|e|}))"
+  apply standard
+   apply (metis bot.not_eq_extremum gr_implies_not0 le_neq_implies_less less_one size_fsingleton size_fsubset)
+  by auto
+
+lemma ffilter_empty_if: "\<forall>x |\<in>| xs. \<not> P x \<Longrightarrow> ffilter P xs = {||}"
+  by auto
+
+lemma empty_ffilter: "ffilter P xs = {||} = (\<forall>x |\<in>| xs. \<not> P x)"
+  by auto
+
+lemma all_states_deterministic:
+"(\<forall>s l i r.
+  ffilter (\<lambda>((origin, dest), t). origin = s \<and> (Label t) = l \<and> can_take_transition t i r) e = {||} \<or>
+  (\<exists>x. ffilter (\<lambda>((origin, dest), t). origin = s \<and> (Label t) = l \<and> can_take_transition t i r) e = {|x|})
+) \<Longrightarrow> deterministic e"
+  unfolding deterministic_def
+  apply clarify
+  apply (erule_tac x=s in allE)
+  apply (erule_tac x=l in allE)
+  apply (erule_tac x=i in allE)
+  apply (erule_tac x=r in allE)
+  apply (simp only: size_le_1)
+  apply (erule disjE)
+   apply (rule_tac disjI1)
+   apply (simp add: possible_steps_def can_take_transition_def can_take_def)
+  apply (erule exE)
+  apply (case_tac x, case_tac a)
+  apply simp
+  apply (induct e)
+   apply auto[1]
+  apply (rule disjI2)
+  apply (rule_tac x=ba in exI)
+  apply (rule_tac x=b in exI)
+  by (simp add: possible_steps_def can_take_transition_def[symmetric] can_take_def[symmetric])
+
+lemma deterministic_finsert:
+"\<forall>i r l.
+\<forall>((a, b), t) |\<in>| ffilter (\<lambda>((origin, dest), t). origin = s) (finsert ((s, s'), t') e).
+Label t = l \<and> can_take_transition t i r \<longrightarrow> \<not> can_take_transition t' i r \<Longrightarrow>
+deterministic e \<Longrightarrow>
+deterministic (finsert ((s, s'), t') e)"
+  apply (simp add: deterministic_def possible_steps_finsert can_take del: size_fset_overloaded_simps)
+  apply clarify
+  apply (erule_tac x=s in allE)
+  apply (erule_tac x=r in allE)
+  apply (erule_tac x="Label t'" in allE)
+  apply (erule_tac x=i in allE)
+  apply (erule_tac x=r in allE)
+  apply (erule_tac x=i in allE)
+  apply (erule_tac x="Label t'" in allE)
+  by auto
+
+lemma ffilter_fBall: "(\<forall>x |\<in>| xs. P x) = (ffilter P xs = xs)"
+  by auto
+
+lemma fsubset_if: "\<forall>x. x |\<in>| f1 \<longrightarrow> x |\<in>| f2 \<Longrightarrow> f1 |\<subseteq>| f2"
+  by auto
+
+lemma in_possible_steps: "(((s, s'), t)|\<in>|e \<and> Label t = l \<and> can_take_transition t i r) = ((s', t) |\<in>| possible_steps e s r l i)"
+  apply (simp add: fmember_possible_steps)
+  by (simp add: can_take_def can_take_transition_def fmember.rep_eq)
+
+lemma not_deterministic:
+  "\<exists>s l i r.
+    \<exists>d1 d2 t1 t2.
+      d1 \<noteq> d2 \<and> t1 \<noteq> t2 \<and>
+      ((s, d1), t1) |\<in>| e \<and>
+      ((s, d2), t2) |\<in>| e \<and>
+      Label t1 = Label t2 \<and>
+      can_take_transition t1 i r \<and>
+      can_take_transition t2 i r \<Longrightarrow>
+  \<not>deterministic e"
+  apply (simp add: deterministic_def not_le del: size_fset_overloaded_simps)
+  apply clarify
+  apply (rule_tac x=s in exI)
+  apply (rule_tac x=r in exI)
+  apply (rule_tac x="Label t1" in exI)
+  apply (rule_tac x=i in exI)
+  apply (case_tac "(d1, t1) |\<in>| possible_steps e s r (Label t1) i")
+   defer using in_possible_steps apply blast
+  apply (case_tac "(d2, t2) |\<in>| possible_steps e s r (Label t1) i")
+   apply (metis fempty_iff fsingleton_iff not_le_imp_less prod.inject size_le_1)
+  using in_possible_steps by force
+
+lemma size_gt_1: "1 < size f \<Longrightarrow> \<exists>e1 e2 f'. e1 \<noteq> e2 \<and> f = finsert e1 (finsert e2 f')"
+  apply (induct f)
+   apply simp
+  apply (rule_tac x=x in exI)
+  by (metis finsertCI leD not_le_imp_less size_le_1)
+
+lemma not_deterministic_conv:
+  "\<not>deterministic e \<Longrightarrow>
+  \<exists>s l i r.
+    \<exists>d1 d2 t1 t2.
+      (d1 \<noteq> d2 \<or> t1 \<noteq> t2) \<and>
+      ((s, d1), t1) |\<in>| e \<and>
+      ((s, d2), t2) |\<in>| e \<and>
+      Label t1 = Label t2 \<and>
+      can_take_transition t1 i r \<and>
+      can_take_transition t2 i r"
+  apply (simp add: deterministic_def not_le del: size_fset_overloaded_simps)
+  apply clarify
+  apply (case_tac "\<exists>e1 e2 f'. e1 \<noteq> e2 \<and> possible_steps e s r l i = finsert e1 (finsert e2 f')")
+   defer using size_gt_1 apply blast
+  apply (erule exE)+
+  apply (case_tac e1, case_tac e2)
+  apply (simp del: size_fset_overloaded_simps)
+  apply (rule_tac x=s in exI)
+  apply (rule_tac x=i in exI)
+  apply (rule_tac x=r in exI)
+  apply (rule_tac x=a in exI)
+  apply (rule_tac x=aa in exI)
+  apply (rule_tac x=b in exI)
+  apply (rule_tac x=ba in exI)
+  by (metis finsertI1 finsert_commute in_possible_steps)
+
+lemma deterministic_if: 
+"\<nexists>s l i r.
+  \<exists>d1 d2 t1 t2.
+    (d1 \<noteq> d2 \<or> t1 \<noteq> t2) \<and>
+    ((s, d1), t1) |\<in>| e \<and>
+    ((s, d2), t2) |\<in>| e \<and>
+    Label t1 = Label t2 \<and>
+    can_take_transition t1 i r \<and>
+    can_take_transition t2 i r \<Longrightarrow>
+  deterministic e"
+  using not_deterministic_conv by blast
+
+lemma "\<forall>l i r.
+  (\<forall>((s, s'), t) |\<in>| e. Label t = l \<and> can_take_transition t i r \<and>
+  (\<nexists>t' s''. ((s, s''), t') |\<in>| e \<and> (s' \<noteq> s'' \<or> t' \<noteq> t) \<and> Label t' = l \<and> can_take_transition t' i r))
+ \<Longrightarrow> deterministic e"
+  apply (simp add: deterministic_def del: size_fset_overloaded_simps)
+  apply (rule allI)+
+  apply (simp only: size_le_1 possible_steps_empty)
+  apply (case_tac "\<exists>t s'. ((s, s'), t)|\<in>|e \<and> Label t = l \<and> can_take_transition t i r")
+   defer using notin_fset apply fastforce
+  apply (rule disjI2)
+  apply clarify
+  apply (rule_tac x="(s', t)" in exI)
+  apply standard
+   defer apply (meson fempty_fsubsetI finsert_fsubset in_possible_steps)
+  apply standard
+  apply (case_tac x)
+  apply (simp add: in_possible_steps[symmetric])
+  apply (erule_tac x="Label t" in allE)
+  apply (erule_tac x=i in allE)
+  apply (erule_tac x=r in allE)
+  apply (erule_tac x="((s, s'), t)" in fBallE)
+   defer apply simp
+  apply simp
+  apply (erule_tac x=b in allE)
+  apply simp
+  apply (erule_tac x=a in allE)
+  by simp
 
 text\<open>The \texttt{random\_member} function returns a random member from a finite set, or
 \texttt{None}, if the set is empty.\<close>

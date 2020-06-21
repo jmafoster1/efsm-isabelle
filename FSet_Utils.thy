@@ -37,6 +37,9 @@ lemma fset_both_sides: "(Abs_fset s = f) = (fset (Abs_fset s) = fset f)"
 lemma Abs_ffilter: "(ffilter f s = s') = ({e \<in> (fset s). f e} = (fset s'))"
   by (simp add: ffilter_def fset_both_sides Abs_fset_inverse Set.filter_def)
 
+lemma size_ffilter_card: "size (ffilter f s) = card ({e \<in> (fset s). f e})"
+  by (simp add: ffilter_def fset_both_sides Abs_fset_inverse Set.filter_def)
+
 lemma ffilter_empty [simp]: "ffilter f {||} = {||}"
   by auto
 
@@ -276,4 +279,46 @@ lemma fBall_ffilter2:
    \<forall>x |\<in>| X. f x \<Longrightarrow>
    ffilter f X = Y"
   by auto
+
+lemma size_fset_of_list: "size (fset_of_list l) = length (remdups l)"
+  apply (induct l)
+   apply simp
+  by (simp add: fset_of_list.rep_eq insert_absorb)
+
+lemma size_fsingleton: "(size f = 1) = (\<exists>e. f = {|e|})"
+  apply (insert exists_fset_of_list[of f])
+  apply clarify
+  apply (simp only: size_fset_of_list)
+  apply (simp add: fset_of_list_def fset_both_sides Abs_fset_inverse)
+  by (metis List.card_set One_nat_def card.insert card_1_singletonE card_empty empty_iff finite.intros(1))
+
+lemma ffilter_mono: "(ffilter X xs = f) \<Longrightarrow> \<forall>x |\<in>| xs. X x = Y x \<Longrightarrow> (ffilter Y xs = f)"
+  by auto
+
+lemma size_fimage: "size (fimage f s) \<le> size s"
+  apply (induct s)
+   apply simp
+  by (simp add: card_insert_if)
+
+lemma size_ffilter: "size (ffilter P f) \<le> size f"
+  apply (induct f)
+   apply simp
+  apply (simp only: ffilter_finsert)
+  apply (case_tac "P x")
+   apply (simp add: fmember.rep_eq)
+  by (simp add: card_insert_if)
+
+lemma fimage_size_le: "\<And>f s. size s \<le> n \<Longrightarrow> size (fimage f s) \<le> n"
+  using le_trans size_fimage by blast
+
+lemma ffilter_size_le: "\<And>f s. size s \<le> n \<Longrightarrow> size (ffilter f s) \<le> n"
+  using dual_order.trans size_ffilter by blast
+
+lemma set_membership_eq: "A = B \<longleftrightarrow> (\<lambda>x. Set.member x A) = (\<lambda>x. Set.member x B)"
+  apply standard
+   apply simp
+  by (meson equalityI subsetI)
+
+lemmas ffilter_eq_iff = Abs_ffilter set_membership_eq fun_eq_iff
+
 end
