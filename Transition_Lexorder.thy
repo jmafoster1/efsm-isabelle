@@ -4,7 +4,7 @@ text\<open>This theory defines a lexicographical ordering on transitions such th
 the set representation of EFSMs to a sorted list that we can recurse over.\<close>
 
 theory Transition_Lexorder
-  imports "EFSM.Transition"
+  imports "Transition"
     GExp_Lexorder
     "HOL-Library.Product_Lexorder"
 begin

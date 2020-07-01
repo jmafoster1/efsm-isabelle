@@ -15,7 +15,7 @@ Note that, while statename has four elements, the drinks machine presented here 
 states. The fourth element is included here so that the \emph{statename} datatype may be used in
 the next example.\<close>
 theory Drinks_Machine
-  imports EFSM.EFSM
+  imports "EFSM.EFSM"
 begin
 
 text_raw\<open>\snip{selectdef}{1}{2}{%\<close>

@@ -1,5 +1,5 @@
 theory LTL_Exp
-imports Main "../EFSM" FinFun.FinFun
+imports Main "EFSM.EFSM" FinFun.FinFun
 begin
 
 no_notation relcomp (infixr "O" 75) and comp (infixl "o" 55)

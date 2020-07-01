@@ -70,6 +70,12 @@ lemma split_label:
 ffilter (\<lambda>((origin, dest), t). origin = s \<and> can_take_transition t i r) (ffilter (\<lambda>((origin, dest), t). Label t = l) e)"
   by auto
 
+lemma possible_steps_empty_guards_false:
+  "\<forall>((s1, s2), t) |\<in>| ffilter (\<lambda>((origin, dest), t). Label t = l) e. \<not>can_take_transition t i r \<Longrightarrow>
+  possible_steps e s r l i = {||}"
+  apply (simp add: possible_steps_def can_take[symmetric] split_label)
+  by (simp add: Abs_ffilter fBall_def Ball_def)
+
 lemma fmember_possible_steps: "(s', t) |\<in>| possible_steps e s r l i = (((s, s'), t) \<in> {((origin, dest), t) \<in> fset e. origin = s \<and> Label t = l \<and> length i = Arity t \<and> apply_guards (Guards t) (join_ir i r)})"
   apply (simp add: possible_steps_def ffilter_def fimage_def fmember_def Abs_fset_inverse)
   by force
@@ -97,6 +103,13 @@ lemma possible_steps_alt: "(possible_steps e s r l i = {|(d, t)|}) = (ffilter
   apply standard
    apply (simp add: possible_steps_alt_aux)
   by (simp add: possible_steps_def)
+
+lemma possible_steps_alt3: "(possible_steps e s r l i = {|(d, t)|}) = (ffilter
+     (\<lambda>((origin, dest), t). origin = s \<and> Label t = l \<and> can_take_transition t i r)
+     e = {|((s, d), t)|})"
+  apply standard
+   apply (simp add: possible_steps_alt_aux can_take)
+  by (simp add: possible_steps_def can_take)
 
 lemma possible_steps_alt_atom: "(possible_steps e s r l i = {|dt|}) = (ffilter
      (\<lambda>((origin, dest), t). origin = s \<and> Label t = l \<and> can_take_transition t i r)
@@ -368,6 +381,52 @@ lemma "\<forall>l i r.
   apply simp
   apply (erule_tac x=a in allE)
   by simp
+
+definition "outgoing_transitions e s = ffilter (\<lambda>((o, _), _). o = s) e"
+
+lemma in_outgoing: "((s1, s2), t) |\<in>| outgoing_transitions e s = (((s1, s2), t) |\<in>| e \<and> s1 = s)"
+  by (simp add: outgoing_transitions_def)
+
+lemma outgoing_transitions_deterministic:
+  "\<forall>s.
+    \<forall>((s1, s2), t) |\<in>| outgoing_transitions e s.
+      \<forall>((s1', s2'), t') |\<in>| outgoing_transitions e s.
+        s2 \<noteq> s2' \<or> t \<noteq> t' \<longrightarrow> Label t = Label t' \<longrightarrow> \<not> choice t t' \<Longrightarrow> deterministic e"
+  apply (rule deterministic_if)
+  apply simp
+  apply (rule allI)
+  apply (erule_tac x=s in allE)
+  apply (simp add: fBall_def Ball_def)
+  apply (rule allI)+
+  apply (erule_tac x=s in allE)
+  apply (erule_tac x=d1 in allE)
+  apply (erule_tac x=t1 in allE)
+  apply (rule impI, rule allI)
+  apply (case_tac "((s, d1), t1) \<in> fset (outgoing_transitions e s)")
+   apply simp
+   apply (erule_tac x=s in allE)
+   apply (erule_tac x=d2 in allE)
+   apply (erule_tac x=t2 in allE)
+   apply (simp add: outgoing_transitions_def choice_def can_take)
+   apply (meson fmember_implies_member)
+  apply (simp add: outgoing_transitions_def)
+  by (meson fmember_implies_member)
+
+lemma outgoing_transitions_deterministic2: "(\<And>s a b ba aa bb bc.
+       ((a, b), ba) |\<in>| outgoing_transitions e s \<Longrightarrow>
+       ((aa, bb), bc) |\<in>| (outgoing_transitions e s) - {|((a, b), ba)|} \<Longrightarrow> b \<noteq> bb \<or> ba \<noteq> bc \<Longrightarrow> \<not>choice ba bc)
+        \<Longrightarrow> deterministic e"
+  apply (rule outgoing_transitions_deterministic)
+  by blast
+
+lemma outgoing_transitions_fprod_deterministic:
+"(\<And>s b ba bb bc.
+(((s, b), ba), ((s, bb), bc)) \<in> fset (outgoing_transitions e s) \<times> fset (outgoing_transitions e s)
+\<Longrightarrow> b \<noteq> bb \<or> ba \<noteq> bc \<Longrightarrow> Label ba = Label bc \<Longrightarrow> \<not>choice ba bc)
+\<Longrightarrow> deterministic e"
+  apply (rule outgoing_transitions_deterministic)
+  apply clarify
+  by (metis SigmaI fmember_implies_member in_outgoing)
 
 text\<open>The \texttt{random\_member} function returns a random member from a finite set, or
 \texttt{None}, if the set is empty.\<close>

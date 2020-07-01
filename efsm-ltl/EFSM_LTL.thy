@@ -4,7 +4,7 @@ library and defines functions to ease the expression of LTL properties over EFSM
 operators effectively act over traces of models we must find a way to express models as streams.\<close>
 
 theory EFSM_LTL
-imports "../EFSM" "HOL-Library.Linear_Temporal_Logic_on_Streams"
+imports "EFSM.EFSM" "HOL-Library.Linear_Temporal_Logic_on_Streams"
 begin
 
 text_raw\<open>\snip{statedef}{1}{2}{%\<close>
@@ -38,6 +38,18 @@ fun ltl_step :: "transition_matrix \<Rightarrow> cfstate option \<Rightarrow> re
                   )"
 text_raw\<open>}%endsnip\<close>
 
+lemma ltl_step_singleton:
+"\<exists>t. possible_steps e n r (fst v) (snd v) = {|(aa, t)|} \<and> evaluate_outputs t (snd v) r  = b \<and> evaluate_updates t (snd v) r = c\<Longrightarrow>
+ltl_step e (Some n) r v = (Some aa, b, c)"
+  apply (cases v)
+  by auto
+
+lemma ltl_step_none: "possible_steps e s r a b = {||} \<Longrightarrow> ltl_step e (Some s) r (a, b) = (None, [], r)"
+  by simp
+
+lemma ltl_step_none_2: "possible_steps e s r (fst ie) (snd ie) = {||} \<Longrightarrow> ltl_step e (Some s) r ie = (None, [], r)"
+  by (metis ltl_step_none prod.exhaust_sel)
+
 lemma ltl_step_alt: "ltl_step e (Some s) r t = (
   let possibilities = possible_steps e s r (fst t) (snd t) in
   if possibilities = {||} then
@@ -47,9 +59,6 @@ lemma ltl_step_alt: "ltl_step e (Some s) r t = (
   (Some s', (apply_outputs (Outputs t') (join_ir (snd t) r)), (apply_updates (Updates t') (join_ir (snd t) r) r))
 )"
   by (case_tac t, simp add: Let_def)
-
-lemma ltl_step_none: "possible_steps e s r (fst ie) (snd ie) = {||} \<Longrightarrow> ltl_step e (Some s) r ie = (None, [], r)"
-  by (simp add: ltl_step_alt)
 
 lemma ltl_step_some:
   assumes "possible_steps e s r l i = {|(s', t)|}"

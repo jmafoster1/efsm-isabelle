@@ -26,6 +26,9 @@ definition subsumes :: "transition \<Rightarrow> registers \<Rightarrow> transit
                                   (\<forall>P r'. (p1 $ r' = None) \<or> (P (p2 $ r') \<longrightarrow> P (p1 $ r'))))
                       )"
 
+lemma transition_subsumes_self: "subsumes t c t"
+  by (simp add: subsumes_def)
+
 lemma subsumption:
   "(Label t1 = Label t2 \<and> Arity t1 = Arity t2) \<Longrightarrow>
    (\<forall>i. can_take_transition t1 i r \<longrightarrow> can_take_transition t2 i r) \<Longrightarrow>

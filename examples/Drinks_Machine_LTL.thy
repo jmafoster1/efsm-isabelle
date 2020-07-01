@@ -54,19 +54,15 @@ lemma LTL_r2_not_always_gt_100: "not (alw (check_exp (Gt (V (Rg 2)) (L (Num 100)
   using value_gt_def by auto
 
 lemma drinks_step_2_none: "ltl_step drinks (Some 2) r e = (None, [], r)"
-  by (simp add: drinks_end ltl_step_none)
+  by (simp add: drinks_end ltl_step_none_2)
 
 lemma one_before_two_2:
   "alw (\<lambda>x. statename (shd (stl x)) = Some 2 \<longrightarrow> statename (shd x) = Some 1) (make_full_observation drinks (Some 2) r [r $ 1] x2a)"
 proof(coinduction)
   case alw
   then show ?case
-    apply simp
-    apply standard
-    apply (simp add: drinks_end ltl_step_none)
-    apply (rule disjI2)
     apply (simp add: drinks_step_2_none)
-    by (metis (mono_tags, lifting) alw_mono nxt.simps once_none_nxt_always_none option.simps(3) )
+    by (metis (mono_tags, lifting) alw_mono nxt.simps once_none_nxt_always_none option.distinct(1))
 qed
 
 lemma one_before_two_aux:
@@ -185,6 +181,7 @@ lemma LTL_neverReachS2:"(((((action_eq (''select'', [Str ''coke''])))
 lemma ltl_step_not_select:
   "\<nexists>i. e = (STR ''select'', [i]) \<Longrightarrow>
    ltl_step drinks (Some 0) r e = (None, [], r)"
+  apply (cases e, clarify)
   apply (rule ltl_step_none)
   apply (simp add: possible_steps_empty drinks_def can_take_transition_def can_take_def select_def)
   by (cases e, case_tac b, auto)
@@ -200,6 +197,8 @@ lemma ltl_step_not_coin_or_vend:
   "\<nexists>i. e = (STR ''coin'', [i]) \<Longrightarrow>
     e \<noteq> (STR ''vend'', []) \<Longrightarrow>
     ltl_step drinks (Some 1) r e = (None, [], r)"
+  apply (cases e)
+  apply (simp del: ltl_step.simps)
   apply (rule ltl_step_none)
   apply (simp add: possible_steps_empty drinks_def can_take_transition_def can_take_def transitions)
   by (case_tac e, case_tac b, auto)
