@@ -59,9 +59,6 @@ lemma bad_outputs:
    \<not> subsumes t2 r t1"
   by (simp add: subsumes_def)
 
-lemma subsumes_reflexive: "subsumes t c t"
-  by (simp add: subsumes_def)
-
 primrec accepting_sequence :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> (transition \<times> cfstate \<times> outputs \<times> registers) list \<Rightarrow> (transition \<times> cfstate \<times> outputs \<times> registers) list option" where
   "accepting_sequence _ _ r [] obs = Some (rev obs)" |
   "accepting_sequence e s r (a#t) obs = (let
@@ -241,6 +238,10 @@ lemma subsumes_update_equality:
   apply (erule_tac x=r' in allE)
   by auto
 
+text_raw\<open>\snip{subsumptionPreorder}{1}{2}{%\<close>
+lemma subsumes_reflexive: "subsumes t c t"
+  by (simp add: subsumes_def)
+
 lemma subsumption_transitive:
   assumes p1: "subsumes t1 c t2"
       and p2: "subsumes t2 c t3"
@@ -248,5 +249,6 @@ lemma subsumption_transitive:
   using p1 p2
   apply (simp add: subsumes_def)
   by (metis subsumes_update_equality p1 p2 can_take_transition_def option.distinct(1) option.sel posterior_separate_def)
+text_raw\<open>}%endsnip\<close>
 
 end
