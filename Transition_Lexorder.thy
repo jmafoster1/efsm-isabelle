@@ -9,12 +9,12 @@ theory Transition_Lexorder
     "HOL-Library.Product_Lexorder"
 begin
 
-instantiation "transition_ext" :: (linorder) linorder begin
+instantiation "transition_ext" :: (linorder, linorder) linorder begin
 
-definition less_transition_ext :: "'a::linorder transition_scheme \<Rightarrow> 'a transition_scheme \<Rightarrow> bool" where
+definition less_transition_ext :: "('a, 'b) transition_scheme \<Rightarrow> ('a, 'b) transition_scheme \<Rightarrow> bool" where
 "less_transition_ext t1 t2 = ((Label t1, Arity t1, Guards t1, Outputs t1, Updates t1, more t1) < (Label t2, Arity t2, Guards t2, Outputs t2, Updates t2, more t2))"
 
-definition less_eq_transition_ext :: "'a::linorder transition_scheme \<Rightarrow> 'a transition_scheme \<Rightarrow> bool" where
+definition less_eq_transition_ext :: "('a, 'b) transition_scheme \<Rightarrow> ('a, 'b) transition_scheme \<Rightarrow> bool" where
 "less_eq_transition_ext t1 t2 = (t1 < t2 \<or> t1 = t2)"
 
 instance

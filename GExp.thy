@@ -20,58 +20,58 @@ declare I_def [simp]
 hide_const I
 
 text_raw\<open>\snip{gexptype}{1}{2}{%\<close>
-datatype 'a gexp = Bc bool | Eq "'a aexp" "'a aexp" | Gt "'a aexp" "'a aexp" | In 'a "value list" |  Nor "'a gexp" "'a gexp"
+datatype ('a, 'b) gexp = Bc bool | Eq "('a, 'b) aexp" "('a, 'b) aexp" | Gt "('a, 'b) aexp" "('a, 'b) aexp" | In 'a "'b list" |  Nor "('a, 'b) gexp" "('a, 'b) gexp"
 text_raw\<open>}%endsnip\<close>
 
-fun gval :: "'a gexp \<Rightarrow> 'a datastate \<Rightarrow> trilean" where
+fun gval :: "('a, 'b) gexp \<Rightarrow> ('a, 'b::aexp_value) datastate \<Rightarrow> trilean" where
   "gval (Bc True) _ = true" |
   "gval (Bc False) _ = false" |
-  "gval (Gt a\<^sub>1 a\<^sub>2) s = value_gt (aval a\<^sub>1 s) (aval a\<^sub>2 s)" |
-  "gval (Eq a\<^sub>1 a\<^sub>2) s = value_eq (aval a\<^sub>1 s) (aval a\<^sub>2 s)" |
+  "gval (Gt a\<^sub>1 a\<^sub>2) s = (aval a\<^sub>1 s) >\<^sub>? (aval a\<^sub>2 s)" |
+  "gval (Eq a\<^sub>1 a\<^sub>2) s = (aval a\<^sub>1 s) =\<^sub>? (aval a\<^sub>2 s)" |
   "gval (In v l) s = (if s v \<in> set (map Some l) then true else false)" |
   "gval (Nor a\<^sub>1 a\<^sub>2) s = \<not>\<^sub>? ((gval a\<^sub>1 s) \<or>\<^sub>? (gval a\<^sub>2 s))"
 
 text_raw\<open>\snip{connectives}{1}{2}{%\<close>
-definition gNot :: "'a gexp \<Rightarrow> 'a gexp"  where
+definition gNot :: "('a, 'b) gexp \<Rightarrow> ('a, 'b) gexp"  where
   "gNot g \<equiv> Nor g g"
 
-definition gOr :: "'a gexp \<Rightarrow> 'a gexp \<Rightarrow> 'a gexp" (*infix "\<or>" 60*) where
+definition gOr :: "('a, 'b) gexp \<Rightarrow> ('a, 'b) gexp \<Rightarrow> ('a, 'b) gexp" (*infix "\<or>" 60*) where
   "gOr v va \<equiv> Nor (Nor v va) (Nor v va)"
 
-definition gAnd :: "'a gexp \<Rightarrow> 'a gexp \<Rightarrow> 'a gexp" (*infix "\<and>" 60*) where
+definition gAnd :: "('a, 'b) gexp \<Rightarrow> ('a, 'b) gexp \<Rightarrow> ('a, 'b) gexp" (*infix "\<and>" 60*) where
   "gAnd v va \<equiv> Nor (Nor v v) (Nor va va)"
 
-definition gImplies :: "'a gexp \<Rightarrow> 'a gexp \<Rightarrow> 'a gexp" where
+definition gImplies :: "('a, 'b) gexp \<Rightarrow> ('a, 'b) gexp \<Rightarrow> ('a, 'b) gexp" where
   "gImplies p q \<equiv> gOr (gNot p) q"
 
-definition Lt :: "'a aexp \<Rightarrow> 'a aexp \<Rightarrow> 'a gexp" (*infix "<" 60*) where
+definition Lt :: "('a, 'b) aexp \<Rightarrow> ('a, 'b) aexp \<Rightarrow> ('a, 'b) gexp" (*infix "<" 60*) where
   "Lt a b \<equiv> Gt b a"
 
-definition Le :: "'a aexp \<Rightarrow> 'a aexp \<Rightarrow> 'a gexp" (*infix "\<le>" 60*) where
+definition Le :: "('a, 'b) aexp \<Rightarrow> ('a, 'b) aexp \<Rightarrow> ('a, 'b) gexp" (*infix "\<le>" 60*) where
   "Le v va \<equiv> gNot (Gt v va)"
 
-definition Ge :: "'a aexp \<Rightarrow> 'a aexp \<Rightarrow> 'a gexp" (*infix "\<ge>" 60*) where
+definition Ge :: "('a, 'b) aexp \<Rightarrow> ('a, 'b) aexp \<Rightarrow> ('a, 'b) gexp" (*infix "\<ge>" 60*) where
   "Ge v va \<equiv> gNot (Lt v va)"
 
-definition Ne :: "'a aexp \<Rightarrow> 'a aexp \<Rightarrow> 'a gexp" (*infix "\<noteq>" 60*) where
+definition Ne :: "('a, 'b) aexp \<Rightarrow> ('a, 'b) aexp \<Rightarrow> ('a, 'b) gexp" (*infix "\<noteq>" 60*) where
   "Ne v va \<equiv> gNot (Eq v va)"
 text_raw\<open>}%endsnip\<close>
 
 lemma gval_Lt [simp]:
-  "gval (Lt a\<^sub>1 a\<^sub>2) s = value_gt (aval a\<^sub>2 s) (aval a\<^sub>1 s)"
+  "gval (Lt a\<^sub>1 a\<^sub>2) s = (aval a\<^sub>2 s) >\<^sub>? (aval a\<^sub>1 s)"
   by (simp add: Lt_def)
 
 lemma gval_Le [simp]:
-  "gval (Le a\<^sub>1 a\<^sub>2) s = \<not>\<^sub>? (value_gt (aval a\<^sub>1 s) (aval a\<^sub>2 s))"
-  by (simp add: Le_def value_gt_def gNot_def maybe_or_idempotent)
+  "gval (Le a\<^sub>1 a\<^sub>2) s = \<not>\<^sub>? ((aval a\<^sub>1 s) >\<^sub>? (aval a\<^sub>2 s))"
+  by (simp add: Le_def gt_value_def gNot_def maybe_or_idempotent)
 
 lemma gval_Ge [simp]:
-  "gval (Ge a\<^sub>1 a\<^sub>2) s = \<not>\<^sub>? (value_gt (aval a\<^sub>2 s) (aval a\<^sub>1 s))"
-  by (simp add: Ge_def value_gt_def gNot_def maybe_or_idempotent)
+  "gval (Ge a\<^sub>1 a\<^sub>2) s = \<not>\<^sub>? ((aval a\<^sub>2 s) >\<^sub>? (aval a\<^sub>1 s))"
+  by (simp add: Ge_def gt_value_def gNot_def maybe_or_idempotent)
 
 lemma gval_Ne [simp]:
   "gval (Ne a\<^sub>1 a\<^sub>2) s = \<not>\<^sub>? (value_eq (aval a\<^sub>2 s) (aval a\<^sub>1 s))"
-  by (simp add: Ne_def value_gt_def gNot_def maybe_or_idempotent)
+  by (simp add: Ne_def gt_value_def gNot_def maybe_or_idempotent)
 
 lemmas connectives = gAnd_def gOr_def gNot_def Lt_def Le_def Ge_def Ne_def
 
@@ -98,7 +98,7 @@ lemma gval_gAnd_True:
 lemma nor_equiv: "gval (gNot (gOr a b)) s = gval (Nor a b) s"
   by simp
 
-definition satisfiable :: "vname gexp \<Rightarrow> bool" where
+definition satisfiable :: "(vname, 'b::aexp_value) gexp \<Rightarrow> bool" where
   "satisfiable g \<equiv> (\<exists>i r. gval g (join_ir i r) = true)"
 
 definition "satisfiable_list l = satisfiable (fold gAnd l (Bc True))"
@@ -109,25 +109,25 @@ lemma unsatisfiable_false: "\<not> satisfiable (Bc False)"
 lemma satisfiable_true: "satisfiable (Bc True)"
   by (simp add: satisfiable_def)
 
-definition valid :: "vname gexp \<Rightarrow> bool" where
+definition valid :: "(vname, 'b::aexp_value) gexp \<Rightarrow> bool" where
   "valid g \<equiv> (\<forall>s. gval g s = true)"
 
 lemma valid_true: "valid (Bc True)"
   by (simp add: valid_def)
 
-fun gexp_constrains :: "'a gexp \<Rightarrow> 'a aexp \<Rightarrow> bool" where
+fun gexp_constrains :: "('a, 'b) gexp \<Rightarrow> ('a, 'b) aexp \<Rightarrow> bool" where
   "gexp_constrains (Bc _) _ = False" |
   "gexp_constrains (Eq a1 a2) a = (aexp_constrains a1 a \<or> aexp_constrains a2 a)" |
   "gexp_constrains (Gt a1 a2) a = (aexp_constrains a1 a \<or> aexp_constrains a2 a)" |
   "gexp_constrains (Nor g1 g2) a = (gexp_constrains g1 a \<or> gexp_constrains g2 a)" |
   "gexp_constrains (In v l) a = aexp_constrains (V v) a"
 
-fun contains_bool :: "'a gexp \<Rightarrow> bool" where
+fun contains_bool :: "('a, 'b) gexp \<Rightarrow> bool" where
   "contains_bool (Bc _) = True" |
   "contains_bool (Nor g1 g2) = (contains_bool g1 \<or> contains_bool g2)" |
   "contains_bool _ = False"
 
-fun gexp_same_structure :: "'a gexp \<Rightarrow> 'a gexp \<Rightarrow> bool" where
+fun gexp_same_structure :: "('a, 'b) gexp \<Rightarrow> ('a, 'b) gexp \<Rightarrow> bool" where
   "gexp_same_structure (Bc b) (Bc b') = (b = b')" |
   "gexp_same_structure (Eq a1 a2) (Eq a1' a2') = (aexp_same_structure a1 a1' \<and> aexp_same_structure a2 a2')" |
   "gexp_same_structure (Gt a1 a2) (Gt a1' a2') = (aexp_same_structure a1 a1' \<and> aexp_same_structure a2 a2')" |
@@ -148,12 +148,16 @@ next
     by simp
 qed
 
-fun enumerate_gexp_inputs :: "vname gexp \<Rightarrow> nat set" where
+fun enumerate_gexp_inputs :: "(vname, 'b) gexp \<Rightarrow> nat set" where
   "enumerate_gexp_inputs (Bc _) = {}" |
   "enumerate_gexp_inputs (Eq v va) = enumerate_aexp_inputs v \<union> enumerate_aexp_inputs va" |
   "enumerate_gexp_inputs (Gt v va) = enumerate_aexp_inputs v \<union> enumerate_aexp_inputs va" |
-  "enumerate_gexp_inputs (In v va) = enumerate_aexp_inputs (V v)" |
+  "enumerate_gexp_inputs (In (R _) va) = {}" |
+  "enumerate_gexp_inputs (In (I n) va) = {n}" |
   "enumerate_gexp_inputs (Nor v va) = enumerate_gexp_inputs v \<union> enumerate_gexp_inputs va"
+
+lemma enumerate_inputs_In: "enumerate_gexp_inputs (In v va) = AExp.enumerate_aexp_inputs (V v)"
+  by (cases v, auto)
 
 lemma enumerate_gexp_inputs_list: "\<exists>l. enumerate_gexp_inputs g = set l"
 proof(induct g)
@@ -171,17 +175,17 @@ next
 next
   case (In x1a x2)
   then show ?case
-    by (simp add: enumerate_aexp_inputs_list)
+    by (metis List.set_insert empty_set enumerate_gexp_inputs.elims gexp.simps(17) gexp.simps(21) gexp.simps(25))
 next
   case (Nor g1 g2)
   then show ?case
-    by (metis enumerate_gexp_inputs.simps(5) set_append)
+    by (metis enumerate_gexp_inputs.simps(6) set_union)
 qed
 
-definition max_input :: "vname gexp \<Rightarrow> nat option" where
+definition max_input :: "(vname, 'b) gexp \<Rightarrow> nat option" where
   "max_input g = (let inputs = (enumerate_gexp_inputs g) in if inputs = {} then None else Some (Max inputs))"
 
-definition max_input_list :: "vname gexp list \<Rightarrow> nat option" where
+definition max_input_list :: "(vname, 'b) gexp list \<Rightarrow> nat option" where
   "max_input_list g = fold max (map (\<lambda>g. max_input g) g) None"
 
 lemma max_input_list_cons:
@@ -191,17 +195,26 @@ lemma max_input_list_cons:
    apply (simp add: max_def_raw)
   by (metis (no_types, lifting) List.finite_set Max.insert Max.set_eq_fold fold_simps(1) list.set(2) max.assoc set_empty)
 
-fun enumerate_regs :: "vname gexp \<Rightarrow> nat set" where
+fun enumerate_regs :: "(vname, 'b) gexp \<Rightarrow> nat set" where
   "enumerate_regs (Bc _) = {}" |
   "enumerate_regs (Eq v va) = AExp.enumerate_regs v \<union> AExp.enumerate_regs va" |
   "enumerate_regs (Gt v va) = AExp.enumerate_regs v \<union> AExp.enumerate_regs va" |
-  "enumerate_regs (In v va) = AExp.enumerate_regs (V v)" |
+  "enumerate_regs (In (I _) va) = {}" |
+  "enumerate_regs (In (R n) va) = {n}" |
   "enumerate_regs (Nor v va) = enumerate_regs v \<union> enumerate_regs va"
 
-lemma finite_enumerate_regs: "finite (enumerate_regs g)"
-  using AExp.finite_enumerate_regs by (induct g, auto)
+lemma enumerate_regs_In: "enumerate_regs (In v va) = AExp.enumerate_regs (V v)"
+  by (cases v, auto)
 
-definition max_reg :: "vname gexp \<Rightarrow> nat option" where
+lemma finite_enumerate_regs: "finite (enumerate_regs g)"
+  apply (induct g)
+      apply simp
+     apply (simp add: finite_enumerate_regs)
+    apply (simp add: finite_enumerate_regs)
+   apply (metis enumerate_regs_In finite_enumerate_regs)
+  by simp
+
+definition max_reg :: "(vname, 'b) gexp \<Rightarrow> nat option" where
   "max_reg g = (let regs = (enumerate_regs g) in if regs = {} then None else Some (Max regs))"
 
 lemma max_reg_gNot: "max_reg (gNot x) = max_reg x"
@@ -236,7 +249,7 @@ proof-
     using join_ir_double_exists by fastforce
 qed
 
-definition max_reg_list :: "vname gexp list \<Rightarrow> nat option" where
+definition max_reg_list :: "(vname, 'b) gexp list \<Rightarrow> nat option" where
   "max_reg_list g = (fold max (map (\<lambda>g. max_reg g) g) None)"
 
 lemma max_reg_list_cons:
@@ -258,10 +271,10 @@ proof(induct bs rule: rev_induct)
 next
   case (snoc x xs)
   then show ?case
-    by (metis append_assoc max.assoc max_reg_list_append_singleton)
+    by (metis (no_types, lifting) append.assoc max.assoc max_reg_list_append_singleton)
 qed
 
-definition apply_guards :: "vname gexp list \<Rightarrow> vname datastate \<Rightarrow> bool" where
+definition apply_guards :: "(vname, 'b) gexp list \<Rightarrow> (vname, 'b::aexp_value) datastate \<Rightarrow> bool" where
   "apply_guards G s = (\<forall>g \<in> set (map (\<lambda>g. gval g s) G). g = true)"
 
 lemma apply_guards_singleton[simp]: "(apply_guards [g] s) = (gval g s = true)"
@@ -280,7 +293,7 @@ lemma apply_guards_double_cons:
 
 lemma apply_guards_append:
   "apply_guards (a@a') s = (apply_guards a s \<and> apply_guards a' s)"
-  using apply_guards_def by auto
+  by (metis Un_iff apply_guards_def map_append set_append)
 
 lemma apply_guards_foldr:
   "apply_guards G s = (gval (foldr gAnd G (Bc True)) s = true)"
@@ -311,7 +324,7 @@ lemma foldr_apply_guards:
   by (simp add: apply_guards_foldr)
 
 lemma apply_guards_subset:
-  "set g' \<subseteq> set g \<Longrightarrow> apply_guards g c \<longrightarrow> apply_guards g' c"
+  "set g' \<subseteq> set g \<Longrightarrow> apply_guards g c \<Longrightarrow> apply_guards g' c"
 proof(induct g)
   case Nil
   then show ?case
@@ -319,7 +332,7 @@ proof(induct g)
 next
   case (Cons a g)
   then show ?case
-    using apply_guards_def by auto
+    by (meson foldr_apply_guards gval_foldr_true in_mono)
 qed
 
 lemma apply_guards_subset_append:
@@ -328,7 +341,7 @@ lemma apply_guards_subset_append:
 
 lemma apply_guards_rearrange:
   "x \<in> set G \<Longrightarrow> apply_guards G s = apply_guards (x#G) s"
-  using apply_guards_def by auto
+  by (metis apply_guards_subset insert_absorb2 list.simps(15) mk_disjoint_insert set_subset_Cons)
 
 lemma max_input_Bc: "max_input (Bc x) = None"
   by (simp add: max_input_def)
@@ -349,7 +362,7 @@ lemma gexp_max_input_Nor:
   by (metis List.finite_set Max.union enumerate_gexp_inputs_list less_eq_option_Some_None max_def sup_Some sup_max)
 
 lemma gexp_max_input_In: "max_input (In v l) = AExp.max_input (V v)"
-  by (simp add: AExp.max_input_def GExp.max_input_def)
+  by (metis AExp.max_input_def GExp.max_input_def enumerate_inputs_In)
 
 lemma gval_foldr_gOr_invalid:
   "(gval (fold gOr l g) s = invalid) = (\<exists>g' \<in> (set (g#l)). gval g' s = invalid)"
@@ -360,7 +373,7 @@ proof(induct l rule: rev_induct)
 next
   case (snoc x xs)
   then show ?case
-    by (simp, metis gval_gOr maybe_or_invalid)
+    by (simp, metis maybe_or_invalid)
 qed
 
 lemma gval_foldr_gOr_true:
@@ -415,7 +428,7 @@ next
     by (simp only: gval_In_cons list.map gval_fold_gOr)
 qed
 
-fun fold_In :: "'a \<Rightarrow> value list \<Rightarrow> 'a gexp" where
+fun fold_In :: "'a \<Rightarrow> 'b list \<Rightarrow> ('a, 'b) gexp" where
   "fold_In _ [] = Bc False" |
   "fold_In v [l] = Eq (V v) (L l)" |
   "fold_In v (l#t) = fold gOr (map (\<lambda>x. Eq (V v) (L x)) t) (Eq (V v) (L l))"
@@ -666,8 +679,7 @@ next
 next
   case (In v l)
   then show ?case
-    apply (simp add: gexp_max_input_In)
-    using aval_take by fastforce
+    by (metis aval.simps(2) aval_take gexp_max_input_In gval.simps(5))
 qed
 
 lemma gval_fold_gAnd_append_singleton:
@@ -827,24 +839,24 @@ next
     by (simp add: length_padding)
 qed
 
-fun enumerate_gexp_strings :: "'a gexp \<Rightarrow> String.literal set" where
+fun enumerate_gexp_strings :: "('a, value) gexp \<Rightarrow> String.literal set" where
   "enumerate_gexp_strings (Bc _) = {}" |
   "enumerate_gexp_strings (Eq a1 a2) = enumerate_aexp_strings a1 \<union> enumerate_aexp_strings a2" |
   "enumerate_gexp_strings (Gt a1 a2) = enumerate_aexp_strings a1 \<union> enumerate_aexp_strings a2" |
   "enumerate_gexp_strings (In v l) = fold (\<lambda>x acc. case x of Num n \<Rightarrow> acc | Str s \<Rightarrow> insert s acc) l {}" |
   "enumerate_gexp_strings (Nor g1 g2) = enumerate_gexp_strings g1 \<union> enumerate_gexp_strings g2"
 
-fun enumerate_gexp_ints :: "'a gexp \<Rightarrow> int set" where
+fun enumerate_gexp_ints :: "('a, 'b::aexp_value) gexp \<Rightarrow> int set" where
   "enumerate_gexp_ints (Bc _) = {}" |
   "enumerate_gexp_ints (Eq a1 a2) = enumerate_aexp_ints a1 \<union> enumerate_aexp_ints a2" |
   "enumerate_gexp_ints (Gt a1 a2) = enumerate_aexp_ints a1 \<union> enumerate_aexp_ints a2" |
-  "enumerate_gexp_ints (In v l) = fold (\<lambda>x acc. case x of Str s \<Rightarrow> acc | Num n \<Rightarrow> insert n acc) l {}" |
+  "enumerate_gexp_ints (In v l) = fold (\<lambda>x acc. if isNum x then insert (getNum x) acc else acc) l {}" |
   "enumerate_gexp_ints (Nor g1 g2) = enumerate_gexp_ints g1 \<union> enumerate_gexp_ints g2"
 
-definition restricted_once :: "'a \<Rightarrow> 'a gexp list \<Rightarrow> bool" where
+definition restricted_once :: "'a \<Rightarrow> ('a, 'b) gexp list \<Rightarrow> bool" where
   "restricted_once v G = (length (filter (\<lambda>g. gexp_constrains g (V v)) G) = 1)"
 
-definition not_restricted :: "'a \<Rightarrow> 'a gexp list \<Rightarrow> bool" where
+definition not_restricted :: "'a \<Rightarrow> ('a, 'b) gexp list \<Rightarrow> bool" where
   "not_restricted v G = (length (filter (\<lambda>g. gexp_constrains g (V v)) G) = 0)"
 
 lemma restricted_once_cons:
@@ -855,10 +867,10 @@ lemma not_restricted_cons:
   "not_restricted v (g#gs) = ((\<not> gexp_constrains g (V v)) \<and> not_restricted v gs)"
   by (simp add: not_restricted_def)
 
-definition enumerate_vars :: "vname gexp \<Rightarrow> vname list" where
+definition enumerate_vars :: "(vname, 'b) gexp \<Rightarrow> vname list" where
   "enumerate_vars g = sorted_list_of_set ((image R (enumerate_regs g)) \<union> (image I (enumerate_gexp_inputs g)))"
 
-fun rename_regs :: "(nat \<Rightarrow> nat) \<Rightarrow> vname gexp \<Rightarrow> vname gexp" where
+fun rename_regs :: "(nat \<Rightarrow> nat) \<Rightarrow> (vname, 'b) gexp \<Rightarrow> (vname, 'b) gexp" where
   "rename_regs _ (Bc b) = Bc b" |
   "rename_regs f (Eq a1 a2) = Eq (AExp.rename_regs f a1) (AExp.rename_regs f a2)" |
   "rename_regs f (Gt a1 a2) = Gt (AExp.rename_regs f a1) (AExp.rename_regs f a2)" |
@@ -866,7 +878,7 @@ fun rename_regs :: "(nat \<Rightarrow> nat) \<Rightarrow> vname gexp \<Rightarro
   "rename_regs f (In v vs) = In v vs" |
   "rename_regs f (Nor g1 g2) = Nor (rename_regs f g1) (rename_regs f g2)"
 
-definition eq_upto_rename :: "vname gexp \<Rightarrow> vname gexp \<Rightarrow> bool" where
+definition eq_upto_rename :: "(vname, 'b) gexp \<Rightarrow> (vname, 'b) gexp \<Rightarrow> bool" where
   "eq_upto_rename g1 g2 = (\<exists>f. bij f \<and> rename_regs f g1 = g2)"
 
 end

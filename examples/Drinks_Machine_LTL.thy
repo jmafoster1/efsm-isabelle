@@ -18,16 +18,16 @@ proof-
     by (induct i, auto)
   show ?thesis
     apply (case_tac "\<exists>d. (l, i) = (STR ''select'', [d])")
-     apply (simp add: possible_steps_0 length_i select_def apply_updates_def)
+     apply (simp add: possible_steps_0 length_i select_def apply_updates_def join_ir_nth)
     using select apply auto[1]
     by (simp add: possible_steps_0_invalid length_i_2 invalid)
 qed
 
 lemma P_ltl_step_1:
   assumes invalid: "P (None, [], r)"
-  assumes coin: "l = STR ''coin'' \<longrightarrow> P (Some 1, [value_plus (r $ 2) (Some (hd i))], r(2 $:= value_plus (r $ 2) (Some (i ! 0))))"
-  assumes vend_fail: "value_gt (Some (Num 100)) (r $ 2) = trilean.true \<longrightarrow> P (Some 1, [],r)"
-  assumes vend: "\<not>\<^sub>? value_gt (Some (Num 100)) (r $ 2) = trilean.true \<longrightarrow> P (Some 2, [r$1], r)"
+  assumes coin: "l = STR ''coin'' \<longrightarrow> P (Some 1, [(r $ 2) +\<^sub>? (Some (hd i))], r(2 $:= (r $ 2) +\<^sub>? (Some (i ! 0))))"
+  assumes vend_fail: "(Some (Num 100)) >\<^sub>? (r $ 2) = trilean.true \<longrightarrow> P (Some 1, [],r)"
+  assumes vend: "\<not>\<^sub>? (Some (Num 100)) >\<^sub>? (r $ 2) = trilean.true \<longrightarrow> P (Some 2, [r$1], r)"
   shows "P (ltl_step drinks (Some 1) r (l, i))"
 proof-
   have length_i: "\<And>s. \<exists>d. (l, i) = (s, [d]) \<Longrightarrow> length i = 1"
@@ -36,7 +36,7 @@ proof-
     by (induct i, auto)
   show ?thesis
     apply (case_tac "\<exists>d. (l, i) = (STR ''coin'', [d])")
-     apply (simp add: possible_steps_1_coin length_i coin_def apply_outputs_def apply_updates_def)
+     apply (simp add: possible_steps_1_coin length_i coin_def apply_outputs_def apply_updates_def join_ir_nth)
     using coin apply auto[1]
     apply (case_tac "(l, i) = (STR ''vend'', [])")
      apply (case_tac "\<exists>n. r $ 2 = Some (Num n)")
@@ -45,13 +45,13 @@ proof-
        apply (simp add: drinks_vend_sufficient vend_def apply_updates_def apply_outputs_def)
        apply (metis finfun_upd_triv possible_steps_2_vend vend vend_ge_100)
       apply (simp add: drinks_vend_insufficient vend_fail_def apply_updates_def apply_outputs_def)
-      apply (metis MaybeBoolInt.simps(1) finfun_upd_triv not_less value_gt_def vend_fail)
+      apply (metis MaybeBoolInt.simps(1) finfun_upd_triv not_less gt_value_def vend_fail)
      apply (simp add: drinks_vend_invalid invalid)
     by (simp add: drinks_no_possible_steps_1 length_i_2 invalid)
 qed
 
 lemma LTL_r2_not_always_gt_100: "not (alw (check_exp (Gt (V (Rg 2)) (L (Num 100))))) (watch drinks i)"
-  using value_gt_def by auto
+  using gt_value_def by auto
 
 lemma drinks_step_2_none: "ltl_step drinks (Some 2) r e = (None, [], r)"
   by (simp add: drinks_end ltl_step_none_2)
@@ -62,7 +62,10 @@ proof(coinduction)
   case alw
   then show ?case
     apply (simp add: drinks_step_2_none)
-    by (metis (mono_tags, lifting) alw_mono nxt.simps once_none_nxt_always_none option.distinct(1))
+    apply (rule disjI2)
+    apply (rule alw_mono[of "nxt (state_eq None)"])
+    apply (simp add: once_none_nxt_always_none)
+    by simp
 qed
 
 lemma one_before_two_aux:
@@ -120,7 +123,7 @@ lemma costsMoney_aux:
   apply standard
   apply (rule disjI2)
   apply (rule alw_mono[of "nxt (state_eq None)"])
-   apply (metis (no_types, lifting) drinks_step_2_none fst_conv make_full_observation.sel(2) nxt.simps nxt_alw once_none_always_none_aux)
+   apply (metis Pair_inject drinks_step_2_none make_full_observation.simps(2) nxt.simps nxt_alw once_none_always_none_aux prod.collapse)
   by simp
 
 (* costsMoney: THEOREM drinks |- G(X(cfstate=State_2) => gval(value_ge(r_2, Some(NUM(100))))); *)
@@ -174,7 +177,7 @@ lemma LTL_neverReachS2:"(((((action_eq (''select'', [Str ''coke''])))
   apply simp
   apply (simp add: possible_steps_0 select_def)
   apply (case_tac "shd x2", clarify)
-  apply (simp add: possible_steps_1_coin coin_def value_plus_def finfun_update_twist apply_updates_def)
+  apply (simp add: possible_steps_1_coin coin_def plus_value_def finfun_update_twist apply_updates_def join_ir_nth)
   apply (case_tac "shd (stl x2)", clarify)
   by (simp add: drinks_vend_sufficient )
 
@@ -191,7 +194,7 @@ lemma ltl_step_select:
   apply (rule  ltl_step_some[of _ _ _ _ _ _ select])
     apply (simp add: possible_steps_0)
    apply (simp add: select_def)
-  by (simp add: select_def finfun_update_twist apply_updates_def)
+  by (simp add: select_def finfun_update_twist apply_updates_def join_ir_nth)
 
 lemma ltl_step_not_coin_or_vend:
   "\<nexists>i. e = (STR ''coin'', [i]) \<Longrightarrow>
@@ -234,7 +237,7 @@ lemma drink_costs_money_aux:
      apply (rule alw_mono[of "nxt (output_eq [])"])
       apply (simp add: no_output_none_nxt)
      apply simp
-    apply (simp add: Str_def value_plus_never_string)
+    apply (simp add: Str_def plus_value_never_string)
     apply auto[1]
    apply auto[1]
   apply simp
@@ -319,7 +322,7 @@ text_raw\<open>}%endsnip\<close>
 text_raw\<open>\snip{outputVendUnfolded}{1}{2}{%\<close>
 lemma LTL_output_vend_unfolded:
   "alw (\<lambda>xs. label (shd xs) = STR ''vend'' \<and> nxt (\<lambda>s. output (shd s) = [Some d]) xs \<longrightarrow>
-              \<not>\<^sub>? value_gt (Some (Num 100)) (datastate (shd xs) $ 2) = trilean.true)
+              \<not>\<^sub>? (Some (Num 100)) >\<^sub>? (datastate (shd xs) $ 2) = trilean.true)
      (watch drinks t)"
   apply (insert LTL_output_vend[of d t])
   by (simp add: implode_vend)

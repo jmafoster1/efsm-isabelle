@@ -13,14 +13,14 @@ begin
 declare One_nat_def [simp del]
 unbundle finfun_syntax
 
-type_synonym registers = "nat \<Rightarrow>f value option"
-type_synonym 'a datastate = "'a \<Rightarrow> value option"
+type_synonym 'a registers = "nat \<Rightarrow>f 'a option"
+type_synonym ('a, 'b) datastate = "'a \<Rightarrow> 'b option"
 
 text_raw\<open>\snip{aexptype}{1}{2}{%\<close>
-datatype 'a aexp = L "value" | V 'a | Plus "'a aexp" "'a aexp" | Minus "'a aexp" "'a aexp" | Times "'a aexp" "'a aexp"
+datatype ('a, 'b) aexp = L 'b | V 'a | Plus "('a, 'b) aexp" "('a, 'b) aexp" | Minus "('a, 'b) aexp" "('a, 'b) aexp" | Times "('a, 'b) aexp" "('a, 'b) aexp" 
 text_raw\<open>}%endsnip\<close>
 
-fun is_lit :: "'a aexp \<Rightarrow> bool" where
+fun is_lit :: "('a, 'b) aexp \<Rightarrow> bool" where
   "is_lit (L _) = True" |
   "is_lit _ = False"
 
@@ -34,15 +34,15 @@ lemma aexp_induct_separate_V_cases  [case_names L I R Plus Minus Times]:
    P a"
   by (metis aexp.induct vname.exhaust)
 
-fun aval :: "'a aexp \<Rightarrow> 'a datastate \<Rightarrow> value option" where
+fun aval :: "('a, 'b::aexp_value) aexp \<Rightarrow> ('a, 'b::aexp_value) datastate \<Rightarrow> 'b option" where
   "aval (L x) s = Some x" |
   "aval (V x) s = s x" |
-  "aval (Plus a\<^sub>1 a\<^sub>2) s = value_plus (aval a\<^sub>1 s)(aval a\<^sub>2 s)" |
-  "aval (Minus a\<^sub>1 a\<^sub>2) s = value_minus (aval a\<^sub>1 s) (aval a\<^sub>2 s)" |
-  "aval (Times a\<^sub>1 a\<^sub>2) s = value_times (aval a\<^sub>1 s) (aval a\<^sub>2 s)"
+  "aval (Plus a\<^sub>1 a\<^sub>2) s = (aval a\<^sub>1 s) +\<^sub>? (aval a\<^sub>2 s)" |
+  "aval (Minus a\<^sub>1 a\<^sub>2) s = (aval a\<^sub>1 s) -\<^sub>? (aval a\<^sub>2 s)" |
+  "aval (Times a\<^sub>1 a\<^sub>2) s = (aval a\<^sub>1 s) *\<^sub>? (aval a\<^sub>2 s)"
 
 lemma aval_plus_symmetry: "aval (Plus x y) s = aval (Plus y x) s"
-  by (simp add: value_plus_symmetry)
+  by (simp add: plus_aexp_commute)
 
 text \<open>A little syntax magic to write larger states compactly:\<close>
 definition null_state ("<>") where
@@ -70,10 +70,10 @@ lemma empty_None: "<> = (K$ None)"
 lemma apply_empty_None [simp]: "<> $ x2 = None"
   by (simp add: null_state_def bot_option_def)
 
-definition input2state :: "value list \<Rightarrow> registers" where
+definition input2state :: "'a list \<Rightarrow> 'a registers" where
   "input2state n = fold (\<lambda>(k, v) f. f(k $:= Some v)) (enumerate 0 n) (K$ None)"
 
-primrec input2state_prim :: "value list \<Rightarrow> nat \<Rightarrow> registers" where
+primrec input2state_prim :: "'a::aexp_value list \<Rightarrow> nat \<Rightarrow> 'a registers" where
   "input2state_prim [] _ = (K$ None)" |
   "input2state_prim (v#t) k = (input2state_prim t (k+1))(k $:= Some v)"
 
@@ -137,13 +137,11 @@ qed
 
 lemma input2state_not_None:
   "(input2state i $ x \<noteq> None) \<Longrightarrow> (x < length i)"
-  using input2state_within_bounds by blast
+  by (meson input2state_within_bounds not_Some_eq)
 
 lemma input2state_Some:
   "(\<exists>v. input2state i $ x = Some v) = (x < length i)"
-  apply standard
-  using input2state_within_bounds apply blast
-  by (simp add: input2state_nth)
+  by (meson input2state_nth input2state_within_bounds)
 
 lemma input2state_cons: "x1 > 0 \<Longrightarrow>
    x1 < length ia \<Longrightarrow>
@@ -227,7 +225,7 @@ lemma input2state_double_exists_2:
   apply (metis input2state_nth input2state_within_bounds le_trans length_append_repeat length_list_update linorder_not_le nth_append nth_list_update_neq order_refl)
   by (metis input2state_nth length_append length_input2state_repeat length_list_update length_repeat nth_list_update_eq)
 
-definition join_ir :: "value list \<Rightarrow> registers \<Rightarrow> vname datastate" where
+definition join_ir :: "'a list \<Rightarrow> 'a registers \<Rightarrow>  (vname, 'a) datastate" where
   "join_ir i r \<equiv> (\<lambda>x. case x of
     R n \<Rightarrow> r $ n |
     I n \<Rightarrow> (input2state i) $ n
@@ -245,84 +243,85 @@ lemma join_ir_empty [simp]: "join_ir [] <> = (\<lambda>x. None)"
 lemma join_ir_R [simp]: "(join_ir i r) (R n) = r $ n"
   by (simp add: join_ir_def)
 
+lemma join_ir_I:
+  shows "(join_ir i r) (I n) = (join_ir i r') (I n)"
+    and "(\<exists>i r. P (join_ir i r (I x1))) = (\<exists>i. P (join_ir i r (I x1)))"
+   apply (simp add: join_ir_def)
+  by (simp add: join_ir_def)
+
+lemma join_ir_nth:
+  shows "i < length is \<Longrightarrow> join_ir is r (I i) = Some (is ! i)"
+    and "i \<ge> length is \<Longrightarrow> join_ir is r (I i) = None"
+    and "(join_ir is r (I i) = Some (is ! i)) = (i < length is)"
+  apply (simp add: input2state_nth join_ir_def)
+   apply (simp add: input2state_out_of_bounds join_ir_def)
+  by (metis input2state_nth input2state_within_bounds join_ir_def vname.simps(5))
+
+lemma join_ir_I_Some: "join_ir is r (I i) = Some x \<Longrightarrow> x = is ! i"
+  by (metis join_ir_nth(1) join_ir_nth(2) not_le_imp_less option.inject option.simps(3))
+
+lemma exists_join_ir_ext: "\<exists>i r. join_ir i r v = s v"
+proof(cases v)
+  case (I x1)
+  then show ?thesis
+    apply simp
+    by (metis Ex_list_of_length antisym_conv1 dual_order.irrefl input2state_double_exists input2state_nth input2state_within_bounds join_ir_nth(1) join_ir_nth(2) option.exhaust)
+next
+  case (R x2)
+  then show ?thesis
+    by (metis finfun_const_apply join_ir_R)
+qed
+
 lemma join_ir_double_exists:
   "\<exists>i r. join_ir i r v = Some a \<and> join_ir i r v' = Some a"
 proof(cases v)
   case (I x1)
   then show ?thesis
-    apply (simp add: join_ir_def)
-    apply (cases v')
-     apply (simp add: input2state_double_exists input2state_exists)
-    using input2state_exists by auto
+    apply simp
+    by (metis (mono_tags, hide_lams) input2state_double_exists join_ir_def vname.exhaust vname.simps(5) vname.simps(6))
 next
   case (R x2)
   then show ?thesis
-    apply (simp add: join_ir_def)
-    apply (cases v')
-    using input2state_exists apply force
-    using input2state_double_exists by fastforce
+  by (metis finfun_const_apply input2state_exists join_ir_def vname.exhaust vname.simps(5) vname.simps(6))
 qed
 
 lemma join_ir_double_exists_2:
   "v \<noteq> v' \<Longrightarrow> \<exists>i r. join_ir i r v = Some a \<and> join_ir i r v' = Some a'"
+
+
 proof(cases v)
   case (I x1)
   assume "v \<noteq> v'"
   then show ?thesis
-    apply (simp add: join_ir_def)
+    apply (simp add: join_ir_def I)
     apply (cases v')
-     apply (simp add: I input2state_double_exists_2)
-    using I input2state_exists by auto
+     apply (simp add: input2state_double_exists_2)
+    using input2state_exists by force
 next
   case (R x2)
   assume "v \<noteq> v'"
   then show ?thesis
-    apply (simp add: join_ir_def)
+    apply (simp add: join_ir_def R)
     apply (cases v')
-     apply simp
-    using R input2state_exists apply auto[1]
-    apply (simp add: R)
-    apply (rule_tac x="<x2 $:= Some a,x2a $:= Some a'>" in exI)
-    by simp
+    using input2state_exists apply force
+    using input2state_double_exists_2 by force
 qed
 
-lemma exists_join_ir_ext: "\<exists>i r. join_ir i r v = s v"
-  apply (simp add: join_ir_def)
-  apply (case_tac "s v")
-   apply (cases v)
-    apply (rule_tac x="[]" in exI)
-    apply (simp add: input2state_out_of_bounds)
-   apply simp
-   apply (rule_tac x="<>" in exI)
-   apply simp
-  apply simp
-  apply (cases v)
-   apply simp
-   defer
-   apply simp
-   apply (rule_tac x="<x2 $:= Some a>" in exI)
-   apply simp
-  by (simp add: input2state_exists)
-
-lemma join_ir_nth [simp]:
-  "i < length is \<Longrightarrow> join_ir is r (I i) = Some (is ! i)"
-  by (simp add: join_ir_def input2state_nth)
-
-fun aexp_constrains :: "'a aexp \<Rightarrow> 'a aexp \<Rightarrow> bool" where
+fun aexp_constrains :: "('a, 'b) aexp \<Rightarrow> ('a, 'b) aexp \<Rightarrow> bool" where
   "aexp_constrains (L l) a = (L l = a)" |
   "aexp_constrains (V v) v' = (V v = v')" |
   "aexp_constrains (Plus a1 a2) v = ((Plus a1 a2) = v \<or> (Plus a1 a2) = v \<or> (aexp_constrains a1 v \<or> aexp_constrains a2 v))" |
   "aexp_constrains (Minus a1 a2) v = ((Minus a1 a2) = v \<or> (aexp_constrains a1 v \<or> aexp_constrains a2 v))" |
   "aexp_constrains (Times a1 a2) v = ((Times a1 a2) = v \<or> (aexp_constrains a1 v \<or> aexp_constrains a2 v))"
 
-fun aexp_same_structure :: "'a aexp \<Rightarrow> 'a aexp \<Rightarrow> bool" where
+fun aexp_same_structure :: "('a, 'b) aexp \<Rightarrow> ('a, 'b) aexp \<Rightarrow> bool" where
   "aexp_same_structure (L v) (L v') = True" |
   "aexp_same_structure (V v) (V v') = True" |
   "aexp_same_structure (Plus a1 a2) (Plus a1' a2') = (aexp_same_structure a1 a1' \<and> aexp_same_structure a2 a2')" |
   "aexp_same_structure (Minus a1 a2) (Minus a1' a2') = (aexp_same_structure a1 a1' \<and> aexp_same_structure a2 a2')" |
   "aexp_same_structure _ _ = False"
 
-fun enumerate_aexp_inputs :: "vname aexp \<Rightarrow> nat set" where
+fun enumerate_aexp_inputs :: "(vname, 'a) aexp \<Rightarrow> nat set" where
   "enumerate_aexp_inputs (L _) = {}" |
   "enumerate_aexp_inputs (V (I n)) = {n}" |
   "enumerate_aexp_inputs (V (R n)) = {}" |
@@ -355,7 +354,7 @@ next
     by (metis enumerate_aexp_inputs.simps(6) set_append)
 qed
 
-fun enumerate_regs :: "vname aexp \<Rightarrow> nat set" where
+fun enumerate_regs :: "(vname, 'a) aexp \<Rightarrow> nat set" where
   "enumerate_regs (L _) = {}" |
   "enumerate_regs (V (R n)) = {n}" |
   "enumerate_regs (V (I _)) = {}" |
@@ -422,10 +421,10 @@ next
     by simp
 qed
 
-definition max_input :: "vname aexp \<Rightarrow> nat option" where
+definition max_input :: "(vname, 'a) aexp \<Rightarrow> nat option" where
   "max_input g = (let inputs = (enumerate_aexp_inputs g) in if inputs = {} then None else Some (Max inputs))"
 
-definition max_reg :: "vname aexp \<Rightarrow> nat option" where
+definition max_reg :: "(vname, 'a) aexp \<Rightarrow> nat option" where
   "max_reg g = (let regs = (enumerate_regs g) in if regs = {} then None else Some (Max regs))"
 
 lemma max_reg_V_I: "max_reg (V (I n)) = None"
@@ -490,14 +489,15 @@ lemma enumerate_aexp_inputs_empty_input_unconstrained:
 lemma input_unconstrained_aval_input_swap:
   "\<forall>i. \<not> aexp_constrains a (V (I i)) \<Longrightarrow>
    aval a (join_ir i r) = aval a (join_ir i' r)"
-  using join_ir_def
   by (induct a rule: aexp_induct_separate_V_cases, auto)
 
 lemma input_unconstrained_aval_register_swap:
   "\<forall>i. \<not> aexp_constrains a (V (R i)) \<Longrightarrow>
    aval a (join_ir i r) = aval a (join_ir i r')"
-  using join_ir_def
-  by (induct a rule: aexp_induct_separate_V_cases, auto)
+  apply (induct a rule: aexp_induct_separate_V_cases)
+       apply simp
+  using max_reg_V_I no_reg_aval_swap_regs apply blast
+  by auto
 
 lemma unconstrained_variable_swap_aval:
   "\<forall>i. \<not> aexp_constrains a (V (I i)) \<Longrightarrow>
@@ -579,7 +579,7 @@ next
     by (metis aval_take no_reg_aval_swap_regs)
 qed
 
-fun enumerate_aexp_strings :: "'a aexp \<Rightarrow> String.literal set" where
+fun enumerate_aexp_strings :: "('a, value) aexp \<Rightarrow> String.literal set" where
   "enumerate_aexp_strings (L (Str s)) = {s}" |
   "enumerate_aexp_strings (L (Num s)) = {}" |
   "enumerate_aexp_strings (V _) = {}" |
@@ -587,18 +587,17 @@ fun enumerate_aexp_strings :: "'a aexp \<Rightarrow> String.literal set" where
   "enumerate_aexp_strings (Minus a1 a2) = enumerate_aexp_strings a1 \<union> enumerate_aexp_strings a2" |
   "enumerate_aexp_strings (Times a1 a2) = enumerate_aexp_strings a1 \<union> enumerate_aexp_strings a2"
 
-fun enumerate_aexp_ints :: "'a aexp \<Rightarrow> int set" where
-  "enumerate_aexp_ints (L (Str s)) = {}" |
-  "enumerate_aexp_ints (L (Num s)) = {s}" |
+fun enumerate_aexp_ints :: "('a, 'b::aexp_value) aexp \<Rightarrow> int set" where
+  "enumerate_aexp_ints (L v) = (if (isNum v) then {getNum v} else {})" |
   "enumerate_aexp_ints (V _) = {}" |
   "enumerate_aexp_ints (Plus a1 a2) = enumerate_aexp_ints a1 \<union> enumerate_aexp_ints a2" |
   "enumerate_aexp_ints (Minus a1 a2) = enumerate_aexp_ints a1 \<union> enumerate_aexp_ints a2" |
   "enumerate_aexp_ints (Times a1 a2) = enumerate_aexp_ints a1 \<union> enumerate_aexp_ints a2"
 
-definition enumerate_vars :: "vname aexp \<Rightarrow> vname set" where
+definition enumerate_vars :: "(vname, 'a) aexp \<Rightarrow> vname set" where
   "enumerate_vars a = (image I (enumerate_aexp_inputs a)) \<union> (image R (enumerate_regs a))"
 
-fun rename_regs :: "(nat \<Rightarrow> nat) \<Rightarrow> vname aexp \<Rightarrow> vname aexp" where
+fun rename_regs :: "(nat \<Rightarrow> nat) \<Rightarrow> (vname, 'a) aexp \<Rightarrow> (vname, 'a) aexp" where
   "rename_regs _ (L l) = (L l)" |
   "rename_regs f (V (R r)) = (V (R (f r)))" |
   "rename_regs _ (V v) = (V v)" |
@@ -606,7 +605,7 @@ fun rename_regs :: "(nat \<Rightarrow> nat) \<Rightarrow> vname aexp \<Rightarro
   "rename_regs f (Minus a b) = Minus (rename_regs f a) (rename_regs f b)" |
   "rename_regs f (Times a b) = Times (rename_regs f a) (rename_regs f b)"
 
-definition eq_upto_rename :: "vname aexp \<Rightarrow> vname aexp \<Rightarrow> bool" where
+definition eq_upto_rename :: "(vname, 'a) aexp \<Rightarrow> (vname, 'a) aexp \<Rightarrow> bool" where
   "eq_upto_rename a1 a2 = (\<exists>f. bij f \<and> rename_regs f a1 = a2)"
 
 end

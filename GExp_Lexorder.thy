@@ -12,15 +12,15 @@ imports
   "HOL-Library.List_Lexorder"
 begin
 
-fun height :: "'a gexp \<Rightarrow> nat" where
+fun height :: "('a, 'b) gexp \<Rightarrow> nat" where
   "height (Bc _) = 1" |
   "height (Eq a\<^sub>1 a\<^sub>2) = 1 + max (AExp_Lexorder.height a\<^sub>1) (AExp_Lexorder.height a\<^sub>2)" |
   "height (Gt a\<^sub>1 a\<^sub>2) = 1 + max (AExp_Lexorder.height a\<^sub>1) (AExp_Lexorder.height a\<^sub>2)" |
   "height (In v l) = 2 + size l" |
   "height (Nor g\<^sub>1 g\<^sub>2) = 1 + max (height g\<^sub>1) (height g\<^sub>2)"
 
-instantiation gexp :: (linorder) linorder begin
-fun less_gexp_aux :: "'a gexp \<Rightarrow> 'a gexp \<Rightarrow> bool"  where
+instantiation gexp :: (linorder, linorder) linorder begin
+fun less_gexp_aux :: "('a, 'b) gexp \<Rightarrow> ('a, 'b) gexp \<Rightarrow> bool"  where
   "less_gexp_aux (Bc b1) (Bc b2) = (b1 < b2)" |
   "less_gexp_aux (Bc b1) _ = True" |
 
@@ -40,7 +40,7 @@ fun less_gexp_aux :: "'a gexp \<Rightarrow> 'a gexp \<Rightarrow> bool"  where
   "less_gexp_aux (Nor g1 g2) (Nor g1' g2') = ((less_gexp_aux g1 g1') \<or> ((g1 = g1') \<and> (less_gexp_aux g2 g2')))" |
   "less_gexp_aux (Nor g1 g2) _ = False"
 
-definition less_gexp :: "'a gexp \<Rightarrow> 'a gexp \<Rightarrow> bool" where
+definition less_gexp :: "('a, 'b) gexp \<Rightarrow> ('a, 'b) gexp \<Rightarrow> bool" where
   "less_gexp a1 a2 = (
     let
       h1 = height a1;
@@ -54,7 +54,7 @@ definition less_gexp :: "'a gexp \<Rightarrow> 'a gexp \<Rightarrow> bool" where
 
 declare less_gexp_def [simp]
 
-definition less_eq_gexp :: "'a gexp \<Rightarrow> 'a gexp \<Rightarrow> bool" where
+definition less_eq_gexp :: "('a, 'b) gexp \<Rightarrow> ('a, 'b) gexp \<Rightarrow> bool" where
   "less_eq_gexp e1 e2 \<equiv> (e1 < e2) \<or> (e1 = e2)"
 
 lemma less_gexp_aux_antisym: "less_gexp_aux x y = (\<not>(less_gexp_aux y x) \<and> (x \<noteq> y))"
@@ -137,7 +137,7 @@ next
   then show ?case by auto
 qed
 
-lemma less_gexp_antisym: "(x::'a gexp) < y = (\<not>(y < x) \<and> (x \<noteq> y))"
+lemma less_gexp_antisym: "(x::('a, 'b) gexp) < y = (\<not>(y < x) \<and> (x \<noteq> y))"
   apply (simp add: Let_def)
   apply standard
   using less_gexp_aux_antisym apply blast
@@ -231,12 +231,12 @@ next
   then show ?case by (cases z, auto)
 qed
 
-lemma less_gexp_trans: "(x::'a gexp) < y \<Longrightarrow> y < z \<Longrightarrow> x < z"
+lemma less_gexp_trans: "(x::('a, 'b) gexp) < y \<Longrightarrow> y < z \<Longrightarrow> x < z"
   apply (simp add: Let_def)
   by (metis (no_types, lifting) dual_order.strict_trans less_gexp_aux_trans less_imp_not_less)
 
 instance proof
-  fix x y z :: "'a gexp"
+  fix x y z :: "('a, 'b) gexp"
   show "(x < y) = (x \<le> y \<and> \<not> y \<le> x)"
     by (metis less_gexp_antisym less_eq_gexp_def)
   show "(x \<le> x)"

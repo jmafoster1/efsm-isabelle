@@ -8,27 +8,27 @@ imports "EFSM.EFSM" "HOL-Library.Linear_Temporal_Logic_on_Streams"
 begin
 
 text_raw\<open>\snip{statedef}{1}{2}{%\<close>
-record state =
+record 'a state =
   statename :: "nat option"
-  datastate :: registers
-  action :: action
-  "output" :: outputs
+  datastate :: "'a registers"
+  action :: "'a action"
+  "output" :: "'a outputs"
 text_raw\<open>}%endsnip\<close>
 
 text_raw\<open>\snip{whitebox}{1}{2}{%\<close>
-type_synonym whitebox_trace = "state stream"
+type_synonym 'a whitebox_trace = "'a state stream"
 text_raw\<open>}%endsnip\<close>
 
-type_synonym property = "whitebox_trace \<Rightarrow> bool"
+type_synonym 'a property = "'a whitebox_trace \<Rightarrow> bool"
 
-abbreviation label :: "state \<Rightarrow> String.literal" where
+abbreviation label :: "'a state \<Rightarrow> String.literal" where
   "label s \<equiv> fst (action s)"
 
-abbreviation inputs :: "state \<Rightarrow> value list" where
+abbreviation inputs :: "'a state \<Rightarrow> 'a list" where
   "inputs s \<equiv> snd (action s)"
 
 text_raw\<open>\snip{ltlStep}{1}{2}{%\<close>
-fun ltl_step :: "transition_matrix \<Rightarrow> cfstate option \<Rightarrow> registers \<Rightarrow> action \<Rightarrow> (nat option \<times> outputs \<times> registers)" where
+fun ltl_step :: "('a::aexp_value) transition_matrix \<Rightarrow> cfstate option \<Rightarrow> 'a registers \<Rightarrow> 'a action \<Rightarrow> (nat option \<times> 'a outputs \<times> 'a registers)" where
   "ltl_step _ None r _ = (None, [], r)" |
   "ltl_step e (Some s) r (l, i) = (let possibilities = possible_steps e s r l i in
                    if possibilities = {||} then (None, [], r)
@@ -112,7 +112,7 @@ the \texttt{None} state. From here, the behaviour is constant for the rest of th
 control flow state remains None; the data state does not change, and no output is produced.\<close>
 
 text_raw\<open>\snip{makeFullObservation}{1}{2}{%\<close>
-primcorec make_full_observation :: "transition_matrix \<Rightarrow> cfstate option \<Rightarrow> registers \<Rightarrow> outputs \<Rightarrow> action stream \<Rightarrow> whitebox_trace" where
+primcorec make_full_observation :: "('a::aexp_value) transition_matrix \<Rightarrow> cfstate option \<Rightarrow> 'a registers \<Rightarrow> 'a outputs \<Rightarrow> 'a action stream \<Rightarrow> 'a whitebox_trace" where
   "make_full_observation e s d p i = (
     let (s', o', d') = ltl_step e s d (shd i) in
     \<lparr>statename = s, datastate = d, action=(shd i), output = p\<rparr>##(make_full_observation e s' d' o' (stl i))
@@ -120,7 +120,7 @@ primcorec make_full_observation :: "transition_matrix \<Rightarrow> cfstate opti
 text_raw\<open>}%endsnip\<close>
 
 text_raw\<open>\snip{watch}{1}{2}{%\<close>
-abbreviation watch :: "transition_matrix \<Rightarrow> action stream \<Rightarrow> whitebox_trace" where
+abbreviation watch :: "('a::{aexp_value,order}) transition_matrix \<Rightarrow> 'a action stream \<Rightarrow> 'a whitebox_trace" where
   "watch e i \<equiv> (make_full_observation e (Some 0) <> [] i)"
 text_raw\<open>}%endsnip\<close>
 
@@ -132,7 +132,7 @@ subsubsection\<open>State Equality\<close>
 text\<open>The \textsc{state\_eq} takes a cfstate option representing a control flow state index and
 returns true if this is the control flow state at the head of the full observation.\<close>
 
-abbreviation state_eq :: "cfstate option \<Rightarrow> whitebox_trace \<Rightarrow> bool" where
+abbreviation state_eq :: "cfstate option \<Rightarrow> 'a whitebox_trace \<Rightarrow> bool" where
   "state_eq v s \<equiv> statename (shd s) = v"
 
 lemma state_eq_holds: "state_eq s = holds (\<lambda>x. statename x = s)"
@@ -178,9 +178,9 @@ subsubsection\<open>Checking Arbitrary Expressions\<close>
 text\<open>The \textsc{check\_exp} function takes a guard expression and returns true if the guard
 expression evaluates to true in the given state.\<close>
 
-type_synonym ltl_gexp = "ltl_vname gexp"
+type_synonym 'b ltl_gexp = "(ltl_vname, 'b) gexp"
 
-definition join_iro :: "value list \<Rightarrow> registers \<Rightarrow> outputs \<Rightarrow> ltl_vname datastate" where
+definition join_iro :: "'a list \<Rightarrow> 'a registers \<Rightarrow> 'a outputs \<Rightarrow> (ltl_vname \<Rightarrow> 'a option)" where
   "join_iro i r p = (\<lambda>x. case x of
     Rg n \<Rightarrow> r $ n |
     Ip n \<Rightarrow> Some (i ! n) |

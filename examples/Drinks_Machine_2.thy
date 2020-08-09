@@ -8,7 +8,7 @@ begin
 
 (* Only imports Drinks_Machine_LTL so I can easily open all three at once for testing *)
 
-definition vend_nothing :: "transition" where
+definition vend_nothing :: "value transition" where
 "vend_nothing \<equiv> \<lparr>
         Label = (STR ''vend''),
         Arity = 0,
@@ -19,7 +19,7 @@ definition vend_nothing :: "transition" where
 
 lemmas transitions = Drinks_Machine.transitions vend_nothing_def
 
-definition drinks2 :: transition_matrix where
+definition drinks2 :: "value transition_matrix" where
 "drinks2 = {|
               ((0,1), select),
               ((1,1), vend_nothing),
@@ -53,7 +53,7 @@ lemma possible_steps_2_vend:
    possible_steps drinks2 2 r ((STR ''vend'')) [] = {|(3, vend)|}"
   apply (simp add: possible_steps_singleton drinks2_def)
   apply safe
-  by (simp_all add: transitions apply_guards_def value_gt_def join_ir_def connectives)
+  by (simp_all add: transitions apply_guards_def gt_value_def join_ir_def connectives)
 
 lemma recognises_first_select:
   "recognises_execution drinks 0 r ((aa, b) # as) \<Longrightarrow> aa = STR ''select'' \<and> length b = 1"
@@ -73,14 +73,14 @@ lemma drinks2_vend_insufficient2:
    possible_steps drinks2 2 r ((STR ''vend'')) [] = {|(2, vend_fail)|}"
   apply (simp add: possible_steps_singleton drinks2_def)
   apply safe
-  by (simp_all add: transitions apply_guards_def value_gt_def join_ir_def connectives)
+  by (simp_all add: transitions apply_guards_def gt_value_def join_ir_def connectives)
 
 lemma drinks2_vend_sufficient: "r $ 2 = Some (Num x1) \<Longrightarrow>
                 \<not> x1 < 100 \<Longrightarrow>
                 possible_steps drinks2 2 r ((STR ''vend'')) [] = {|(3, vend)|}"
   apply (simp add: possible_steps_singleton drinks2_def)
   apply safe
-  by (simp_all add: transitions apply_guards_def value_gt_def join_ir_def connectives)
+  by (simp_all add: transitions apply_guards_def gt_value_def join_ir_def connectives)
 
 lemma recognises_1_2: "recognises_execution drinks 1 r t \<longrightarrow> recognises_execution drinks2 2 r t"
 proof(induct t arbitrary: r)
@@ -128,7 +128,7 @@ lemma drinks2_0_invalid:
 lemma drinks2_vend_r2_none:
   "r $ 2 = None \<Longrightarrow> possible_steps drinks2 2 r ((STR ''vend'')) [] = {||}"
   apply (simp add: possible_steps_empty drinks2_def can_take_transition_def can_take_def transitions)
-  by (simp add: value_gt_def)
+  by (simp add: gt_value_def)
 
 lemma drinks2_end: "possible_steps drinks2 3 r a b = {||}"
   apply (simp add: possible_steps_def drinks2_def transitions)
@@ -138,7 +138,7 @@ lemma drinks2_vend_r2_String: "r $ 2 = Some (value.Str x2) \<Longrightarrow>
                 possible_steps drinks2 2 r ((STR ''vend'')) [] = {||}"
   apply (simp add: possible_steps_empty drinks2_def)
   apply safe
-  by (simp_all add: transitions can_take_transition_def can_take_def value_gt_def)
+  by (simp_all add: transitions can_take_transition_def can_take_def gt_value_def)
 
 lemma drinks2_2_invalid:
   "fst a = (STR ''coin'') \<longrightarrow> length (snd a) \<noteq> 1 \<Longrightarrow>
@@ -153,14 +153,14 @@ lemma drinks2_1_invalid:
     possible_steps drinks2 1 r a b = {||}"
   apply (simp add: possible_steps_empty drinks2_def)
   apply safe
-  by (simp_all add: transitions can_take_transition_def can_take_def value_gt_def)
+  by (simp_all add: transitions can_take_transition_def can_take_def gt_value_def)
 
 lemma drinks2_vend_invalid:
   "\<nexists>n. r $ 2 = Some (Num n) \<Longrightarrow>
    possible_steps drinks2 2 r (STR ''vend'') [] = {||}"
   apply (simp add: possible_steps_empty drinks2_def)
   apply safe
-  by (simp_all add: transitions can_take_transition_def can_take_def value_gt_def MaybeBoolInt_not_num_1)
+  by (simp_all add: transitions can_take_transition_def can_take_def gt_value_def MaybeBoolInt_not_num_1)
 
 lemma equiv_1_2: "executionally_equivalent drinks 1 r drinks2 2 r x"
 proof(induct x arbitrary: r)

@@ -9,7 +9,7 @@ imports AExp Value_Lexorder
 begin
 
 text_raw\<open>\snip{height}{1}{2}{%\<close>
-fun height :: "'a aexp \<Rightarrow> nat"  where
+fun height :: "('a,'b) aexp \<Rightarrow> nat"  where
   "height (L l2) = 1" |
   "height (V v2) = 1" |
   "height (Plus e1 e2) = 1 + max (height e1) (height e2)" |
@@ -17,8 +17,8 @@ fun height :: "'a aexp \<Rightarrow> nat"  where
   "height (Times e1 e2) = 1 + max (height e1) (height e2)"
 text_raw\<open>}%endsnip\<close>
 
-instantiation aexp :: (linorder) linorder begin
-fun less_aexp_aux :: "'a aexp \<Rightarrow> 'a aexp \<Rightarrow> bool"  where
+instantiation aexp :: (linorder,linorder) linorder begin
+fun less_aexp_aux :: "('a, 'b) aexp \<Rightarrow> ('a, 'b) aexp \<Rightarrow> bool"  where
   "less_aexp_aux (L l1) (L l2) = (l1 < l2)" |
   "less_aexp_aux (L l1) _ = True" |
 
@@ -38,7 +38,7 @@ fun less_aexp_aux :: "'a aexp \<Rightarrow> 'a aexp \<Rightarrow> bool"  where
   "less_aexp_aux (Times e1 e2) (Times e1' e2') =  ((less_aexp_aux e1 e1') \<or> ((e1 = e1') \<and> (less_aexp_aux e2 e2')))" |
   "less_aexp_aux (Times e1 e2) _ = False"
 
-definition less_aexp :: "'a aexp \<Rightarrow> 'a aexp \<Rightarrow> bool" where
+definition less_aexp :: "('a, 'b) aexp \<Rightarrow> ('a, 'b) aexp \<Rightarrow> bool" where
   "less_aexp a1 a2 = (
     let
       h1 = height a1;
@@ -50,7 +50,7 @@ definition less_aexp :: "'a aexp \<Rightarrow> 'a aexp \<Rightarrow> bool" where
       h1 < h2
   )"
 
-definition less_eq_aexp :: "'a aexp \<Rightarrow> 'a aexp \<Rightarrow> bool"
+definition less_eq_aexp :: "('a, 'b) aexp \<Rightarrow> ('a, 'b) aexp \<Rightarrow> bool"
   where "less_eq_aexp e1 e2 \<equiv> (e1 < e2) \<or> (e1 = e2)"
 
 declare less_aexp_def [simp]
@@ -58,7 +58,7 @@ declare less_aexp_def [simp]
 lemma less_aexp_aux_antisym: "less_aexp_aux x  y = (\<not>(less_aexp_aux y x) \<and> (x \<noteq> y))"
   by (induct x y rule: less_aexp_aux.induct, auto)
 
-lemma less_aexp_antisym: "(x::'a aexp) < y = (\<not>(y < x) \<and> (x \<noteq> y))"
+lemma less_aexp_antisym: "(x::('a, 'b) aexp) < y = (\<not>(y < x) \<and> (x \<noteq> y))"
   apply (simp add: Let_def)
   apply standard
   using less_aexp_aux_antisym apply blast
@@ -146,14 +146,14 @@ qed
 
 
 
-lemma less_aexp_trans: "(x::'a aexp) < y \<Longrightarrow> y < z \<Longrightarrow> x < z"
+lemma less_aexp_trans: "(x::('a, 'b) aexp) < y \<Longrightarrow> y < z \<Longrightarrow> x < z"
   apply (simp add: Let_def)
   apply standard
    apply (metis AExp_Lexorder.less_aexp_aux_trans dual_order.asym)
   by presburger
     
 instance proof
-    fix x y z :: "'a aexp"
+    fix x y z :: "('a, 'b) aexp"
     show "(x < y) = (x \<le> y \<and> \<not> y \<le> x)"
       by (metis less_aexp_antisym less_eq_aexp_def)
     show "(x \<le> x)"
