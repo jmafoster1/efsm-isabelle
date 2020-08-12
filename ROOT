@@ -7,6 +7,7 @@ theories
   "GExp"
   "GExp_Lexorder"
   "efsm-ltl/EFSM_LTL"
+  "efsm-ltl/LTL_Exp"
   "Contexts"
   "AExp"
   "AExp_Lexorder"

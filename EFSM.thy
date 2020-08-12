@@ -1,12 +1,12 @@
 section \<open>Extended Finite State Machines\<close>
 
 text\<open>This theory defines extended finite state machines as presented in \cite{foster2018}. States
-are indexed by natural numbers, however, since 'a transition matrices are implemented by finite sets,
+are indexed by natural numbers, however, since transition matrices are implemented by finite sets,
 the number of reachable states in $S$ is necessarily finite. For ease of implementation, we
 implicitly make the initial state zero for all EFSMs. This allows EFSMs to be represented purely by
-their 'a transition matrix which, in this implementation, is a finite set of tuples of the form
+their transition matrix which, in this implementation, is a finite set of tuples of the form
 $((s_1, s_2), t)$ in which $s_1$ is the origin state, $s_2$ is the destination state, and $t$ is a
-'a transition.\<close>
+transition.\<close>
 
 theory EFSM
   imports "HOL-Library.FSet" Transition FSet_Utils
@@ -15,19 +15,19 @@ begin
 declare One_nat_def [simp del]
 
 type_synonym cfstate = nat
-type_synonym 'a inputs = "'a list"
-type_synonym 'a outputs = "'a option list"
+type_synonym inputs = "value list"
+type_synonym outputs = "value option list"
 
-type_synonym 'a action = "(label \<times> 'a inputs)"
-type_synonym 'a execution = "'a action list"
-type_synonym 'a observation = "'a outputs list"
-type_synonym 'a transition_matrix = "((cfstate \<times> cfstate) \<times> 'a transition) fset"
+type_synonym action = "(label \<times> inputs)"
+type_synonym execution = "action list"
+type_synonym observation = "outputs list"
+type_synonym transition_matrix = "((cfstate \<times> cfstate) \<times> transition) fset"
 
 no_notation relcomp (infixr "O" 75) and comp (infixl "o" 55)
 
-type_synonym 'a event = "(label \<times> 'a inputs \<times> 'a list)"
-type_synonym 'a trace = "'a event list"
-type_synonym 'a log = "'a trace list"
+type_synonym event = "(label \<times> inputs \<times> value list)"
+type_synonym trace = "event list"
+type_synonym log = "trace list"
 
 definition Str :: "string \<Rightarrow> value" where
   "Str s \<equiv> value.Str (String.implode s)"
@@ -35,7 +35,7 @@ definition Str :: "string \<Rightarrow> value" where
 lemma str_not_num: "Str s \<noteq> Num x1"
   by (simp add: Str_def)
 
-definition S :: "'a transition_matrix \<Rightarrow> nat fset" where
+definition S :: "transition_matrix \<Rightarrow> nat fset" where
   "S m = (fimage (\<lambda>((s, s'), t). s) m) |\<union>| fimage (\<lambda>((s, s'), t). s') m"
 
 lemma S_ffUnion: "S e = ffUnion (fimage (\<lambda>((s, s'), _). {|s, s'|}) e)"
@@ -43,11 +43,11 @@ lemma S_ffUnion: "S e = ffUnion (fimage (\<lambda>((s, s'), _). {|s, s'|}) e)"
   by(induct e, auto)
 
 subsection\<open>Possible Steps\<close>
-text\<open>From a given state, the possible steps for a given action are those 'a transitions with labels
-which correspond to the action label, arities which correspond to the number of 'a inputs, and guards
-which are satisfied by those 'a inputs.\<close>
+text\<open>From a given state, the possible steps for a given action are those transitions with labels
+which correspond to the action label, arities which correspond to the number of inputs, and guards
+which are satisfied by those inputs.\<close>
 
-definition possible_steps :: "('a::aexp_value) transition_matrix \<Rightarrow> cfstate \<Rightarrow> 'a registers \<Rightarrow> label \<Rightarrow> 'a inputs \<Rightarrow> (cfstate \<times> 'a transition) fset" where
+definition possible_steps :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> label \<Rightarrow> inputs \<Rightarrow> (cfstate \<times> transition) fset" where
   "possible_steps e s r l i = fimage (\<lambda>((origin, dest), t). (dest, t)) (ffilter (\<lambda>((origin, dest), t). origin = s \<and> (Label t) = l \<and> (length i) = (Arity t) \<and> apply_guards (Guards t) (join_ir i r)) e)"
 
 lemma possible_steps_finsert:
@@ -186,22 +186,22 @@ proof-
 qed
 
 subsection\<open>Choice\<close>
-text\<open>Here we define the \texttt{choice} operator which determines whether or not two 'a transitions are
+text\<open>Here we define the \texttt{choice} operator which determines whether or not two transitions are
 nondeterministic.\<close>
 
-definition choice :: "('a::aexp_value) transition \<Rightarrow> 'a transition \<Rightarrow> bool" where
+definition choice :: "transition \<Rightarrow> transition \<Rightarrow> bool" where
   "choice t t' = (\<exists> i r. apply_guards (Guards t) (join_ir i r) \<and> apply_guards (Guards t') (join_ir i r))"
 
-definition choice_alt :: "('a::aexp_value) transition \<Rightarrow> 'a transition \<Rightarrow> bool" where
+definition choice_alt :: "transition \<Rightarrow> transition \<Rightarrow> bool" where
   "choice_alt t t' = (\<exists> i r. apply_guards (Guards t@Guards t') (join_ir i r))"
 
 lemma choice_alt: "choice t t' = choice_alt t t'"
   by (simp add: choice_def choice_alt_def apply_guards_append)
 
 lemma choice_symmetry: "choice x y = choice y x"
-  using choice_def by blast
+  using choice_def by auto
 
-definition deterministic :: "('a::aexp_value) transition_matrix \<Rightarrow> bool" where
+definition deterministic :: "transition_matrix \<Rightarrow> bool" where
   "deterministic e = (\<forall>s r l i. size (possible_steps e s r l i) \<le> 1)"
 
 lemma deterministic_alt_aux: "size (possible_steps e s r l i) \<le> 1 =(
@@ -222,7 +222,8 @@ lemma deterministic_alt: "deterministic e = (
     possible_steps e s r l i = {||} \<or>
     (\<exists>s' t. ffilter (\<lambda>((origin, dest), t). origin = s \<and> (Label t) = l \<and> (length i) = (Arity t) \<and> apply_guards (Guards t) (join_ir i r)) e = {|((s, s'), t)|})
 )"
-  by (metis (mono_tags, lifting) deterministic_alt_aux deterministic_def)
+  using deterministic_alt_aux
+  by (simp add: deterministic_def)
 
 lemma size_le_1: "size f \<le> 1 = (f = {||} \<or> (\<exists>e. f = {|e|}))"
   apply standard
@@ -339,7 +340,7 @@ lemma not_deterministic_conv:
   apply (rule_tac x=aa in exI)
   apply (rule_tac x=b in exI)
   apply (rule_tac x=ba in exI)
-  by (metis finsert_iff in_possible_steps)
+  by (metis finsertI1 finsert_commute in_possible_steps)
 
 lemma deterministic_if: 
 "\<nexists>s l i r.
@@ -449,7 +450,7 @@ lemma random_member_None[simp]: "random_member ss = None = (ss = {||})"
 lemma random_member_empty[simp]: "random_member {||} = None"
   by simp
 
-definition step :: "('a::aexp_value) transition_matrix \<Rightarrow> cfstate \<Rightarrow> 'a registers \<Rightarrow> label \<Rightarrow> 'a inputs \<Rightarrow> ('a transition \<times> cfstate \<times> 'a outputs \<times> 'a registers) option" where
+definition step :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> label \<Rightarrow> inputs \<Rightarrow> (transition \<times> cfstate \<times> outputs \<times> registers) option" where
   "step e s r l i = (case random_member (possible_steps e s r l i) of
       None \<Rightarrow> None |
       Some (s', t) \<Rightarrow>  Some (t, s', evaluate_outputs t i r, evaluate_updates t i r)
@@ -506,7 +507,7 @@ text\<open>One of the key features of this formalisation of EFSMs is their abili
 EFSM, they produce a corresponding \emph{observation}.\<close>
 
 text_raw\<open>\snip{observe}{1}{2}{%\<close>
-fun observe_execution :: "('a::aexp_value) transition_matrix \<Rightarrow> cfstate \<Rightarrow> 'a registers \<Rightarrow> 'a execution \<Rightarrow> 'a outputs list" where
+fun observe_execution :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> outputs list" where
   "observe_execution _ _ _ [] = []" |
   "observe_execution e s r ((l, i)#as)  = (
     let viable = possible_steps e s r l i in
@@ -587,7 +588,7 @@ subsection\<open>Reachability\<close>
 text\<open>Here, we define the function \texttt{gets\_us\_to} which returns true if the given execution
 leaves the given EFSM in the given state.\<close>
 
-inductive gets_us_to :: "cfstate \<Rightarrow> ('a::aexp_value) transition_matrix \<Rightarrow> cfstate \<Rightarrow> 'a registers \<Rightarrow> 'a execution \<Rightarrow> bool" where
+inductive gets_us_to :: "cfstate \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
   base: "s = target \<Longrightarrow> gets_us_to target _ s _ []" |
   step_some: "\<exists>(s', T) |\<in>| possible_steps e s d (fst h) (snd h). gets_us_to target e s' (evaluate_updates T i r) t \<Longrightarrow>
    gets_us_to target e s r (h#t)" |
@@ -604,19 +605,19 @@ lemma no_further_steps:
 subsubsection\<open>Utilities\<close>
 text\<open>Here we define some utility functions to access the various key properties of a given EFSM.\<close>
 
-definition max_reg :: "'a transition_matrix \<Rightarrow> nat option" where
+definition max_reg :: "transition_matrix \<Rightarrow> nat option" where
   "max_reg e = (let maxes = (fimage (\<lambda>(_, t). Transition.max_reg t) e) in if maxes = {||} then None else fMax maxes)"
 
-definition enumerate_ints :: "('a::aexp_value) transition_matrix \<Rightarrow> int set" where
+definition enumerate_ints :: "transition_matrix \<Rightarrow> int set" where
   "enumerate_ints e = \<Union> (image (\<lambda>(_, t). Transition.enumerate_ints t) (fset e))"
 
-definition max_int :: "('a::aexp_value) transition_matrix \<Rightarrow> int" where
+definition max_int :: "transition_matrix \<Rightarrow> int" where
   "max_int e = Max (insert 0 (enumerate_ints e))"
 
-definition max_output :: "'a transition_matrix \<Rightarrow> nat" where
+definition max_output :: "transition_matrix \<Rightarrow> nat" where
   "max_output e = fMax (fimage (\<lambda>(_, t). length (Outputs t)) e)"
 
-definition all_regs :: "'a transition_matrix \<Rightarrow> nat set" where
+definition all_regs :: "transition_matrix \<Rightarrow> nat set" where
   "all_regs e = \<Union> (image (\<lambda>(_, t). enumerate_regs t) (fset e))"
 
 text_raw\<open>\snip{finiteRegs}{1}{2}{%\<close>
@@ -631,10 +632,10 @@ lemma finite_all_regs: "finite (all_regs e)"
   by auto
 text_raw\<open>}%endsnip\<close>
 
-definition max_input :: "'a transition_matrix \<Rightarrow> nat option" where
+definition max_input :: "transition_matrix \<Rightarrow> nat option" where
   "max_input e = fMax (fimage (\<lambda>(_, t). Transition.max_input t) e)"
 
-fun maxS :: "'a transition_matrix \<Rightarrow> nat" where
+fun maxS :: "transition_matrix \<Rightarrow> nat" where
   "maxS t = (if t = {||} then 0 else fMax ((fimage (\<lambda>((origin, dest), t). origin) t) |\<union>| (fimage (\<lambda>((origin, dest), t). dest) t)))"
 
 subsection\<open>Execution Recognition\<close>
@@ -644,7 +645,7 @@ outputs produced. When a recognised execution is observed, it produces an accept
 EFSM.\<close>
 
 text_raw\<open>\snip{recognises}{1}{2}{%\<close>
-inductive recognises_execution :: "('a::aexp_value) transition_matrix \<Rightarrow> nat \<Rightarrow> 'a registers \<Rightarrow> 'a execution \<Rightarrow> bool" where
+inductive recognises_execution :: "transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
   base: "recognises_execution e s d []" |
   step: "(s', t) |\<in>| possible_steps e s r l i \<Longrightarrow>
          recognises_execution e s' (evaluate_updates t i r) ts \<Longrightarrow>
@@ -667,7 +668,7 @@ lemma recognises_step_equiv: "recognises_execution e s d ((l, i)#t) =
    apply auto[1]
   using recognises_execution.step by blast
 
-fun recognises_prim :: "('a::aexp_value) transition_matrix \<Rightarrow> nat \<Rightarrow> 'a registers \<Rightarrow> 'a execution \<Rightarrow> bool" where
+fun recognises_prim :: "transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
   "recognises_prim e s d [] = True" |
   "recognises_prim e s d ((l, i)#t) = (
     let poss_steps = possible_steps e s d l i in
@@ -740,17 +741,16 @@ lemma step_none_rejects:
 
 lemma trace_reject:
   "(\<not> recognises_execution e s d ((a, b)#t)) = (possible_steps e s d a b = {||} \<or> (\<forall>(s', T) |\<in>| possible_steps e s d a b. \<not> recognises_execution e s' (evaluate_updates T b d) t))"
-  apply (simp add: recognises_prim)
-  by auto
+  using recognises_prim by fastforce
 
 lemma trace_reject_no_possible_steps_atomic:
   "possible_steps e s d (fst a) (snd a) = {||} \<Longrightarrow> \<not> recognises_execution e s d (a#t)"
-  using recognises_possible_steps_not_empty by blast
+  using recognises_possible_steps_not_empty by auto
 
 lemma trace_reject_later:
   "\<forall>(s', T) |\<in>| possible_steps e s d a b. \<not> recognises_execution e s' (evaluate_updates T b d) t \<Longrightarrow>
    \<not> recognises_execution e s d ((a, b)#t)"
-  by (metis (mono_tags, lifting) trace_reject)
+  using trace_reject by auto
 
 lemma recognition_prefix_closure: "recognises_execution e s d (t@t') \<Longrightarrow> recognises_execution e s d t"
 proof(induct t arbitrary: s d)
@@ -779,7 +779,7 @@ the EFSM is able to respond to each event in sequence \emph{and} is able to prod
 output. Accepted traces represent valid runs of an EFSM.\<close>
 
 text_raw\<open>\snip{accepts}{1}{2}{%\<close>
-inductive accepts_trace :: "('a::aexp_value) transition_matrix \<Rightarrow> cfstate \<Rightarrow> 'a registers \<Rightarrow> 'a trace \<Rightarrow> bool" where
+inductive accepts_trace :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> trace \<Rightarrow> bool" where
   base: "accepts_trace e s d []" |
   step: "\<exists>(s', T) |\<in>| possible_steps e s d l i.
          evaluate_outputs T i d = map Some p \<and>
@@ -788,7 +788,7 @@ inductive accepts_trace :: "('a::aexp_value) transition_matrix \<Rightarrow> cfs
 text_raw\<open>}%endsnip\<close>
 
 text_raw\<open>\snip{T}{1}{2}{%\<close>
-definition T :: "('a::{aexp_value,order}) transition_matrix \<Rightarrow> 'a trace set" where
+definition T :: "transition_matrix \<Rightarrow> trace set" where
   "T e = {t. accepts_trace e 0 <> t}"
 text_raw\<open>}%endsnip\<close>
 
@@ -808,7 +808,7 @@ lemma accepts_trace_exists_possible_step:
   "accepts_trace e1 s1 r1 ((aa, b, c) # t) \<Longrightarrow>
        \<exists>(s1', t1)|\<in>|possible_steps e1 s1 r1 aa b.
           evaluate_outputs t1 b r1 = map Some c"
-  using accepts_trace_step by blast
+  using accepts_trace_step by auto
 
 lemma rejects_trace_step:
 "rejects_trace e s d ((l, i, p)#t) = (
@@ -817,7 +817,7 @@ lemma rejects_trace_step:
   apply (simp add: accepts_trace_step)
   by auto
 
-definition accepts_log :: "'a trace set \<Rightarrow> ('a::{aexp_value,order}) transition_matrix \<Rightarrow> bool" where
+definition accepts_log :: "trace set \<Rightarrow> transition_matrix \<Rightarrow> bool" where
   "accepts_log l e = (\<forall>t \<in> l. accepts_trace e 0 <> t)"
 
 text_raw\<open>\snip{prefixClosure}{1}{2}{%\<close>
@@ -837,7 +837,7 @@ text_raw\<open>}%endsnip\<close>
 
 text\<open>For code generation, it is much more efficient to re-implement the \texttt{accepts\_trace}
 function primitively than to use the code generator's default setup for inductive definitions.\<close>
-fun accepts_trace_prim :: "('a::aexp_value) transition_matrix \<Rightarrow> cfstate \<Rightarrow> 'a registers \<Rightarrow> 'a trace \<Rightarrow> bool" where
+fun accepts_trace_prim :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> trace \<Rightarrow> bool" where
   "accepts_trace_prim _ _ _ [] = True" |
   "accepts_trace_prim e s d ((l, i, p)#t) = (
     let poss_steps = possible_steps e s d l i in
@@ -872,17 +872,17 @@ text\<open>Two EFSMs are isomorphic with respect to states if there exists a bij
 the state names of the two EFSMs, i.e. the only difference between the two models is the way the
 states are indexed.\<close>
 
-definition isomorphic :: "'a transition_matrix \<Rightarrow> 'a transition_matrix \<Rightarrow> bool" where
+definition isomorphic :: "transition_matrix \<Rightarrow> transition_matrix \<Rightarrow> bool" where
   "isomorphic e1 e2 = (\<exists>f. bij f \<and> (\<forall>((s1, s2), t) |\<in>| e1. ((f s1, f s2), t) |\<in>| e2))"
 
 subsubsection\<open>Register Isomporphism\<close>
-text\<open>Two EFSMs are isomorphic with respect to 'a registers if there exists a bijective function between
-the indices of the 'a registers in the two EFSMs, i.e. the only difference between the two models is
-the way the 'a registers are indexed.\<close>
-definition rename_regs :: "(nat \<Rightarrow> nat) \<Rightarrow> 'a transition_matrix \<Rightarrow> 'a transition_matrix" where
+text\<open>Two EFSMs are isomorphic with respect to registers if there exists a bijective function between
+the indices of the registers in the two EFSMs, i.e. the only difference between the two models is
+the way the registers are indexed.\<close>
+definition rename_regs :: "(nat \<Rightarrow> nat) \<Rightarrow> transition_matrix \<Rightarrow> transition_matrix" where
   "rename_regs f e = fimage (\<lambda>(tf, t). (tf, Transition.rename_regs f t)) e"
 
-definition eq_upto_rename_strong :: "'a transition_matrix \<Rightarrow> 'a transition_matrix \<Rightarrow> bool" where
+definition eq_upto_rename_strong :: "transition_matrix \<Rightarrow> transition_matrix \<Rightarrow> bool" where
   "eq_upto_rename_strong e1 e2 = (\<exists>f. bij f \<and> rename_regs f e1 = e2)"
 
 subsubsection\<open>Trace Simulation\<close>
@@ -891,7 +891,7 @@ states of $e_1$ and $e_1$ such that in each state, if $e_1$ can respond to the e
 the correct output, so can $e_2$.\<close>
 
 text_raw\<open>\snip{traceSim}{1}{2}{%\<close>
-inductive trace_simulation :: "(cfstate \<Rightarrow> cfstate) \<Rightarrow> ('a::aexp_value) transition_matrix \<Rightarrow> cfstate \<Rightarrow> 'a registers \<Rightarrow> 'a transition_matrix \<Rightarrow> cfstate \<Rightarrow> 'a registers \<Rightarrow> 'a trace \<Rightarrow> bool" where
+inductive trace_simulation :: "(cfstate \<Rightarrow> cfstate) \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> trace \<Rightarrow> bool" where
   base: "s2 = f s1 \<Longrightarrow> trace_simulation f e1 s1 r1 e2 s2 r2 []" |
   step: "s2 = f s1 \<Longrightarrow>
          \<forall>(s1', t1) |\<in>| ffilter (\<lambda>(s1', t1). evaluate_outputs t1 i r1 = map Some o) (possible_steps e1 s1 r1 l i).
@@ -955,7 +955,7 @@ lemma accepts_trace_simulation:
   using rejects_trace_simulation by blast
 
 lemma simulates_trace_subset: "trace_simulates e1 e2 \<Longrightarrow> T e1 \<subseteq> T e2"
-  using T_def accepts_trace_simulation trace_simulates_def by fast
+  using T_def accepts_trace_simulation trace_simulates_def by fastforce
 
 subsubsection\<open>Trace Equivalence\<close>
 text\<open>Two EFSMs are trace equivalent if they accept the same traces. This is the intuitive definition
@@ -969,7 +969,7 @@ text_raw\<open>}%endsnip\<close>
 text_raw\<open>\snip{simEquiv}{1}{2}{%\<close>
 lemma simulation_implies_trace_equivalent:
   "trace_simulates e1 e2 \<Longrightarrow> trace_simulates e2 e1 \<Longrightarrow> trace_equivalent e1 e2"
-  using simulates_trace_subset trace_equivalent_def by blast
+  using simulates_trace_subset trace_equivalent_def by auto
 text_raw\<open>}%endsnip\<close>
 
 lemma trace_equivalent_reflexive: "trace_equivalent e1 e1"
@@ -977,7 +977,7 @@ lemma trace_equivalent_reflexive: "trace_equivalent e1 e1"
 
 lemma trace_equivalent_symmetric:
   "trace_equivalent e1 e2 = trace_equivalent e2 e1"
-  using trace_equivalent_def by blast
+  using trace_equivalent_def by auto
 
 lemma trace_equivalent_transitive:
   "trace_equivalent e1 e2 \<Longrightarrow>
@@ -1002,7 +1002,7 @@ Execution simulation has no notion of ``expected'' output. It simply requires th
 EFSM must be able to produce equivalent output for each action.\<close>
 
 text_raw\<open>\snip{execSim}{1}{2}{%\<close>
-inductive execution_simulation :: "(cfstate \<Rightarrow> cfstate) \<Rightarrow> ('a::aexp_value) transition_matrix \<Rightarrow> cfstate \<Rightarrow> 'a registers \<Rightarrow> 'a transition_matrix \<Rightarrow> cfstate \<Rightarrow> 'a registers \<Rightarrow> 'a execution \<Rightarrow> bool" where
+inductive execution_simulation :: "(cfstate \<Rightarrow> cfstate) \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
   base: "s2 = f s1 \<Longrightarrow> execution_simulation f e1 s1 r1 e2 s2 r2 []" |
   step: "s2 = f s1 \<Longrightarrow>
          \<forall>(s1', t1) |\<in>| (possible_steps e1 s1 r1 l i).
@@ -1065,7 +1065,7 @@ text\<open>Two EFSMs are executionally equivalent if there is no execution which
 the two. That is, for every execution, they must produce equivalent outputs.\<close>
 
 text_raw\<open>\snip{execEquiv}{1}{2}{%\<close>
-inductive executionally_equivalent :: "('a::aexp_value) transition_matrix \<Rightarrow> cfstate \<Rightarrow> 'a registers \<Rightarrow> 'a transition_matrix \<Rightarrow> cfstate \<Rightarrow> 'a registers \<Rightarrow> 'a execution \<Rightarrow> bool" where
+inductive executionally_equivalent :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
   base [simp]: "executionally_equivalent e1 s1 r1 e2 s2 r2 []" |
   step: "((\<forall>(s1', t1) |\<in>| (possible_steps e1 s1 r1 l i). possible_steps e2 s2 r2 l i \<noteq> {||} \<and>
            (\<forall>(s2', t2) |\<in>| possible_steps e2 s2 r2 l i. evaluate_outputs t1 i r1 = evaluate_outputs t2 i r2 \<and>

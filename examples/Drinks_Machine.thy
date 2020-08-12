@@ -19,7 +19,7 @@ theory Drinks_Machine
 begin
 
 text_raw\<open>\snip{selectdef}{1}{2}{%\<close>
-definition select :: "value transition" where
+definition select :: "transition" where
 "select \<equiv> \<lparr>
         Label = STR ''select'',
         Arity = 1,
@@ -33,7 +33,7 @@ definition select :: "value transition" where
 text_raw\<open>}%endsnip\<close>
 
 text_raw\<open>\snip{coindef}{1}{2}{%\<close>
-definition coin :: "value transition" where
+definition coin :: "transition" where
 "coin \<equiv> \<lparr>
         Label = STR ''coin'',
         Arity = 1,
@@ -47,7 +47,7 @@ definition coin :: "value transition" where
 text_raw\<open>}%endsnip\<close>
 
 text_raw\<open>\snip{venddef}{1}{2}{%\<close>
-definition vend:: "value transition" where
+definition vend:: "transition" where
 "vend\<equiv> \<lparr>
         Label = STR ''vend'',
         Arity = 0,
@@ -58,7 +58,7 @@ definition vend:: "value transition" where
 text_raw\<open>}%endsnip\<close>
 
 text_raw\<open>\snip{vendfaildef}{1}{2}{%\<close>
-definition vend_fail :: "value transition" where
+definition vend_fail :: "transition" where
 "vend_fail \<equiv> \<lparr>
         Label = STR ''vend'',
         Arity = 0,
@@ -69,7 +69,7 @@ definition vend_fail :: "value transition" where
 text_raw\<open>}%endsnip\<close>
 
 text_raw\<open>\snip{drinksdef}{1}{2}{%\<close>
-definition drinks :: "value transition_matrix" where
+definition drinks :: "transition_matrix" where
 "drinks \<equiv> {|
           ((0,1), select),    \<comment> \<open> If we want to go from state 1 to state 2 then select will do that \<close>
           ((1,1), coin),
@@ -106,13 +106,13 @@ lemma drinks_vend_insufficient:
    possible_steps drinks 1 r (STR ''vend'') [] = {|(1, vend_fail)|}"
   apply (simp add: possible_steps_singleton drinks_def)
   apply safe
-  by (simp_all add: transitions apply_guards_def gt_value_def join_ir_def connectives)
+  by (simp_all add: transitions apply_guards_def value_gt_def join_ir_def connectives)
 
 lemma drinks_vend_invalid:
   "\<nexists>n. r $ 2 = Some (Num n) \<Longrightarrow>
    possible_steps drinks 1 r (STR ''vend'') [] = {||}"
   apply (simp add: possible_steps_empty drinks_def can_take_transition_def can_take_def transitions)
-  by (simp add: MaybeBoolInt_not_num_1 gt_value_def)
+  by (simp add: MaybeBoolInt_not_num_1 value_gt_def)
 
 lemma possible_steps_1_coin:
   "length i = 1 \<Longrightarrow> possible_steps drinks 1 r (STR ''coin'') i = {|(1, coin)|}"
@@ -125,7 +125,7 @@ lemma possible_steps_2_vend:
    possible_steps drinks 1 r (STR ''vend'') [] = {|(2, vend)|}"
   apply (simp add: possible_steps_singleton drinks_def)
   apply safe
-  by (simp_all add: transitions apply_guards_def gt_value_def join_ir_def connectives)
+  by (simp_all add: transitions apply_guards_def value_gt_def join_ir_def connectives)
 
 lemma recognises_from_2:
   "recognises_execution drinks 1 <1 $:= d, 2 $:= Some (Num 100)> [(STR ''vend'', [])]"
@@ -137,19 +137,21 @@ lemma recognises_from_1a:
   "recognises_execution drinks 1 <1 $:= d, 2 $:= Some (Num 50)> [(STR ''coin'', [Num 50]), (STR ''vend'', [])]"
   apply (rule recognises_execution.step[of 1 coin])
    apply (simp add: possible_steps_1_coin)
-  by (simp add: apply_updates_def coin_def finfun_update_twist plus_value_def join_ir_nth recognises_from_2)
+  apply (simp add: apply_updates_def coin_def finfun_update_twist value_plus_def)
+  using recognises_from_2 by auto
 
 lemma recognises_from_1: "recognises_execution drinks 1 <2 $:= Some (Num 0), 1 $:= Some d>
      [(STR ''coin'', [Num 50]), (STR ''coin'', [Num 50]), (STR ''vend'', [])]"
   apply (rule recognises_execution.step[of 1 coin])
    apply (simp add: possible_steps_1_coin)
-  by (simp add: apply_updates_def coin_def plus_value_def finfun_update_twist join_ir_nth recognises_from_1a)
+  apply (simp add: apply_updates_def coin_def value_plus_def finfun_update_twist)
+  using recognises_from_1a by auto
 
 lemma purchase_coke:
   "observe_execution drinks 0 <> [(STR ''select'', [Str ''coke'']), (STR ''coin'', [Num 50]), (STR ''coin'', [Num 50]), (STR ''vend'', [])] =
                        [[], [Some (Num 50)], [Some (Num 100)], [Some (Str ''coke'')]]"
   by (simp add: possible_steps_0 possible_steps_1_coin possible_steps_2_vend transitions
-                   apply_outputs_def apply_updates_def plus_value_def join_ir_nth)
+                   apply_outputs_def apply_updates_def value_plus_def)
 
 lemma rejects_input:
   "l \<noteq> STR ''coin'' \<Longrightarrow>
@@ -176,7 +178,7 @@ lemma rejects_termination:
 lemma r2_0_vend:
   "can_take_transition vend i r \<Longrightarrow>
    \<exists>n. r $ 2 = Some (Num n) \<and> n \<ge> 100" (* You can't take vendimmediately after taking select *)
-  apply (simp add: can_take_transition_def can_take_def vend_def apply_guards_def maybe_negate_true maybe_or_false connectives gt_value_def)
+  apply (simp add: can_take_transition_def can_take_def vend_def apply_guards_def maybe_negate_true maybe_or_false connectives value_gt_def)
   using MaybeBoolInt.elims by force
 
 lemma drinks_vend_sufficient: "r $ 2 = Some (Num x1) \<Longrightarrow>
@@ -192,13 +194,13 @@ lemma drinks_vend_r2_String:
   "r $ 2 = Some (value.Str x2) \<Longrightarrow>
    possible_steps drinks 1 r (STR ''vend'') [] = {||}"
   apply (simp add: possible_steps_empty drinks_def can_take_transition_def can_take_def transitions)
-  by (simp add: gt_value_def)
+  by (simp add: value_gt_def)
 
 lemma drinks_vend_r2_rejects:
   "\<nexists>n. r $ 2 = Some (Num n) \<Longrightarrow> step drinks 1 r (STR ''vend'') [] = None"
   apply (rule no_possible_steps_1)
   apply (simp add: possible_steps_empty drinks_def can_take_transition_def can_take_def transitions)
-  by (simp add: MaybeBoolInt_not_num_1 gt_value_def)
+  by (simp add: MaybeBoolInt_not_num_1 value_gt_def)
 
 lemma drinks_0_rejects:
   "\<not> (fst a = STR ''select'' \<and> length (snd a) = 1) \<Longrightarrow>
@@ -246,9 +248,9 @@ lemma invalid_other_states:
 
 lemma vend_ge_100:
   "possible_steps drinks 1 r l i = {|(2, vend)|} \<Longrightarrow>
-   \<not>\<^sub>? (Some (Num 100)) >\<^sub>? (r $ 2) = trilean.true"
+   \<not>\<^sub>? value_gt (Some (Num 100)) (r $ 2) = trilean.true"
   apply (insert possible_steps_apply_guards[of drinks 1 r l i 2 vend])
-  by (simp add: possible_steps_def apply_guards_def vend_def join_ir_nth)
+  by (simp add: possible_steps_def apply_guards_def vend_def)
 
 lemma drinks_no_possible_steps_1:
   assumes not_coin: "\<not> (a = STR ''coin'' \<and> length b = 1)"

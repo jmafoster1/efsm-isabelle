@@ -8,24 +8,13 @@ theory Value
 imports Trilean
 begin
 
-class aexp_value =
-  fixes plus  :: "'a option \<Rightarrow> 'a option \<Rightarrow> 'a option" (infixl "+\<^sub>?" 65)
-    and minus :: "'a option \<Rightarrow> 'a option \<Rightarrow> 'a option" (infixl "-\<^sub>?" 65)
-    and times :: "'a option \<Rightarrow> 'a option \<Rightarrow> 'a option" (infixl "*\<^sub>?" 65)
-    and gt :: "'a option \<Rightarrow> 'a option \<Rightarrow> trilean" (infix ">\<^sub>?" 65)
-    and is_num :: "'a \<Rightarrow> bool" ("isNum _" [40] 40)
-    and get_num :: "'a \<Rightarrow> int" ("getNum _" [40] 40)
-  assumes plus_aexp_commute: "x +\<^sub>? y = y +\<^sub>? x"
-begin
-  definition value_eq :: "'a option \<Rightarrow> 'a option \<Rightarrow> trilean"(infix "=\<^sub>?" 65)  where
-    "value_eq a b \<equiv> (if a = b then true else false)"
-  declare value_eq_def [simp]
-end
-
-
 text_raw\<open>\snip{valuetype}{1}{2}{%\<close>
 datatype "value" = Num int | Str String.literal
 text_raw\<open>}%endsnip\<close>
+
+fun is_Num :: "value \<Rightarrow> bool" where
+  "is_Num (Num _) = True" |
+  "is_Num (Str _) = False"
 
 text_raw\<open>\snip{maybeIntArith}{1}{2}{%\<close>
 fun MaybeArithInt :: "(int \<Rightarrow> int \<Rightarrow> int) \<Rightarrow> value option \<Rightarrow> value option \<Rightarrow> value option" where
@@ -52,6 +41,25 @@ lemma MaybeArithInt_Not_Num:
 lemma MaybeArithInt_never_string: "MaybeArithInt f a b \<noteq> Some (Str x)"
   using MaybeArithInt.elims by blast
 
+definition "value_plus = MaybeArithInt (+)"
+
+lemma value_plus_never_string: "value_plus a b \<noteq> Some (Str x)"
+  by (simp add: value_plus_def MaybeArithInt_never_string)
+
+lemma value_plus_symmetry: "value_plus x y = value_plus y x"
+  apply (induct x y rule: MaybeArithInt.induct)
+  by (simp_all add: value_plus_def)
+
+definition "value_minus = MaybeArithInt (-)"
+
+lemma value_minus_never_string: "value_minus a b \<noteq> Some (Str x)"
+  by (simp add: MaybeArithInt_never_string value_minus_def)
+
+definition "value_times = MaybeArithInt (*)"
+
+lemma value_times_never_string: "value_times a b \<noteq> Some (Str x)"
+  by (simp add: MaybeArithInt_never_string value_times_def)
+
 fun MaybeBoolInt :: "(int \<Rightarrow> int \<Rightarrow> bool) \<Rightarrow> value option \<Rightarrow> value option \<Rightarrow> trilean" where
   "MaybeBoolInt f (Some (Num a)) (Some (Num b)) = (if f a b then true else false)" |
   "MaybeBoolInt _ _ _ = invalid"
@@ -60,31 +68,11 @@ lemma MaybeBoolInt_not_num_1:
   "\<forall>n. r \<noteq> Some (Num n) \<Longrightarrow> MaybeBoolInt f n r = invalid"
   using MaybeBoolInt.elims by blast
 
-instantiation "value" :: aexp_value begin
-  definition "plus_value = MaybeArithInt (+)"
-  definition "minus_value = MaybeArithInt (-)"
-  definition "times_value = MaybeArithInt (*)"
-  definition gt_value :: "value option \<Rightarrow> value option \<Rightarrow> trilean"  where
-    "gt_value a b \<equiv> MaybeBoolInt (>) a b"
-  fun is_num_value :: "value \<Rightarrow> bool" where
-    "is_num_value (Num _) = True" |
-    "is_num_value (Str _) = False"
-  definition get_num_value :: "value \<Rightarrow> int" where
-    "get_num_value v = (case v of (Num n) \<Rightarrow> n)"
-instance
-  apply standard
-  subgoal for x y
-    by (induct x y rule: MaybeArithInt.induct, simp_all add: plus_value_def)
-  done
-end
+definition value_gt :: "value option \<Rightarrow> value option \<Rightarrow> trilean"  where
+  "value_gt a b \<equiv> MaybeBoolInt (>) a b"
 
-lemma plus_value_never_string: "a +\<^sub>? b \<noteq> Some (Str x)"
-  by (simp add: plus_value_def MaybeArithInt_never_string)
-
-lemma minus_value_never_string: "a -\<^sub>? b \<noteq> Some (Str x)"
-  by (simp add: MaybeArithInt_never_string minus_value_def)
-
-lemma times_value_never_string: "a *\<^sub>? b \<noteq> Some (Str x)"
-  by (simp add: MaybeArithInt_never_string times_value_def)
+definition value_eq :: "value option \<Rightarrow> value option \<Rightarrow> trilean"  where
+  "value_eq a b \<equiv> (if a = b then true else false)"
+declare value_eq_def [simp]
 
 end

@@ -10,13 +10,13 @@ theory Contexts
     EFSM GExp
 begin
 
-definition posterior_separate :: "nat \<Rightarrow> ('a::aexp_value) guard list \<Rightarrow> 'a update_function list \<Rightarrow> 'a inputs \<Rightarrow> 'a registers \<Rightarrow> 'a registers option" where
+definition posterior_separate :: "nat \<Rightarrow> vname gexp list \<Rightarrow> update_function list \<Rightarrow> inputs \<Rightarrow> registers \<Rightarrow> registers option" where
   "posterior_separate a g u i r = (if can_take a g i r then Some (apply_updates u (join_ir i r) r) else None)"
 
-definition posterior :: "('a::aexp_value) transition \<Rightarrow> 'a inputs \<Rightarrow> 'a registers \<Rightarrow> 'a registers option" where
+definition posterior :: "transition \<Rightarrow> inputs \<Rightarrow> registers \<Rightarrow> registers option" where
   "posterior t i r = posterior_separate (Arity t) (Guards t) (Updates t) i r"
 
-definition subsumes :: "('a::aexp_value) transition \<Rightarrow> 'a registers \<Rightarrow> ('a::aexp_value) transition \<Rightarrow> bool" where
+definition subsumes :: "transition \<Rightarrow> registers \<Rightarrow> transition \<Rightarrow> bool" where
   "subsumes t2 r t1 = (Label t1 = Label t2 \<and> Arity t1 = Arity t2 \<and>
                        (\<forall>i. can_take_transition t1 i r \<longrightarrow> can_take_transition t2 i r) \<and>
                        (\<forall>i. can_take_transition t1 i r \<longrightarrow>
@@ -59,7 +59,7 @@ lemma bad_outputs:
    \<not> subsumes t2 r t1"
   by (simp add: subsumes_def)
 
-primrec accepting_sequence :: "('a::aexp_value) transition_matrix \<Rightarrow> cfstate \<Rightarrow> 'a registers \<Rightarrow> 'a execution \<Rightarrow> ('a transition \<times> cfstate \<times> 'a outputs \<times> 'a registers) list \<Rightarrow> ('a transition \<times> cfstate \<times> 'a outputs \<times> 'a registers) list option" where
+primrec accepting_sequence :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> (transition \<times> cfstate \<times> outputs \<times> registers) list \<Rightarrow> (transition \<times> cfstate \<times> outputs \<times> registers) list option" where
   "accepting_sequence _ _ r [] obs = Some (rev obs)" |
   "accepting_sequence e s r (a#t) obs = (let
     poss = possible_steps e s r (fst a) (snd a);
@@ -71,7 +71,7 @@ primrec accepting_sequence :: "('a::aexp_value) transition_matrix \<Rightarrow> 
       accepting_sequence e s' r' t ((tt, s', (apply_outputs (Outputs tt) (join_ir (snd a) r)), r')#obs)
   )"
 
-definition posterior_sequence :: "('a::aexp_value) transition_matrix \<Rightarrow> cfstate \<Rightarrow> 'a registers \<Rightarrow> 'a execution \<Rightarrow> 'a registers option" where
+definition posterior_sequence :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> registers option" where
   "posterior_sequence e s r t = (case accepting_sequence e s r t [] of
     None \<Rightarrow> None |
     Some seq \<Rightarrow>
@@ -81,7 +81,7 @@ definition posterior_sequence :: "('a::aexp_value) transition_matrix \<Rightarro
         (_, _, _, r') = last seq in Some r'
   )"
 
-abbreviation anterior_context :: "('a::{aexp_value,order}) transition_matrix \<Rightarrow> 'a execution \<Rightarrow> 'a registers option" where
+abbreviation anterior_context :: "transition_matrix \<Rightarrow> execution \<Rightarrow> registers option" where
   "anterior_context e t \<equiv> posterior_sequence e 0 <> t"
 
 lemma anterior_context_empty: "anterior_context e [] = Some <>"
@@ -202,7 +202,7 @@ lemma recognises_execution_gives_context:
 
 lemma recognises_execution_trace_gives_context:
   "recognises_execution e 0 <> p \<Longrightarrow> (\<exists>c. anterior_context e p = Some c)"
-  using recognises_execution_gives_context by blast
+  using recognises_execution_gives_context by auto
 
 lemma recognises_execution_trace_anterior_not_none:
   "recognises_execution e 0 <> p \<Longrightarrow> anterior_context e p \<noteq> None"
