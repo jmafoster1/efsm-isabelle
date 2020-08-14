@@ -584,24 +584,6 @@ lemma observe_execution_one_possible_step:
    (observe_execution e1 s1 r (h#t)) = (observe_execution e2 s2 r (h#t))"
   by (simp add: observe_execution_possible_step)
 
-subsection\<open>Reachability\<close>
-text\<open>Here, we define the function \texttt{gets\_us\_to} which returns true if the given execution
-leaves the given EFSM in the given state.\<close>
-
-inductive gets_us_to :: "cfstate \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
-  base: "s = target \<Longrightarrow> gets_us_to target _ s _ []" |
-  step_some: "\<exists>(s', T) |\<in>| possible_steps e s d (fst h) (snd h). gets_us_to target e s' (evaluate_updates T i r) t \<Longrightarrow>
-   gets_us_to target e s r (h#t)" |
-  step_none: "step e s r (fst h) (snd h) = None \<Longrightarrow>
-   s = target \<Longrightarrow>
-   gets_us_to target e s r (h#t)"
-
-lemma no_further_steps:
-  "s \<noteq> s' \<Longrightarrow> \<not> gets_us_to s e s' r []"
-  apply safe
-  apply (rule gets_us_to.cases)
-  by auto
-
 subsubsection\<open>Utilities\<close>
 text\<open>Here we define some utility functions to access the various key properties of a given EFSM.\<close>
 
@@ -1216,5 +1198,30 @@ next
       by auto
     done
 qed
+
+subsection\<open>Reachability\<close>
+text\<open>Here, we define the function \texttt{gets\_us\_to} which returns true if the given execution
+leaves the given EFSM in the given state.\<close>
+
+inductive gets_us_to :: "cfstate \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
+  base [simp]: "s = target \<Longrightarrow> gets_us_to target _ s _ []" |
+  step_some: "\<exists>(s', T) |\<in>| possible_steps e s d (fst h) (snd h). gets_us_to target e s' (evaluate_updates T i r) t \<Longrightarrow>
+   gets_us_to target e s r (h#t)" |
+  step_none: "step e s r (fst h) (snd h) = None \<Longrightarrow>
+   s = target \<Longrightarrow>
+   gets_us_to target e s r (h#t)"
+
+lemma no_further_steps:
+  "s \<noteq> s' \<Longrightarrow> \<not> gets_us_to s e s' r []"
+  apply safe
+  apply (rule gets_us_to.cases)
+  by auto
+
+definition "reachable s e = (\<exists>t. gets_us_to s e 0 <> t)"
+
+lemma reachable_initial: "reachable 0 e"
+  apply (simp add: reachable_def)
+  apply (rule_tac x="[]" in exI)
+  by simp
 
 end

@@ -1,6 +1,17 @@
+chapter\<open>Preliminaries\<close>
+text\<open>In this chapter, we introduce the preliminaries, including a three-valued logic, variables,
+arithmetic expressions and guard expressions.\<close>
+
 section\<open>Three-Valued Logic\<close>
 
-text\<open>The \texttt{trilean} datatype is used to implement three-valued Bochvar logic
+text\<open>Because our EFSMs are dynamically typed, we cannot rely on conventional Boolean logic when
+evaluating expressions. For example, we may end up in the situation where we need to evaluate
+the guard $r_1 > 5$. This is fine if $r_1$ holds a numeric value, but if $r_1$ evaluates to a
+string, this causes problems. We cannot simply evaluate to \emph{false} because then the negation
+would evaluate to \emph{true.} Instead, we need a three-valued logic such that we can meaningfully
+evaluate nonsensical guards.
+
+The \texttt{trilean} datatype is used to implement three-valued Bochvar logic
 \cite{bochvar1981}. Here we prove that the logic is an idempotent semiring, define a partial order,
 and prove some other useful lemmas.\<close>
 

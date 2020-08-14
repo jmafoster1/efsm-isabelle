@@ -1,4 +1,4 @@
-subsection \<open>Contexts\<close>
+section \<open>Contexts and Subsumption\<close>
 text\<open>
 This theory defines contexts as a way of relating possible constraints on register values to
 observable output. We then use contexts to extend the idea of transition subsumption from

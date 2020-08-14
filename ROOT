@@ -2,24 +2,26 @@ session "EFSM" = "FinFun" +
 options [quick_and_dirty, document = pdf, document_output = "output"]
 directories
   "examples"
-  "efsm-ltl"
 theories
-  "GExp"
-  "GExp_Lexorder"
-  "efsm-ltl/EFSM_LTL"
-  "Contexts"
-  "AExp"
-  "AExp_Lexorder"
-  "Transition"
-  "Transition_Lexorder"
-  "FSet_Utils"
+  "Trilean"
   "Value"
   "VName"
+  "AExp"
+  "AExp_Lexorder"
+  "GExp"
+  "GExp_Lexorder"
+  "FSet_Utils"
+
+  "Transition"
+  "Transition_Lexorder"
+  "EFSM"
+  "Contexts"
+  "EFSM_LTL"
+
   "examples/Drinks_Machine"
   "examples/Drinks_Machine_2"
   "examples/Drinks_Machine_LTL"
-  "Trilean"
-  "EFSM"
+
 document_files
   "root.tex"
   "root.bib"

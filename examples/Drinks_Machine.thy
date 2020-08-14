@@ -1,9 +1,9 @@
-section\<open>Examples\<close>
-text\<open>The following theories present some examples of EFSMs and proofs over them. I first present a
-formalisation of a simple drinks machine. Next, I prove observational equivalence of an alternative
-model. Finally, I prove some temporal properties of the first example.\<close>
+chapter\<open>Examples\<close>
+text\<open>In this chapter, we provide some examples of EFSMs and proofs over them. We first present a
+formalisation of a simple drinks machine. Next, we prove observational equivalence of an alternative
+model. Finally, we prove some temporal properties of the first example.\<close>
 
-subsection\<open>Drinks Machine\<close>
+section\<open>Drinks Machine\<close>
 text\<open>This theory formalises a simple drinks machine. The \emph{select} operation takes one
 argument - the desired beverage. The \emph{coin} operation also takes one parameter representing
 the value of the coin. The \emph{vend} operation has two flavours - one which dispenses the drink if

@@ -1,3 +1,5 @@
+section\<open>FSet Utilities\<close>
+text\<open>This theory provides various additional lemmas, definitions, and syntax over the fset data type.\<close>
 theory FSet_Utils
   imports "HOL-Library.FSet"
 begin
@@ -320,5 +322,16 @@ lemma set_membership_eq: "A = B \<longleftrightarrow> (\<lambda>x. Set.member x 
   by (meson equalityI subsetI)
 
 lemmas ffilter_eq_iff = Abs_ffilter set_membership_eq fun_eq_iff
+
+lemma size_le_1: "size f \<le> 1 = (f = {||} \<or> (\<exists>e. f = {|e|}))"
+  apply standard
+   apply (metis bot.not_eq_extremum gr_implies_not0 le_neq_implies_less less_one size_fsingleton size_fsubset)
+  by auto
+
+lemma size_gt_1: "1 < size f \<Longrightarrow> \<exists>e1 e2 f'. e1 \<noteq> e2 \<and> f = finsert e1 (finsert e2 f')"
+  apply (induct f)
+   apply simp
+  apply (rule_tac x=x in exI)
+  by (metis finsertCI leD not_le_imp_less size_le_1)
 
 end

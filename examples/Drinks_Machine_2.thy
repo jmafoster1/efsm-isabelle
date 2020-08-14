@@ -1,4 +1,4 @@
-subsection\<open>An Observationally Equivalent Model\<close>
+section\<open>An Observationally Equivalent Model\<close>
 text\<open>This theory defines a second formalisation of the drinks machine example which produces
 identical output to the first model. This property is called \emph{observational equivalence} and is
 discussed in more detail in \cite{foster2018}.\<close>
