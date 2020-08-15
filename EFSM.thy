@@ -1227,4 +1227,85 @@ lemma reachable_initial: "reachable 0 e"
   apply (rule_tac x="[]" in exI)
   by simp
 
+lemma "\<nexists>p. gets_us_to s e s' r (take p t) \<and> (\<forall>p'<p. \<not> gets_us_to s e s' r (take p' t)) \<Longrightarrow> \<not> gets_us_to s e s' r (take p' t)"
+proof(induct t rule: rev_induct)
+  case Nil
+  then show ?case
+    by auto
+next
+  case (snoc a t)
+  then show ?case
+    apply (induct p')
+     apply blast
+    apply simp
+    try
+qed
+
+
+
+lemma "gets_us_to s e s' r t \<Longrightarrow> \<exists>p. gets_us_to s e s' r (take p t) \<and> (\<forall>p' < p. \<not> gets_us_to s e s' r (take p' t))"
+proof(induct t arbitrary: s' r rule: rev_induct)
+  case Nil
+  then show ?case
+  by auto
+next
+  case (snoc a t)
+  then show ?case
+    apply (case_tac "gets_us_to s e s' r t")
+     apply simp
+     apply (case_tac "\<exists>p. gets_us_to s e s' r (take p t) \<and> (\<forall>p'<p. \<not> gets_us_to s e s' r (take p' t))")
+      prefer 2 apply simp
+     apply clarify
+     apply (rule_tac x=p in exI)
+    apply (metis append_Nil2 diff_is_0_eq gr0I less_imp_le_nat take_Cons' take_all zero_less_diff)
+    apply simp
+    apply (case_tac "\<exists>p. gets_us_to s e s' r (take p t) \<and> (\<forall>p'<p. \<not> gets_us_to s e s' r (take p' t))")
+     apply clarify
+     apply (rule_tac x=p in exI)
+    apply standard
+      apply (simp add: take_Cons')
+    apply (metis append_Nil2 diff_is_0_eq' diff_less_mono gr0I nat_le_linear take_Cons' take_all zero_less_diff)
+    apply (rule_tac x="length t + 1" in exI)
+    apply standard
+     apply simp
+    apply (rule allI)
+    apply (induct_tac p')
+     apply force
+    apply simp
+    apply (erule_tac x=n in allE)
+
+qed
+  
+
+lemma "reachable s e \<Longrightarrow> reachable s (finsert ((aa, ba), b) e)"
+  apply (simp add: reachable_def)
+  apply clarify
+
+
+definition "remove_state s e = ffilter (\<lambda>((from, to), t). from \<noteq> s \<and> to \<noteq> s) e"
+
+lemma "reachable s e \<Longrightarrow> \<not> reachable s' e \<Longrightarrow> possible_steps e s r l i = possible_steps (remove_state s' e) s r l i"
+proof(induct e)
+  case empty
+  then show ?case
+    by (simp add: possible_steps_def Abs_ffilter remove_state_def)
+next
+  case (insert x e)
+  then show ?case
+    apply (cases x, case_tac a)
+    apply (simp add: possible_steps_finsert)
+qed
+
+lemma "reachable s e \<Longrightarrow> \<not> reachable s' e \<Longrightarrow> executionally_equivalent e s r (remove_state s' e) s r x"
+proof(induct x)
+case Nil
+  then show ?case
+  by simp
+next
+  case (Cons a x)
+  then show ?case
+    apply (cases a, simp)
+    apply (rule executionally_equivalent.step)
+qed
+
 end
