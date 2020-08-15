@@ -2,7 +2,8 @@ section \<open>Contexts and Subsumption\<close>
 text\<open>
 This theory defines contexts as a way of relating possible constraints on register values to
 observable output. We then use contexts to extend the idea of transition subsumption from
-\cite{lorenzoli2008} to EFSM transitions with register update functions.
+\cite{lorenzoli2008} to EFSM transitions with register update functions. The \emph{subsumption in
+context} relation is the main contribution of \cite{foster2018}.
 \<close>
 
 theory Contexts
