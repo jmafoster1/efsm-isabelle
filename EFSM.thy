@@ -1217,6 +1217,9 @@ lemma no_further_steps:
   apply (rule gets_us_to.cases)
   by auto
 
+lemma gets_us_to_base: "gets_us_to target e s r [] = (s = target)"
+  using gets_us_to.base no_further_steps by blast
+
 definition "reachable s e = (\<exists>t. gets_us_to s e 0 <> t)"
 
 lemma reachable_initial: "reachable 0 e"
