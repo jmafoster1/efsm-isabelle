@@ -1485,6 +1485,10 @@ lemma obtains_empty: "obtains s r e s' r' [] = (s = s' \<and> r = r')"
   apply standard
   by (rule obtains.cases, auto)
 
+lemma obtains_step: "obtains s r e s' r' ((l, i)#t) = (\<exists>(s'', T) |\<in>| possible_steps e s' r' l i. obtains s r e s'' (evaluate_updates T i r') t)"
+  apply standard
+  by (rule obtains.cases, auto simp add: obtains.step)
+
 lemma obtains_gets_us_to: "obtains s r e s' r' t \<Longrightarrow> gets_us_to s e s' r' t"
 proof(induct t arbitrary: s' r')
   case Nil
