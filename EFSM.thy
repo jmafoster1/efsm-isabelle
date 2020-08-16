@@ -1049,22 +1049,18 @@ the two. That is, for every execution, they must produce equivalent outputs.\<cl
 text_raw\<open>\snip{execEquiv}{1}{2}{%\<close>
 inductive executionally_equivalent :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
   base [simp]: "executionally_equivalent e1 s1 r1 e2 s2 r2 []" |
-  step: "((\<forall>(s1', t1) |\<in>| (possible_steps e1 s1 r1 l i). possible_steps e2 s2 r2 l i \<noteq> {||} \<and>
-           (\<forall>(s2', t2) |\<in>| possible_steps e2 s2 r2 l i. evaluate_outputs t1 i r1 = evaluate_outputs t2 i r2 \<and>
+  step: "((\<forall>(s1', t1) |\<in>| (possible_steps e1 s1 r1 l i). (\<exists>(s2', t2) |\<in>| possible_steps e2 s2 r2 l i. evaluate_outputs t1 i r1 = evaluate_outputs t2 i r2 \<and>
            executionally_equivalent e1 s1' (evaluate_updates t1 i r1) e2 s2' (evaluate_updates t2 i r2) es)) \<and>
-          (\<forall>(s2', t2) |\<in>| (possible_steps e2 s2 r2 l i). possible_steps e1 s1 r1 l i \<noteq> {||} \<and>
-           (\<forall>(s1', t1) |\<in>| possible_steps e1 s1 r1 l i. evaluate_outputs t1 i r1 = evaluate_outputs t2 i r2 \<and>
+          (\<forall>(s2', t2) |\<in>| (possible_steps e2 s2 r2 l i). (\<exists>(s1', t1) |\<in>| possible_steps e1 s1 r1 l i. evaluate_outputs t1 i r1 = evaluate_outputs t2 i r2 \<and>
            executionally_equivalent e1 s1' (evaluate_updates t1 i r1) e2 s2' (evaluate_updates t2 i r2) es))) \<Longrightarrow>
          executionally_equivalent e1 s1 r1 e2 s2 r2 ((l, i)#es)"
 text_raw\<open>}%endsnip\<close>
 
 lemma executionally_equivalent_step:
 "executionally_equivalent e1 s1 r1 e2 s2 r2 ((l, i)#es) = (
-  (\<forall>(s1', t1) |\<in>| (possible_steps e1 s1 r1 l i). possible_steps e2 s2 r2 l i \<noteq> {||} \<and>
-   (\<forall>(s2', t2) |\<in>| possible_steps e2 s2 r2 l i. evaluate_outputs t1 i r1 = evaluate_outputs t2 i r2 \<and>
+  (\<forall>(s1', t1) |\<in>| (possible_steps e1 s1 r1 l i). (\<exists>(s2', t2) |\<in>| possible_steps e2 s2 r2 l i. evaluate_outputs t1 i r1 = evaluate_outputs t2 i r2 \<and>
    executionally_equivalent e1 s1' (evaluate_updates t1 i r1) e2 s2' (evaluate_updates t2 i r2) es)) \<and>
-  (\<forall>(s2', t2) |\<in>| (possible_steps e2 s2 r2 l i). possible_steps e1 s1 r1 l i \<noteq> {||} \<and>
-   (\<forall>(s1', t1) |\<in>| possible_steps e1 s1 r1 l i. evaluate_outputs t1 i r1 = evaluate_outputs t2 i r2 \<and>
+  (\<forall>(s2', t2) |\<in>| (possible_steps e2 s2 r2 l i). (\<exists>(s1', t1) |\<in>| possible_steps e1 s1 r1 l i. evaluate_outputs t1 i r1 = evaluate_outputs t2 i r2 \<and>
    executionally_equivalent e1 s1' (evaluate_updates t1 i r1) e2 s2' (evaluate_updates t2 i r2) es))
 )"
   apply standard
@@ -1109,8 +1105,9 @@ next
     apply clarsimp
     apply (rule accepts_trace.step)
     apply (erule_tac x="(aa, b)" in fBallE[of "possible_steps e2 s2 r2 l i"])
-     defer apply simp
-      by (case_tac "possible_steps e1 s1 r1 l i", auto)
+       defer apply simp
+      apply simp
+      by blast
     apply (rule accepts_trace.cases)
       apply simp
      apply simp
@@ -1119,7 +1116,7 @@ next
     apply (erule_tac x="(aa, b)" in fBallE)
      defer apply simp
     apply simp
-    by (case_tac "possible_steps e2 s2 r2 la ia", auto)
+    by fastforce
 qed
 
 lemma executionally_equivalent_trace_equivalent:
@@ -1141,27 +1138,19 @@ next
   then show ?case
     apply (cases a, clarsimp)
     apply (simp add: executionally_equivalent_step)
-    apply (case_tac "possible_steps e2 s2 r2 aa b = {||}")
-     apply auto[1]
-    apply (case_tac "possible_steps e1 s1 r1 aa b = {||}")
-     apply auto[1]
     apply standard
+     apply (rule fBallI)
      apply clarsimp
-    subgoal for l i s2' t2 s1' t1
-      apply (erule_tac x="(s1', t1)" in fBallE[of "possible_steps e1 s1 r1 l i"])
-       apply (erule_tac x="(s2', t2)" in fBallE[of "possible_steps e2 s2 r2 l i"])
-        apply simp
-        apply (erule_tac x="(s1', t1)" in fBallE[of "possible_steps e1 s1 r1 l i"])
-         apply (erule_tac x="(s2', t2)" in fBallE[of "possible_steps e2 s2 r2 l i"])
-      by auto
+    subgoal for aa b aaa ba
+      apply (erule_tac x="(aaa, ba)" in fBallE[of "possible_steps e2 s2 r2 aa b"])
+       prefer 2 apply simp
+      by force
+    apply (rule fBallI)
     apply clarsimp
-    subgoal for l i s1' t1 s2' t2
-      apply (erule_tac x="(s1', t1)" in fBallE[of "possible_steps e1 s1 r1 l i"])
-       apply (erule_tac x="(s2', t2)" in fBallE[of "possible_steps e2 s2 r2 l i"])
-        apply simp
-        apply (erule_tac x="(s1', t1)" in fBallE[of "possible_steps e1 s1 r1 l i"])
-         apply (erule_tac x="(s2', t2)" in fBallE[of "possible_steps e2 s2 r2 l i"])
-      by auto
+    subgoal for aa b aaa ba
+      apply (erule_tac x="(aaa, ba)" in fBallE)
+       prefer 2 apply simp
+      by force
     done
 qed
 
@@ -1179,23 +1168,32 @@ next
     apply (cases a, clarsimp)
     apply (simp add: executionally_equivalent_step)
     apply clarsimp
-    apply (case_tac "possible_steps e2 s2 r2 aa b")
-     apply auto[1]
-    apply (case_tac "possible_steps e1 s1 r1 aa b = {||}")
-     apply auto[1]
-    apply (case_tac "possible_steps e3 s3 r3 aa b = {||}")
-     apply auto[1]
     apply standard
+     apply (rule fBallI)
      apply clarsimp
-    subgoal for l i s2' t2 S s1' t1 s3' t3
-      apply (erule_tac x="(s1', t1)" in fBallE[of "possible_steps e1 s1 r1 l i"])+
-        apply (erule_tac x="(s3', t3)" in fBallE[of "possible_steps e3 s3 r3 l i"])+
-      by auto
+    subgoal for aa b ab ba
+      apply (erule_tac x="(ab, ba)" in fBallE[of "possible_steps e1 s1 r1 aa b"])
+       prefer 2 apply simp
+      apply simp
+      apply (erule fBexE)
+      apply (case_tac x)
+      apply simp
+      by blast
+    apply (rule fBallI)
      apply clarsimp
-    subgoal for l i s2' t2 S s3' t3 s1' t1
-      apply (erule_tac x="(s1', t1)" in fBallE[of "possible_steps e1 s1 r1 l i"])+
-        apply (erule_tac x="(s3', t3)" in fBallE[of "possible_steps e3 s3 r3 l i"])+
-      by auto
+    subgoal for aa b ab ba
+      apply (erule_tac x="(ab, ba)" in fBallE[of "possible_steps e3 s3 r3 aa b"])
+       prefer 2 apply simp
+      apply simp
+      apply (erule fBexE)
+      apply (case_tac x)
+      apply clarsimp
+      subgoal for aaa baa
+        apply (erule_tac x="(aaa, baa)" in fBallE[of "possible_steps e2 s2 r2 aa b"])
+         prefer 2 apply simp
+        apply simp
+        by blast
+      done
     done
 qed
 
@@ -1205,7 +1203,7 @@ leaves the given EFSM in the given state.\<close>
 
 inductive gets_us_to :: "cfstate \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
   base [simp]: "s = target \<Longrightarrow> gets_us_to target _ s _ []" |
-  step_some: "\<exists>(s', T) |\<in>| possible_steps e s d (fst h) (snd h). gets_us_to target e s' (evaluate_updates T i r) t \<Longrightarrow>
+  step_some: "\<exists>(s', T) |\<in>| possible_steps e s r (fst h) (snd h). gets_us_to target e s' (evaluate_updates T (snd h) r) t \<Longrightarrow>
    gets_us_to target e s r (h#t)" |
   step_none: "step e s r (fst h) (snd h) = None \<Longrightarrow>
    s = target \<Longrightarrow>
@@ -1220,6 +1218,48 @@ lemma no_further_steps:
 lemma gets_us_to_base: "gets_us_to target e s r [] = (s = target)"
   using gets_us_to.base no_further_steps by blast
 
+lemma gets_us_to_step:
+  "possible_steps e ss r aa b \<noteq> {||} \<Longrightarrow>
+   gets_us_to s e ss r ((aa, b) # t) = (\<exists>(s', T) |\<in>| possible_steps e ss r aa b. gets_us_to s e s' (evaluate_updates T b r) t)"
+  apply standard
+   apply (rule gets_us_to.cases)
+      apply simp
+     apply simp
+    apply clarsimp
+    apply (rule_tac x="(aaa, ba)" in fBexI)
+     apply simp
+    apply simp
+   apply clarsimp
+  using step_None apply auto[1]
+  by (simp add: gets_us_to.step_some)
+
+lemma gets_us_to_step_none:
+  "possible_steps e s' r aa b = {||} \<Longrightarrow> gets_us_to s e s' r ((aa, b) # t) = (s = s')"
+  apply standard
+   apply (rule gets_us_to.cases)
+      apply simp
+     apply simp
+    apply auto[1]
+   apply simp
+  by (simp add: step_None step_none)
+
+lemma can_go_somewhere: "\<exists>s. gets_us_to s e ss r t"
+proof(induct t arbitrary: ss r)
+  case Nil
+  then show ?case
+    by (simp add: gets_us_to_base)
+next
+  case (Cons a t)
+  then show ?case
+    apply (cases a)
+    apply simp
+    apply (case_tac "possible_steps e ss r aa b = {||}")
+     apply (rule_tac x=ss in exI)
+     apply (simp add: step_None step_none)
+    apply (simp add: gets_us_to_step)
+    by fast
+qed
+
 definition "reachable s e = (\<exists>t. gets_us_to s e 0 <> t)"
 
 lemma reachable_initial: "reachable 0 e"
@@ -1227,7 +1267,87 @@ lemma reachable_initial: "reachable 0 e"
   apply (rule_tac x="[]" in exI)
   by simp
 
-lemma "\<nexists>p. gets_us_to s e s' r (take p t) \<and> (\<forall>p'<p. \<not> gets_us_to s e s' r (take p' t)) \<Longrightarrow> \<not> gets_us_to s e s' r (take p' t)"
+lemma min_prefix_length:
+  "gets_us_to s e s' r (take p t) \<Longrightarrow>
+   \<forall>p'<p. \<not> gets_us_to s e s' r (take p' t) \<Longrightarrow>
+   p \<le> length t"
+  by (metis nat_le_linear not_le_imp_less take_all)
+
+lemma min_prefix_append:
+  "\<nexists>p. gets_us_to s e s' r (take p (ts @ [t])) \<and> (\<forall>p'<p. \<not> gets_us_to s e s' r (take p' (ts @ [t]))) \<Longrightarrow>
+   \<nexists>p. gets_us_to s e s' r (take p ts) \<and> (\<forall>p'<p. \<not> gets_us_to s e s' r (take p' ts))"
+  apply clarsimp
+  apply (erule_tac x=p in allE)
+  by (metis (no_types, lifting) append_Nil2 diff_is_0_eq' le_less less_le_trans min_prefix_length take_Cons')
+
+inductive visits :: "cfstate \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
+  base [simp]: "s = s' \<Longrightarrow> visits s e s' r t" |
+  step: "\<exists>(s', T) |\<in>| possible_steps e s r (fst h) (snd h). visits target e s' (evaluate_updates T (snd h) r) t \<Longrightarrow>
+         visits target e s r (h#t)"
+
+lemma gets_us_to_implies_visits:
+  "gets_us_to s e s' r t \<Longrightarrow> visits s e s' r t"
+proof(induct t arbitrary: s' r)
+  case Nil
+  then show ?case
+    using no_further_steps visits.base by blast
+next
+  case (Cons a t)
+  then show ?case
+    apply (cases a)
+    apply (rule gets_us_to.cases)
+       apply simp
+      apply simp
+     apply clarsimp
+     apply (rule visits.step)
+    by auto
+qed
+
+lemma visits_append: "visits s e s' r t \<Longrightarrow> visits s e s' r (t@ts)"
+proof(induct t arbitrary: s' r)
+  case Nil
+  then show ?case
+    by (metis list.simps(3) visits.simps)
+next
+  case (Cons a t)
+  then show ?case
+    apply simp
+    apply (rule visits.cases)
+      apply simp
+     apply simp
+    apply clarsimp
+    apply (rule visits.step)
+    by auto
+qed
+
+lemma visits_append_contra: "\<not>visits s e s' r (t@ts) \<Longrightarrow> \<not>visits s e s' r t"
+  using visits_append by blast
+
+lemma visits_step: "(visits s e s' r (h # t)) = (s=s' \<or> (\<exists>(s', T) |\<in>| possible_steps e s' r (fst h) (snd h). visits s e s' (evaluate_updates T (snd h) r) t))"
+  apply standard
+   apply (rule visits.cases)
+     apply simp
+    apply simp
+   apply simp
+  using visits.base visits.step by presburger
+
+lemma visits_take:
+  "\<exists>p \<le> length t. visits s e s' r (take p t) \<Longrightarrow> visits s e s' r t"
+proof(induct t)
+  case Nil
+  then show ?case
+    by simp
+next
+  case (Cons a t)
+  then show ?case
+    by (metis append_take_drop_id visits_append)
+qed
+
+lemma visits_take_2: "\<not> visits s e s' r t \<Longrightarrow> (\<forall>p \<le> length t. \<not> visits s e s' r (take p t))"
+  using visits_take by blast
+
+lemma visits_min_prefix:
+  "visits s e s' r t \<Longrightarrow> \<exists>p. visits s e s' r (take p t) \<and> (\<forall>p' < p. \<not> visits s e s' r (take p' t))"
 proof(induct t rule: rev_induct)
   case Nil
   then show ?case
@@ -1235,69 +1355,207 @@ proof(induct t rule: rev_induct)
 next
   case (snoc a t)
   then show ?case
-    apply (induct p')
-     apply blast
+    apply (case_tac "visits s e s' r t")
+     apply simp
+     apply clarify
+     apply (rule_tac x=p in exI)
+     apply standard
+    using visits_append apply blast
+     apply (metis append_Nil2 diff_is_0_eq' nat_le_linear take_Cons' take_all)
+    apply (rule_tac x="length t + 1" in exI)
     apply simp
-    try
+    apply (rule visits.cases)
+      apply simp
+     apply simp
+    apply clarsimp
+    by (metis append_take_drop_id visits_append)
 qed
 
+lemma visits_min_prefix_2:
+  "\<nexists>p. visits s e s' r (take p t) \<and> (\<forall>p'<p. \<not> visits s e s' r (take p' t)) \<Longrightarrow>
+  \<not> visits s e s' r (take x t)"
+  by (metis visits_min_prefix nat_le_linear take_all visits_take_2)
 
+lemma visits_empty: "visits s e s' r [] = (s = s')"
+  apply standard
+  by (rule visits.cases, auto)
 
-lemma "gets_us_to s e s' r t \<Longrightarrow> \<exists>p. gets_us_to s e s' r (take p t) \<and> (\<forall>p' < p. \<not> gets_us_to s e s' r (take p' t))"
-proof(induct t arbitrary: s' r rule: rev_induct)
+lemma "(s'', tt) |\<in>| possible_steps e s' r (fst a) (snd a) \<Longrightarrow>
+          visits s e s'' (evaluate_updates tt (snd a) r) t \<Longrightarrow>
+visits s e s' r (a#t)"
+  apply (rule visits.step)
+  by auto
+
+lemma take_head: "take p' (h # t) = ha # ta \<Longrightarrow> ha = h"
+  by (induct p', auto)
+
+lemma visits_gets_us_to_min:
+  "visits s e s' r t \<Longrightarrow> \<forall>p'<length t. \<not> visits s e s' r (take p' t) \<Longrightarrow> gets_us_to s e s' r t"
+proof(induct t arbitrary: s' r)
   case Nil
   then show ?case
-  by auto
+    by (metis gets_us_to.simps list.simps(3) visits.cases)
 next
-  case (snoc a t)
+  case (Cons a t)
   then show ?case
-    apply (case_tac "gets_us_to s e s' r t")
-     apply simp
-     apply (case_tac "\<exists>p. gets_us_to s e s' r (take p t) \<and> (\<forall>p'<p. \<not> gets_us_to s e s' r (take p' t))")
-      prefer 2 apply simp
-     apply clarify
-     apply (rule_tac x=p in exI)
-    apply (metis append_Nil2 diff_is_0_eq gr0I less_imp_le_nat take_Cons' take_all zero_less_diff)
-    apply simp
-    apply (case_tac "\<exists>p. gets_us_to s e s' r (take p t) \<and> (\<forall>p'<p. \<not> gets_us_to s e s' r (take p' t))")
-     apply clarify
-     apply (rule_tac x=p in exI)
-    apply standard
-      apply (simp add: take_Cons')
-    apply (metis append_Nil2 diff_is_0_eq' diff_less_mono gr0I nat_le_linear take_Cons' take_all zero_less_diff)
-    apply (rule_tac x="length t + 1" in exI)
-    apply standard
-     apply simp
-    apply (rule allI)
-    apply (induct_tac p')
-     apply force
-    apply simp
-    apply (erule_tac x=n in allE)
-
+    apply (simp add: visits_step)
+    apply (erule disjE)
+     apply auto[1]
+    apply (rule gets_us_to.step_some)
+    apply (erule fBexE)
+    apply (rule_tac x=x in fBexI)
+     defer apply simp
+    apply (case_tac x)
+    apply clarsimp
+    subgoal for s'' tt
+      apply (rule Cons(1)[of s'' "evaluate_updates tt (snd a) r"])
+       apply simp
+      apply (rule allI)
+      subgoal for p'
+        apply (induct p')
+         apply (simp add: visits_empty)
+         apply (erule_tac x=1 in allE)
+         apply (simp add: One_nat_def visits_step)
+         apply force
+        apply simp
+        apply (rule impI)
+        apply simp
+        apply (erule_tac x="Suc (Suc p')" in allE)
+         apply (simp add: One_nat_def visits_step)
+        by auto
+      done
+    done
 qed
-  
 
-lemma "reachable s e \<Longrightarrow> reachable s (finsert ((aa, ba), b) e)"
+lemma gets_us_to_min:
+  "gets_us_to s e s' r t \<Longrightarrow> \<exists>p. gets_us_to s e s' r (take p t) \<and> (\<forall>p' < p. \<not> gets_us_to s e s' r (take p' t))"
+  apply (insert gets_us_to_implies_visits[of s e s' r t] visits_min_prefix[of s e s' r t])
+  apply simp
+  apply clarify
+  apply (rule_tac x=p in exI)
+  apply standard
+  defer
+  using gets_us_to_implies_visits apply blast
+  using visits_gets_us_to_min by force
+
+lemma visits_finsert:
+  "visits s e s' r t \<Longrightarrow> visits s (finsert ((aa, ba), b) e) s' r t"
+proof(induct t arbitrary: s' r)
+  case Nil
+  then show ?case
+    by (simp add: visits_empty)
+next
+  case (Cons a t)
+  then show ?case
+    apply (simp add: visits_step)
+    apply (erule disjE)
+     apply simp
+    apply (erule fBexE)
+    apply (rule disjI2)
+    apply (rule_tac x=x in fBexI)
+     apply auto[1]
+    by (simp add: possible_steps_finsert)
+qed
+
+lemma visits_trace_gets_us_to:
+  "visits s e s' r t \<Longrightarrow> \<exists>t. gets_us_to s e s' r t"
+  using visits_min_prefix visits_gets_us_to_min
+  by fastforce
+
+lemma reachable_finsert:
+  "reachable s e \<Longrightarrow> reachable s (finsert ((aa, ba), b) e)"
   apply (simp add: reachable_def)
   apply clarify
+  by (meson visits_trace_gets_us_to gets_us_to_implies_visits visits_finsert)
 
+lemma reachable_finsert_contra:
+  "\<not> reachable s (finsert ((aa, ba), b) e) \<Longrightarrow> \<not>reachable s e"
+  using reachable_finsert by blast
 
 definition "remove_state s e = ffilter (\<lambda>((from, to), t). from \<noteq> s \<and> to \<noteq> s) e"
 
-lemma "reachable s e \<Longrightarrow> \<not> reachable s' e \<Longrightarrow> possible_steps e s r l i = possible_steps (remove_state s' e) s r l i"
-proof(induct e)
-  case empty
+inductive "obtains" :: "cfstate \<Rightarrow> registers \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
+  base [simp]: "obtains s r e s r []" |
+  step: "\<exists>(s'', T) |\<in>| possible_steps e s' r' l i. obtains s r e s'' (evaluate_updates T i r') t \<Longrightarrow>
+         obtains s r e s' r' ((l, i)#t)"
+
+definition "obtainable s r e = (\<exists>t. obtains s r e 0 <> t)"
+
+lemma obtains_empty: "obtains s r e s' r' [] = (s = s' \<and> r = r')"
+  apply standard
+  by (rule obtains.cases, auto)
+
+lemma obtains_gets_us_to: "obtains s r e s' r' t \<Longrightarrow> gets_us_to s e s' r' t"
+proof(induct t arbitrary: s' r')
+  case Nil
   then show ?case
-    by (simp add: possible_steps_def Abs_ffilter remove_state_def)
+    by (simp add: obtains_empty)
 next
-  case (insert x e)
+  case (Cons a t)
   then show ?case
-    apply (cases x, case_tac a)
-    apply (simp add: possible_steps_finsert)
+    apply (cases a)
+    apply (rule obtains.cases)
+      apply simp
+     apply simp
+    apply clarsimp
+    apply (rule gets_us_to.step_some)
+    by auto
 qed
 
-lemma "reachable s e \<Longrightarrow> \<not> reachable s' e \<Longrightarrow> executionally_equivalent e s r (remove_state s' e) s r x"
-proof(induct x)
+lemma unobtainable_if: "\<not> gets_us_to s e s' r' t \<Longrightarrow> \<not> obtains s r e s' r' t"
+  using obtains_gets_us_to by blast
+
+lemma obtainable_if_unreachable: "\<not>reachable s e \<Longrightarrow> \<not>obtainable s r e"
+  by (simp add: reachable_def obtainable_def unobtainable_if)
+
+lemma obtains_step_append:
+  "obtains s r e s' r' t \<Longrightarrow>
+  (s'', ta) |\<in>| possible_steps e s r l i \<Longrightarrow>
+  obtains s'' (evaluate_updates ta i r) e s' r' (t @ [(l, i)])"
+proof(induct t arbitrary: s' r')
+  case Nil
+  then show ?case
+    apply (simp add: obtains_empty)
+    apply (rule obtains.step)
+    apply (rule_tac x="(s'', ta)" in fBexI)
+    by auto
+next
+  case (Cons a t)
+  then show ?case
+    apply simp
+    apply (rule obtains.cases)
+      apply simp
+     apply simp
+    apply clarsimp
+    apply (rule obtains.step)
+    by auto
+qed
+
+lemma reachable_if_obtainable_step:
+  "obtainable s r e \<Longrightarrow> \<exists>l i t. (s', t) |\<in>| possible_steps e s r l i \<Longrightarrow> reachable s' e"
+  apply (simp add: reachable_def obtainable_def)
+  apply clarify
+  apply (rule_tac x="t@[(l, i)]" in exI)
+  using obtains_step_append unobtainable_if by blast
+
+lemma pointwise_fequal: "\<forall>e |\<in>| f. e |\<in>| f' \<Longrightarrow> \<forall>e |\<in>| f'. e |\<in>| f \<Longrightarrow> f = f'"
+  by auto
+
+lemma possible_steps_remove_unreachable:
+  "obtainable s r e \<Longrightarrow> \<not> reachable s' e \<Longrightarrow> possible_steps (remove_state s' e) s r l i = possible_steps e s r l i"
+  apply (rule pointwise_fequal)
+   apply (rule fBallI)
+   apply clarsimp
+   apply (metis ffmember_filter in_possible_steps remove_state_def)
+   apply (rule fBallI)
+  apply clarsimp
+  apply (case_tac "a = s'")
+  using reachable_if_obtainable_step apply blast
+  apply (simp add: remove_state_def)
+  by (metis (mono_tags, lifting) ffmember_filter in_possible_steps obtainable_if_unreachable old.prod.case)
+
+lemma "obtainable s r e \<Longrightarrow> \<not> reachable s' e \<Longrightarrow> executionally_equivalent e s r (remove_state s' e) s r x"
+proof(induct x arbitrary: s r)
 case Nil
   then show ?case
   by simp
@@ -1306,6 +1564,20 @@ next
   then show ?case
     apply (cases a, simp)
     apply (rule executionally_equivalent.step)
+    apply (simp add: possible_steps_remove_unreachable)
+    apply standard
+     apply (rule fBallI)
+     apply clarsimp
+     apply (rule_tac x="(ab, ba)" in fBexI)
+      prefer 2 apply simp
+     apply simp
+    apply (meson obtainable_def obtains_step_append)
+    apply (rule fBallI)
+     apply clarsimp
+     apply (rule_tac x="(ab, ba)" in fBexI)
+      prefer 2 apply simp
+     apply simp
+    by (meson obtainable_def obtains_step_append)
 qed
 
 end
