@@ -15,7 +15,7 @@ theories
   "Transition"
   "Transition_Lexorder"
   "EFSM"
-  "Contexts"
+  "Subsumption"
   "EFSM_LTL"
 
   "examples/Drinks_Machine"

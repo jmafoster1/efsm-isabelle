@@ -1267,19 +1267,6 @@ lemma reachable_initial: "reachable 0 e"
   apply (rule_tac x="[]" in exI)
   by simp
 
-lemma min_prefix_length:
-  "gets_us_to s e s' r (take p t) \<Longrightarrow>
-   \<forall>p'<p. \<not> gets_us_to s e s' r (take p' t) \<Longrightarrow>
-   p \<le> length t"
-  by (metis nat_le_linear not_le_imp_less take_all)
-
-lemma min_prefix_append:
-  "\<nexists>p. gets_us_to s e s' r (take p (ts @ [t])) \<and> (\<forall>p'<p. \<not> gets_us_to s e s' r (take p' (ts @ [t]))) \<Longrightarrow>
-   \<nexists>p. gets_us_to s e s' r (take p ts) \<and> (\<forall>p'<p. \<not> gets_us_to s e s' r (take p' ts))"
-  apply clarsimp
-  apply (erule_tac x=p in allE)
-  by (metis (no_types, lifting) append_Nil2 diff_is_0_eq' le_less less_le_trans min_prefix_length take_Cons')
-
 inductive visits :: "cfstate \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
   base [simp]: "s = s' \<Longrightarrow> visits s e s' r t" |
   step: "\<exists>(s', T) |\<in>| possible_steps e s r (fst h) (snd h). visits target e s' (evaluate_updates T (snd h) r) t \<Longrightarrow>
@@ -1489,6 +1476,24 @@ lemma obtains_step: "obtains s r e s' r' ((l, i)#t) = (\<exists>(s'', T) |\<in>|
   apply standard
   by (rule obtains.cases, auto simp add: obtains.step)
 
+lemma obtains_recognises:
+  "obtains s c e s' r t \<Longrightarrow> recognises_execution e s' r t"
+proof(induct t arbitrary: s' r)
+  case Nil
+  then show ?case
+    by (simp add: obtains_empty)
+next
+  case (Cons a t)
+  then show ?case
+    apply (cases a)
+    apply simp
+    apply (rule obtains.cases)
+      apply simp
+     apply simp
+    apply clarsimp
+    by (simp add: recognises_execution.step)
+qed
+
 lemma obtains_gets_us_to: "obtains s r e s' r' t \<Longrightarrow> gets_us_to s e s' r' t"
 proof(induct t arbitrary: s' r')
   case Nil
@@ -1542,15 +1547,16 @@ lemma reachable_if_obtainable_step:
   apply (rule_tac x="t@[(l, i)]" in exI)
   using obtains_step_append unobtainable_if by blast
 
-lemma pointwise_fequal: "\<forall>e |\<in>| f. e |\<in>| f' \<Longrightarrow> \<forall>e |\<in>| f'. e |\<in>| f \<Longrightarrow> f = f'"
-  by auto
-
 lemma possible_steps_remove_unreachable:
-  "obtainable s r e \<Longrightarrow> \<not> reachable s' e \<Longrightarrow> possible_steps (remove_state s' e) s r l i = possible_steps e s r l i"
-  apply (rule pointwise_fequal)
+  "obtainable s r e \<Longrightarrow>
+  \<not> reachable s' e \<Longrightarrow>
+  possible_steps (remove_state s' e) s r l i = possible_steps e s r l i"
+  apply standard
+  apply (simp add: fsubset_eq)
    apply (rule fBallI)
    apply clarsimp
    apply (metis ffmember_filter in_possible_steps remove_state_def)
+  apply (simp add: fsubset_eq)
    apply (rule fBallI)
   apply clarsimp
   apply (case_tac "a = s'")
@@ -1558,7 +1564,8 @@ lemma possible_steps_remove_unreachable:
   apply (simp add: remove_state_def)
   by (metis (mono_tags, lifting) ffmember_filter in_possible_steps obtainable_if_unreachable old.prod.case)
 
-lemma "obtainable s r e \<Longrightarrow> \<not> reachable s' e \<Longrightarrow> executionally_equivalent e s r (remove_state s' e) s r x"
+lemma executionally_equivalent_remove_unreachable_state:
+  "obtainable s r e \<Longrightarrow> \<not> reachable s' e \<Longrightarrow> executionally_equivalent e s r (remove_state s' e) s r x"
 proof(induct x arbitrary: s r)
 case Nil
   then show ?case
@@ -1582,24 +1589,6 @@ next
       prefer 2 apply simp
      apply simp
     by (meson obtainable_def obtains_step_append)
-qed
-
-lemma obtains_recognises:
-  "obtains s c e s' r t \<Longrightarrow> recognises_execution e s' r t"
-proof(induct t arbitrary: s' r)
-  case Nil
-  then show ?case
-    by (simp add: obtains_empty)
-next
-  case (Cons a t)
-  then show ?case
-    apply (cases a)
-    apply simp
-    apply (rule obtains.cases)
-      apply simp
-     apply simp
-    apply clarsimp
-    by (simp add: recognises_execution.step)
 qed
 
 end
