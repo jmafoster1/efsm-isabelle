@@ -628,7 +628,7 @@ EFSM.\<close>
 
 text_raw\<open>\snip{recognises}{1}{2}{%\<close>
 inductive recognises_execution :: "transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
-  base: "recognises_execution e s d []" |
+  base [simp]: "recognises_execution e s d []" |
   step: "(s', t) |\<in>| possible_steps e s r l i \<Longrightarrow>
          recognises_execution e s' (evaluate_updates t i r) ts \<Longrightarrow>
          recognises_execution e s r ((l, i)#ts)"
@@ -661,7 +661,7 @@ lemma recognises_prim [code]: "recognises_execution e s r t = recognises_prim e 
 proof(induct t arbitrary: r s)
   case Nil
   then show ?case
-    by (simp add: recognises_execution.base)
+    by simp
 next
   case (Cons h t)
   then show ?case
@@ -738,7 +738,7 @@ lemma recognition_prefix_closure: "recognises_execution e s d (t@t') \<Longright
 proof(induct t arbitrary: s d)
   case Nil
   then show ?case
-    by (simp add: recognises_execution.base)
+    by simp
 next
   case (Cons a t)
   then show ?case
@@ -1582,6 +1582,24 @@ next
       prefer 2 apply simp
      apply simp
     by (meson obtainable_def obtains_step_append)
+qed
+
+lemma obtains_recognises:
+  "obtains s c e s' r t \<Longrightarrow> recognises_execution e s' r t"
+proof(induct t arbitrary: s' r)
+  case Nil
+  then show ?case
+    by (simp add: obtains_empty)
+next
+  case (Cons a t)
+  then show ?case
+    apply (cases a)
+    apply simp
+    apply (rule obtains.cases)
+      apply simp
+     apply simp
+    apply clarsimp
+    by (simp add: recognises_execution.step)
 qed
 
 end

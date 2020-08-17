@@ -99,7 +99,7 @@ lemma accepting_sequence_recognises_execution:
 proof(induct t arbitrary: r)
   case Nil
   then show ?case
-    by (simp add: recognises_execution.base)
+    by simp
 next
   case (Cons a ts)
   then show ?case
@@ -145,7 +145,7 @@ lemma rejects_gives_no_accepting_sequence:
 proof(induct t arbitrary: s r)
   case Nil
   then show ?case
-    by (simp add: recognises_execution.base)
+    by simp
 next
   case (Cons a t)
   then show ?case
