@@ -511,6 +511,37 @@ next
     by (metis MaybeArithInt_not_None option.simps(3) value_times_def)
 qed
 
+lemma aval_reg_none_superset:
+"\<forall>a. (r $ a  \<noteq> None) \<longrightarrow> r $ a = r' $ a \<Longrightarrow>
+ aval a (join_ir i r') = None \<Longrightarrow>
+ aval a (join_ir i r) = None"
+proof(induct a)
+  case (L x)
+  then show ?case
+    by simp
+next
+  case (V x)
+  then show ?case
+    apply (cases x)
+     apply (simp add: join_ir_def)
+    by auto
+next
+  case (Plus a1 a2)
+  then show ?case
+    apply simp
+    by (metis (no_types, lifting) MaybeArithInt_None Plus.prems(1) aval_reg_some_superset value_plus_def)
+next
+  case (Minus a1 a2)
+  then show ?case
+    apply simp
+    by (metis (no_types, lifting) MaybeArithInt_None Minus.prems(1) aval_reg_some_superset value_minus_def)
+next
+  case (Times a1 a2)
+  then show ?case
+    apply simp
+    by (metis (no_types, lifting) MaybeArithInt_None Times.prems(1) aval_reg_some_superset value_times_def)
+qed
+
 lemma enumerate_regs_empty_reg_unconstrained:
   "enumerate_regs a = {} \<Longrightarrow> \<forall>r. \<not> aexp_constrains a (V (R r))"
   by (induct a rule: aexp_induct_separate_V_cases, auto)

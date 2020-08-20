@@ -342,6 +342,12 @@ lemma apply_guards_rearrange:
   "x \<in> set G \<Longrightarrow> apply_guards G s = apply_guards (x#G) s"
   using apply_guards_def by auto
 
+lemma apply_guards_condense: "\<exists>g. apply_guards G s = (gval g s = true)"
+    using apply_guards_fold by blast
+
+lemma apply_guards_false_condense: "\<exists>g. (\<not>apply_guards G s) = (gval g s = false)"
+  using foldr_apply_guards gval.simps(2) not_true by blast
+
 lemma max_input_Bc: "max_input (Bc x) = None"
   by (simp add: max_input_def)
 
@@ -857,11 +863,11 @@ next
   then show ?case
     apply (cases x)
     apply simp
-    using value_eq_true_Some[of "aval x1a (join_ir i r)" "aval x2 (join_ir i r)"]
+    using value_eq_true[of "aval x1a (join_ir i r)" "aval x2 (join_ir i r)"]
       apply clarsimp
       apply (simp add: aval_reg_some_superset)
     apply simp
-    using value_eq_false_Some[of "aval x1a (join_ir i r)" "aval x2 (join_ir i r)"]
+    using value_eq_false[of "aval x1a (join_ir i r)" "aval x2 (join_ir i r)"]
      apply clarsimp
      apply (simp add: aval_reg_some_superset)
     by simp

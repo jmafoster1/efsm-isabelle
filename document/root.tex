@@ -72,7 +72,7 @@
 \begin{document}
 \maketitle
 \begin{abstract}
-  In this AFP entry, we provide a formalisation of extended finite state machines (EFSMs). Models are represented as finite sets of transitions between states. We provide functions to execute traces within EFSMs, and observe the outputs, and defining various simulation and equality metrics for EFSMs in terms of traces and prove their strengths in relation to each other. We also provide a framework of function definitions such that LTL properties can be phrased over EFSMs. Finally, we provide a simple example case study in the form of a drinks machine.
+  In this AFP entry, we provide a formalisation of extended finite state machines (EFSMs) where models are represented as finite sets of transitions between states. EFSMs execute traces to produce observable outputs. We also define various simulation and equality metrics for EFSMs in terms of traces and prove their strengths in relation to each other. Another key contribution is a framework of function definitions such that LTL properties can be phrased over EFSMs. Finally, we provide a simple example case study in the form of a drinks machine.
   \begin{quote}
     \bigskip
     \noindent{\textbf{Keywords:} Extended Finite State Machines, Automata, Linear Temporal Logic}
@@ -84,7 +84,7 @@
 \cleardoublepage
 
 \chapter{Introduction}
-This theory defines extended finite state machines (EFSMs) and is an accompaniment to \cite{foster2018}. Here, models maintain both a \emph{control-flow state} and a \emph{data state}, which takes the form of a set of \emph{registers} to which values may be assigned. Transitions may take additional input parameters, and may impose guard conditions on the values of both inputs and registers. Additionally, transitions may produce observable outputs and update the data state by evaluating arithmetic functions over inputs and registers.
+This AFP entry defines extended finite state machines (EFSMs) as defined in \cite{foster2018}. Here, models maintain both a \emph{control-flow state} and a \emph{data state}, which takes the form of a set of \emph{registers} to which values may be assigned. Transitions may take additional input parameters, and may impose guard conditions on the values of both inputs and registers. Additionally, transitions may produce observable outputs and update the data state by evaluating arithmetic functions over inputs and registers.
 
 As defined in \cite{foster2018}, an EFSM is a tuple, $(S, s_0, T)$ where
 \begin{where}

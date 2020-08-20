@@ -76,17 +76,14 @@ fun value_eq :: "value option \<Rightarrow> value option \<Rightarrow> trilean" 
   "value_eq _ None = invalid" |
   "value_eq (Some a) (Some b) = (if a = b then true else false)"
 
-lemma value_eq_true_Some: "value_eq a b = true \<Longrightarrow> (\<exists>x. a = Some x) \<and> (\<exists>y. b = Some y)"
-  apply (cases a)
-   apply simp
-  apply (cases b)
-  by auto
+lemma value_eq_true: "(value_eq a b = true) = (\<exists>x y. a = Some x \<and> b = Some y \<and> x = y)"
+  apply (cases a, simp)
+  by (cases b, auto)
 
-lemma value_eq_false_Some: "value_eq a b = false \<Longrightarrow> (\<exists>x. a = Some x) \<and> (\<exists>y. b = Some y)"
-  apply (cases a)
-   apply simp
-  apply (cases b)
-  by auto
+lemma value_eq_false: "(value_eq a b = false) = (\<exists>x y. a = Some x \<and> b = Some y \<and> x \<noteq> y)"
+  apply (cases a, simp)
+  by (cases b, auto)
+
 
 lemma value_gt_true_Some: "value_gt a b = true \<Longrightarrow> (\<exists>x. a = Some x) \<and> (\<exists>y. b = Some y)"
   apply (simp add: value_gt_def)
