@@ -71,8 +71,35 @@ lemma MaybeBoolInt_not_num_1:
 definition value_gt :: "value option \<Rightarrow> value option \<Rightarrow> trilean"  where
   "value_gt a b \<equiv> MaybeBoolInt (>) a b"
 
-definition value_eq :: "value option \<Rightarrow> value option \<Rightarrow> trilean"  where
-  "value_eq a b \<equiv> (if a = b then true else false)"
-declare value_eq_def [simp]
+fun value_eq :: "value option \<Rightarrow> value option \<Rightarrow> trilean" where
+  "value_eq None _ = invalid" |
+  "value_eq _ None = invalid" |
+  "value_eq (Some a) (Some b) = (if a = b then true else false)"
+
+lemma value_eq_true_Some: "value_eq a b = true \<Longrightarrow> (\<exists>x. a = Some x) \<and> (\<exists>y. b = Some y)"
+  apply (cases a)
+   apply simp
+  apply (cases b)
+  by auto
+
+lemma value_eq_false_Some: "value_eq a b = false \<Longrightarrow> (\<exists>x. a = Some x) \<and> (\<exists>y. b = Some y)"
+  apply (cases a)
+   apply simp
+  apply (cases b)
+  by auto
+
+lemma value_gt_true_Some: "value_gt a b = true \<Longrightarrow> (\<exists>x. a = Some x) \<and> (\<exists>y. b = Some y)"
+  apply (simp add: value_gt_def)
+  apply (cases a)
+   apply simp
+  apply (cases b)
+  by auto
+
+lemma value_gt_false_Some: "value_gt a b = false \<Longrightarrow> (\<exists>x. a = Some x) \<and> (\<exists>y. b = Some y)"
+  apply (simp add: value_gt_def)
+  apply (cases a)
+   apply simp
+  apply (cases b)
+  by auto
 
 end

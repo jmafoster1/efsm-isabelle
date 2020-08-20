@@ -288,6 +288,10 @@ lemma in_possible_steps: "(((s, s'), t)|\<in>|e \<and> Label t = l \<and> can_ta
   apply (simp add: fmember_possible_steps)
   by (simp add: can_take_def can_take_transition_def fmember.rep_eq)
 
+lemma possible_steps_can_take_transition:
+  "(s2, t1) |\<in>| possible_steps e1 s1 r l i \<Longrightarrow> can_take_transition t1 i r"
+  using in_possible_steps by blast
+
 lemma not_deterministic:
   "\<exists>s l i r.
     \<exists>d1 d2 t1 t2.
@@ -762,7 +766,7 @@ output. Accepted traces represent valid runs of an EFSM.\<close>
 
 text_raw\<open>\snip{accepts}{1}{2}{%\<close>
 inductive accepts_trace :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> trace \<Rightarrow> bool" where
-  base: "accepts_trace e s d []" |
+  base [simp]: "accepts_trace e s d []" |
   step: "\<exists>(s', T) |\<in>| possible_steps e s d l i.
          evaluate_outputs T i d = map Some p \<and>
          accepts_trace e s' (evaluate_updates T i d) t \<Longrightarrow>
@@ -807,7 +811,7 @@ lemma prefix_closure: "accepts_trace e s r (t@t') \<Longrightarrow> accepts_trac
 proof(induct t arbitrary: s r)
   case Nil
   then show ?case
-    by (simp add: accepts_trace.base)
+    by simp
 next
   case (Cons a t)
   then show ?case
@@ -837,7 +841,7 @@ lemma accepts_trace_prim [code]: "accepts_trace e s d l = accepts_trace_prim e s
 proof(induct l arbitrary: s d)
   case Nil
   then show ?case
-    by (simp add: accepts_trace.base)
+    by simp
 next
   case (Cons a l)
   then show ?case
@@ -1082,13 +1086,13 @@ lemma possible_steps_disparity:
    \<not>executionally_equivalent e1 s1 r1 e2 s2 r2 ((l, i)#es)"
   by (simp add: executionally_equivalent_step, auto)
 
-lemma executionally_equivalent_acceptance:
+lemma executionally_equivalent_acceptance_map:
   "executionally_equivalent e1 s1 r1 e2 s2 r2 (map (\<lambda>(l, i, o). (l, i)) t) \<Longrightarrow>
    accepts_trace e2 s2 r2 t = accepts_trace e1 s1 r1 t"
 proof(induct t arbitrary: s1 s2 r1 r2)
   case Nil
   then show ?case
-    by (simp add: accepts_trace.base)
+    by simp
 next
   case (Cons a t)
   then show ?case
@@ -1119,12 +1123,16 @@ next
     by fastforce
 qed
 
+lemma executionally_equivalent_acceptance:
+  "\<forall>x. executionally_equivalent e1 s1 r1 e2 s2 r2 x \<Longrightarrow> accepts_trace e1 s1 r1  t \<Longrightarrow> accepts_trace e2 s2 r2 t"
+  using executionally_equivalent_acceptance_map by blast
+
 lemma executionally_equivalent_trace_equivalent:
   "\<forall>x. executionally_equivalent e1 0 <> e2 0 <> x \<Longrightarrow> trace_equivalent e1 e2"
   apply (rule trace_equivalent)
   apply clarify
   apply (erule_tac x="map (\<lambda>(l, i, o). (l, i)) t" in allE)
-  by (simp add: executionally_equivalent_acceptance)
+  by (simp add: executionally_equivalent_acceptance_map)
 
 lemma executionally_equivalent_symmetry:
   "executionally_equivalent e1 s1 r1 e2 s2 r2 x \<Longrightarrow>
@@ -1468,6 +1476,11 @@ inductive "obtains" :: "cfstate \<Rightarrow> registers \<Rightarrow> transition
 
 definition "obtainable s r e = (\<exists>t. obtains s r e 0 <> t)"
 
+lemma obtains_obtainable:
+  "obtains s r e 0 <> t \<Longrightarrow> obtainable s r e"
+  apply (simp add: obtainable_def)
+  by auto
+
 lemma obtains_empty: "obtains s r e s' r' [] = (s = s' \<and> r = r')"
   apply standard
   by (rule obtains.cases, auto)
@@ -1493,6 +1506,13 @@ next
     apply clarsimp
     by (simp add: recognises_execution.step)
 qed
+
+lemma obtainable_empty_efsm:
+  "obtainable s c {||} = (s=0 \<and> c = <>)"
+  apply (simp add: obtainable_def)
+  apply standard
+  apply (metis ffilter_empty no_outgoing_transitions no_step_none obtains.cases obtains_recognises step_None)
+  using obtains_empty by blast
 
 lemma obtains_gets_us_to: "obtains s r e s' r' t \<Longrightarrow> gets_us_to s e s' r' t"
 proof(induct t arbitrary: s' r')
@@ -1590,5 +1610,23 @@ next
      apply simp
     by (meson obtainable_def obtains_step_append)
 qed
+
+subsection\<open>Transition Replacement\<close>
+text\<open>Here, we define the function \texttt{replace} to replace one transition with another, and prove
+some of its properties.\<close>
+
+definition "replace e1 old new = fimage (\<lambda>x. if x = old then new else x) e1"
+
+lemma replace_finsert:
+  "replace (finsert ((aaa, baa), b) e1) old new = (if ((aaa, baa), b) = old then (finsert new (replace e1 old new)) else (finsert ((aaa, baa), b) (replace e1 old new)))"
+  by (simp add: replace_def)
+
+lemma possible_steps_replace_unchanged:
+  "((s, aa), ba) \<noteq> ((s1, s2), t1) \<Longrightarrow>
+  (aa, ba) |\<in>| possible_steps e1 s r l i \<Longrightarrow>
+  (aa, ba) |\<in>| possible_steps (replace e1 ((s1, s2), t1) ((s1, s2), t2)) s r l i"
+  apply (simp add: in_possible_steps[symmetric] replace_def)
+  by fastforce
+
 
 end

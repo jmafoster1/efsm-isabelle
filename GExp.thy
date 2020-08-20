@@ -28,7 +28,7 @@ fun gval :: "'a gexp \<Rightarrow> 'a datastate \<Rightarrow> trilean" where
   "gval (Bc False) _ = false" |
   "gval (Gt a\<^sub>1 a\<^sub>2) s = value_gt (aval a\<^sub>1 s) (aval a\<^sub>2 s)" |
   "gval (Eq a\<^sub>1 a\<^sub>2) s = value_eq (aval a\<^sub>1 s) (aval a\<^sub>2 s)" |
-  "gval (In v l) s = (if s v \<in> set (map Some l) then true else false)" |
+  "gval (In v l) s = (case s v of None \<Rightarrow> invalid | Some vv \<Rightarrow> if vv \<in> set l then true else false)" |
   "gval (Nor a\<^sub>1 a\<^sub>2) s = \<not>\<^sub>? ((gval a\<^sub>1 s) \<or>\<^sub>? (gval a\<^sub>2 s))"
 
 text_raw\<open>\snip{connectives}{1}{2}{%\<close>
@@ -70,7 +70,7 @@ lemma gval_Ge [simp]:
   by (simp add: Ge_def value_gt_def gNot_def maybe_or_idempotent)
 
 lemma gval_Ne [simp]:
-  "gval (Ne a\<^sub>1 a\<^sub>2) s = \<not>\<^sub>? (value_eq (aval a\<^sub>2 s) (aval a\<^sub>1 s))"
+  "gval (Ne a\<^sub>1 a\<^sub>2) s = \<not>\<^sub>? (value_eq (aval a\<^sub>1 s) (aval a\<^sub>2 s))"
   by (simp add: Ne_def value_gt_def gNot_def maybe_or_idempotent)
 
 lemmas connectives = gAnd_def gOr_def gNot_def Lt_def Le_def Ge_def Ne_def
@@ -233,7 +233,19 @@ proof-
     apply (simp add: satisfiable_def gval_In_cons)
     apply (cases s)
      apply (simp add: \<open>s \<noteq> []\<close>)
-    using join_ir_double_exists by fastforce
+    apply (cases v)
+     apply (case_tac "\<exists>(i::value list). length i > x1 \<and> i ! x1 = a")
+      apply clarsimp
+      apply (rule_tac x=i in exI)
+      apply (rule_tac x=r in exI)
+      apply simp
+     apply (metis gt_ex length_list_update length_repeat nth_list_update_eq)
+      apply (rule_tac x=i in exI)
+    apply (case_tac "\<exists>r. r $ x2 = Some a")
+     apply clarsimp
+      apply (rule_tac x=r in exI)
+     apply simp
+    by (metis join_ir_R join_ir_double_exists)
 qed
 
 definition max_reg_list :: "vname gexp list \<Rightarrow> nat option" where
@@ -403,22 +415,45 @@ lemma gval_fold_gOr:
   by (simp only: gval_fold_gOr_foldr foldr.simps comp_def gval_gOr)
 
 lemma gval_In_fold:
-  "gval (In v l) s = gval (fold gOr (map (\<lambda>x. Eq (V v) (L x)) l) (Bc False)) s"
+  "gval (In v l) s = (if s v = None then invalid else gval (fold gOr (map (\<lambda>x. Eq (V v) (L x)) l) (Bc False)) s)"
 proof(induct l)
   case Nil
   then show ?case
+    apply simp
     apply (cases "s v")
+    apply simp
     by auto
 next
   case (Cons a l)
   then show ?case
-    by (simp only: gval_In_cons list.map gval_fold_gOr)
+    apply (simp only: gval_In_cons)
+    apply (cases "s v")
+     apply simp
+    by (simp add: gval_fold_gOr del: fold.simps)
 qed
 
 fun fold_In :: "'a \<Rightarrow> value list \<Rightarrow> 'a gexp" where
   "fold_In _ [] = Bc False" |
-  "fold_In v [l] = Eq (V v) (L l)" |
-  "fold_In v (l#t) = fold gOr (map (\<lambda>x. Eq (V v) (L x)) t) (Eq (V v) (L l))"
+  "fold_In v (l#t) = gOr (Eq (V v) (L l)) (fold_In v t)"
+
+lemma gval_fold_In: "l \<noteq> [] \<Longrightarrow> gval (In v l) s = gval (fold_In v l) s"
+proof(induct l)
+case Nil
+  then show ?case
+    by simp
+next
+  case (Cons a l)
+  then show ?case
+    apply (case_tac "s v")
+     apply simp
+    apply simp
+    apply safe
+       apply simp
+       apply (metis fold_In.simps(1) gval.simps(2) plus_trilean.simps(4) plus_trilean.simps(5))
+      apply fastforce
+     apply fastforce
+    by fastforce
+qed
 
 lemma fold_maybe_or_invalid_base: "fold (\<or>\<^sub>?) l invalid = invalid"
 proof(induct l)
@@ -542,6 +577,8 @@ lemma gval_unfold_first:
 proof(induct ls)
   case Nil
   then show ?case
+    apply (cases "s v")
+     apply simp
     by (simp add: gOr_def)
 next
   case (Cons a ls)
@@ -560,19 +597,6 @@ lemma fold_Eq_true:
   "\<forall>v. fold (\<or>\<^sub>?) (map (\<lambda>x. if v = x then true else false) vs) true = true"
   by(induct vs, auto)
 
-lemma gval_fold_In_hd:
-  "s v = Some a \<Longrightarrow> gval (fold_In v (a # l)) s = true"
-proof(induct l)
-  case Nil
-  then show ?case
-    by simp
-next
-  case (Cons v vs)
-  then show ?case
-    apply (simp only: fold_In.simps gval_unfold_first gval_fold_gOr_map)
-    by (simp add: comp_def fold_Eq_true)
-qed
-
 lemma x_in_set_fold_eq:
   "x \<in> set ll \<Longrightarrow>
    fold (\<or>\<^sub>?) (map (\<lambda>xa. if x = xa then true else false) ll) false = true"
@@ -589,61 +613,10 @@ next
     by auto
 qed
 
-lemma gval_fold_In_true_if:
-  "s v \<in> Some ` set l \<Longrightarrow> gval (fold_In v l) s = true"
-proof(induct l)
-  case Nil
-  then show ?case
-    by simp
-next
-  case (Cons l ll)
-  then show ?case
-  proof(induct ll)
-    case Nil
-    then show ?case
-      by simp
-  next
-    case (Cons a ll)
-    then show ?case
-      apply (simp only: fold_In.simps gval_unfold_first gval_fold_gOr_map)
-      apply (simp add: comp_def fold_Eq_true)
-      using x_in_set_fold_eq by fastforce
-    qed
-  qed
-
 lemma x_not_in_set_fold_eq:
   "s v \<notin> Some ` set ll \<Longrightarrow>
    false = fold (\<or>\<^sub>?) (map (\<lambda>x. if s v = Some x then true else false) ll) false"
   by(induct ll, auto)
-
-lemma gval_fold_In_false_if:
-  "s v \<notin> Some ` set l \<longrightarrow> false = gval (fold_In v l) s"
-proof(induct l)
-  case Nil
-  then show ?case
-    by simp
-next
-  case (Cons l ll)
-  then show ?case
-  proof(induct ll)
-    case Nil
-    then show ?case
-      by simp
-  next
-    case (Cons a ll)
-    then show ?case
-      apply (simp only: fold_In.simps gval_unfold_first gval_fold_gOr_map)
-      apply (simp add: comp_def fold_Eq_true)
-      apply clarify
-      using x_not_in_set_fold_eq by force
-  qed
-qed
-
-lemma gval_fold_in: "gval (In v l) s = gval (fold_In v l) s"
-  apply simp
-  apply standard
-   apply (simp add: gval_fold_In_true_if)
-  by (metis gval_fold_In_false_if)
 
 lemma gval_take: "max_input g < Some a \<Longrightarrow>
    gval g (join_ir i r) = gval g (join_ir (take a i) r)"
@@ -868,5 +841,73 @@ fun rename_regs :: "(nat \<Rightarrow> nat) \<Rightarrow> vname gexp \<Rightarro
 
 definition eq_upto_rename :: "vname gexp \<Rightarrow> vname gexp \<Rightarrow> bool" where
   "eq_upto_rename g1 g2 = (\<exists>f. bij f \<and> rename_regs f g1 = g2)"
+
+lemma gval_reg_some_superset:
+"\<forall>a. (r $ a  \<noteq> None) \<longrightarrow> r $ a = r' $ a \<Longrightarrow>
+  x \<noteq> invalid \<Longrightarrow>
+ gval a (join_ir i r) = x \<Longrightarrow>
+ gval a (join_ir i r') = x"
+proof(induct a arbitrary: x)
+case (Bc b)
+  then show ?case
+    apply (cases b)
+    by auto
+next
+  case (Eq x1a x2)
+  then show ?case
+    apply (cases x)
+    apply simp
+    using value_eq_true_Some[of "aval x1a (join_ir i r)" "aval x2 (join_ir i r)"]
+      apply clarsimp
+      apply (simp add: aval_reg_some_superset)
+    apply simp
+    using value_eq_false_Some[of "aval x1a (join_ir i r)" "aval x2 (join_ir i r)"]
+     apply clarsimp
+     apply (simp add: aval_reg_some_superset)
+    by simp
+next
+  case (Gt x1a x2)
+  then show ?case
+    apply (cases x)
+    apply simp
+    using value_gt_true_Some[of "aval x1a (join_ir i r)" "aval x2 (join_ir i r)"]
+      apply clarsimp
+      apply (simp add: aval_reg_some_superset)
+    apply simp
+    using value_gt_false_Some[of "aval x1a (join_ir i r)" "aval x2 (join_ir i r)"]
+     apply clarsimp
+     apply (simp add: aval_reg_some_superset)
+    by simp
+next
+  case (In x1a x2)
+  then show ?case
+    apply simp
+    apply (case_tac "join_ir i r x1a")
+     apply simp
+    apply (case_tac "join_ir i r' x1a")
+     apply simp
+     apply (metis aval_reg_some_superset In.prems(1) aval.simps(2) option.distinct(1))
+    apply simp
+    by (metis (full_types) aval_reg_some_superset In.prems(1) aval.simps(2) option.inject)
+next
+  case (Nor a1 a2)
+  then show ?case
+    apply simp
+    apply (cases x)
+      apply (simp add: maybe_negate_true maybe_or_false)
+      apply (simp add: maybe_negate_false maybe_or_true)
+     apply presburger
+    by simp
+qed
+
+lemma apply_guards_reg_some_superset:
+  "\<forall>a. (r $ a  \<noteq> None) \<longrightarrow> r $ a = r' $ a \<Longrightarrow>
+   apply_guards G (join_ir i r) \<Longrightarrow>
+   apply_guards G (join_ir i r')"
+  apply (induct G)
+   apply simp
+  apply (simp add: apply_guards_cons)
+  using gval_reg_some_superset
+  by simp
 
 end

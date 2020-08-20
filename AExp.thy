@@ -479,6 +479,38 @@ next
   qed
 qed
 
+lemma aval_reg_some_superset:
+"\<forall>a. (r $ a  \<noteq> None) \<longrightarrow> r $ a = r' $ a \<Longrightarrow>
+ aval a (join_ir i r) = Some v \<Longrightarrow>
+ aval a (join_ir i r') = Some v"
+proof(induct a arbitrary: v rule: aexp_induct_separate_V_cases)
+  case (L x)
+  then show ?case by simp
+next
+  case (I x)
+  then show ?case
+    by (simp add: join_ir_def)
+next
+  case (R x)
+  then show ?case
+    by simp
+next
+  case (Plus x1a x2a)
+  then show ?case
+    apply simp
+    by (metis MaybeArithInt_not_None option.simps(3) value_plus_def)
+next
+  case (Minus x1a x2a)
+  then show ?case
+    apply simp
+    by (metis MaybeArithInt_not_None option.simps(3) value_minus_def)
+next
+  case (Times x1a x2a)
+  then show ?case
+    apply simp
+    by (metis MaybeArithInt_not_None option.simps(3) value_times_def)
+qed
+
 lemma enumerate_regs_empty_reg_unconstrained:
   "enumerate_regs a = {} \<Longrightarrow> \<forall>r. \<not> aexp_constrains a (V (R r))"
   by (induct a rule: aexp_induct_separate_V_cases, auto)
