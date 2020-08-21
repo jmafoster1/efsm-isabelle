@@ -84,13 +84,23 @@ lemma value_eq_false: "(value_eq a b = false) = (\<exists>x y. a = Some x \<and>
   apply (cases a, simp)
   by (cases b, auto)
 
-
 lemma value_gt_true_Some: "value_gt a b = true \<Longrightarrow> (\<exists>x. a = Some x) \<and> (\<exists>y. b = Some y)"
   apply (simp add: value_gt_def)
   apply (cases a)
    apply simp
   apply (cases b)
   by auto
+
+lemma value_gt_true: "(value_gt a b = true) = (\<exists>x y. a = Some (Num x) \<and> b = Some (Num y) \<and> x > y)"
+  apply (cases a)
+  using value_gt_true_Some apply blast
+  apply (cases b)
+  using value_gt_true_Some apply blast
+  apply simp
+  apply (case_tac aa)
+   apply simp
+  apply (case_tac aaa)
+  by (simp add: value_gt_def)+
 
 lemma value_gt_false_Some: "value_gt a b = false \<Longrightarrow> (\<exists>x. a = Some x) \<and> (\<exists>y. b = Some y)"
   apply (simp add: value_gt_def)

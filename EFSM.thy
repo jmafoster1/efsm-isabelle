@@ -1469,19 +1469,21 @@ lemma reachable_finsert_contra:
 
 definition "remove_state s e = ffilter (\<lambda>((from, to), t). from \<noteq> s \<and> to \<noteq> s) e"
 
+text_raw\<open>\snip{obtainable}{1}{2}{%\<close>
 inductive "obtains" :: "cfstate \<Rightarrow> registers \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
   base [simp]: "obtains s r e s r []" |
   step: "\<exists>(s'', T) |\<in>| possible_steps e s' r' l i. obtains s r e s'' (evaluate_updates T i r') t \<Longrightarrow>
          obtains s r e s' r' ((l, i)#t)"
 
 definition "obtainable s r e = (\<exists>t. obtains s r e 0 <> t)"
+text_raw\<open>}%endsnip\<close>
 
 lemma obtains_obtainable:
   "obtains s r e 0 <> t \<Longrightarrow> obtainable s r e"
   apply (simp add: obtainable_def)
   by auto
 
-lemma obtains_empty: "obtains s r e s' r' [] = (s = s' \<and> r = r')"
+lemma obtains_base: "obtains s r e s' r' [] = (s = s' \<and> r = r')"
   apply standard
   by (rule obtains.cases, auto)
 
@@ -1494,7 +1496,7 @@ lemma obtains_recognises:
 proof(induct t arbitrary: s' r)
   case Nil
   then show ?case
-    by (simp add: obtains_empty)
+    by (simp add: obtains_base)
 next
   case (Cons a t)
   then show ?case
@@ -1512,13 +1514,13 @@ lemma obtainable_empty_efsm:
   apply (simp add: obtainable_def)
   apply standard
   apply (metis ffilter_empty no_outgoing_transitions no_step_none obtains.cases obtains_recognises step_None)
-  using obtains_empty by blast
+  using obtains_base by blast
 
 lemma obtains_gets_us_to: "obtains s r e s' r' t \<Longrightarrow> gets_us_to s e s' r' t"
 proof(induct t arbitrary: s' r')
   case Nil
   then show ?case
-    by (simp add: obtains_empty)
+    by (simp add: obtains_base)
 next
   case (Cons a t)
   then show ?case
@@ -1544,7 +1546,7 @@ lemma obtains_step_append:
 proof(induct t arbitrary: s' r')
   case Nil
   then show ?case
-    apply (simp add: obtains_empty)
+    apply (simp add: obtains_base)
     apply (rule obtains.step)
     apply (rule_tac x="(s'', ta)" in fBexI)
     by auto
