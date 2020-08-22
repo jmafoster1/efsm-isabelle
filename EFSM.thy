@@ -218,7 +218,7 @@ lemma deterministic_alt_aux: "size (possible_steps e s r l i) \<le> 1 =(
   by (metis le_neq_implies_less le_numeral_extra(4) less_one prod.collapse size_fsingleton)
 
 lemma deterministic_alt: "deterministic e = (
-  \<forall>s r l i. 
+  \<forall>s r l i.
     possible_steps e s r l i = {||} \<or>
     (\<exists>s' t. ffilter (\<lambda>((origin, dest), t). origin = s \<and> (Label t) = l \<and> (length i) = (Arity t) \<and> apply_guards (Guards t) (join_ir i r)) e = {|((s, s'), t)|})
 )"
@@ -346,7 +346,7 @@ lemma not_deterministic_conv:
   apply (rule_tac x=ba in exI)
   by (metis finsertI1 finsert_commute in_possible_steps)
 
-lemma deterministic_if: 
+lemma deterministic_if:
 "\<nexists>s l i r.
   \<exists>d1 d2 t1 t2.
     (d1 \<noteq> d2 \<or> t1 \<noteq> t2) \<and>
@@ -1209,13 +1209,12 @@ subsection\<open>Reachability\<close>
 text\<open>Here, we define the function \texttt{gets\_us\_to} which returns true if the given execution
 leaves the given EFSM in the given state.\<close>
 
+text_raw\<open>\snip{gets_us_to}{1}{2}{%\<close>
 inductive gets_us_to :: "cfstate \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
-  base [simp]: "s = target \<Longrightarrow> gets_us_to target _ s _ []" |
+  base [simp]: "gets_us_to s _ s _ []" |
   step_some: "\<exists>(s', T) |\<in>| possible_steps e s r (fst h) (snd h). gets_us_to target e s' (evaluate_updates T (snd h) r) t \<Longrightarrow>
-   gets_us_to target e s r (h#t)" |
-  step_none: "step e s r (fst h) (snd h) = None \<Longrightarrow>
-   s = target \<Longrightarrow>
    gets_us_to target e s r (h#t)"
+text_raw\<open>}%endsnip\<close>
 
 lemma no_further_steps:
   "s \<noteq> s' \<Longrightarrow> \<not> gets_us_to s e s' r []"
@@ -1224,49 +1223,7 @@ lemma no_further_steps:
   by auto
 
 lemma gets_us_to_base: "gets_us_to target e s r [] = (s = target)"
-  using gets_us_to.base no_further_steps by blast
-
-lemma gets_us_to_step:
-  "possible_steps e ss r aa b \<noteq> {||} \<Longrightarrow>
-   gets_us_to s e ss r ((aa, b) # t) = (\<exists>(s', T) |\<in>| possible_steps e ss r aa b. gets_us_to s e s' (evaluate_updates T b r) t)"
-  apply standard
-   apply (rule gets_us_to.cases)
-      apply simp
-     apply simp
-    apply clarsimp
-    apply (rule_tac x="(aaa, ba)" in fBexI)
-     apply simp
-    apply simp
-   apply clarsimp
-  using step_None apply auto[1]
-  by (simp add: gets_us_to.step_some)
-
-lemma gets_us_to_step_none:
-  "possible_steps e s' r aa b = {||} \<Longrightarrow> gets_us_to s e s' r ((aa, b) # t) = (s = s')"
-  apply standard
-   apply (rule gets_us_to.cases)
-      apply simp
-     apply simp
-    apply auto[1]
-   apply simp
-  by (simp add: step_None step_none)
-
-lemma can_go_somewhere: "\<exists>s. gets_us_to s e ss r t"
-proof(induct t arbitrary: ss r)
-  case Nil
-  then show ?case
-    by (simp add: gets_us_to_base)
-next
-  case (Cons a t)
-  then show ?case
-    apply (cases a)
-    apply simp
-    apply (case_tac "possible_steps e ss r aa b = {||}")
-     apply (rule_tac x=ss in exI)
-     apply (simp add: step_None step_none)
-    apply (simp add: gets_us_to_step)
-    by fast
-qed
+  by (metis gets_us_to.base no_further_steps)
 
 definition "reachable s e = (\<exists>t. gets_us_to s e 0 <> t)"
 
