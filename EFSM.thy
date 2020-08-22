@@ -1151,14 +1151,12 @@ next
      apply clarsimp
     subgoal for aa b aaa ba
       apply (erule_tac x="(aaa, ba)" in fBallE[of "possible_steps e2 s2 r2 aa b"])
-       prefer 2 apply simp
-      by force
+      by (force, simp)
     apply (rule fBallI)
     apply clarsimp
     subgoal for aa b aaa ba
       apply (erule_tac x="(aaa, ba)" in fBallE)
-       prefer 2 apply simp
-      by force
+      by (force, simp)
     done
 qed
 
@@ -1209,220 +1207,63 @@ subsection\<open>Reachability\<close>
 text\<open>Here, we define the function \texttt{gets\_us\_to} which returns true if the given execution
 leaves the given EFSM in the given state.\<close>
 
-text_raw\<open>\snip{gets_us_to}{1}{2}{%\<close>
-inductive gets_us_to :: "cfstate \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
-  base [simp]: "gets_us_to s _ s _ []" |
-  step_some: "\<exists>(s', T) |\<in>| possible_steps e s r (fst h) (snd h). gets_us_to target e s' (evaluate_updates T (snd h) r) t \<Longrightarrow>
-   gets_us_to target e s r (h#t)"
+text_raw\<open>\snip{reachable}{1}{2}{%\<close>
+inductive visits :: "cfstate \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
+  base [simp]: "visits s e s r []" |
+  step_some: "\<exists>(s', T) |\<in>| possible_steps e s r (fst h) (snd h). visits target e s' (evaluate_updates T (snd h) r) t \<Longrightarrow>
+   visits target e s r (h#t)"
+
+definition "reachable s e = (\<exists>t. visits s e 0 <> t)"
 text_raw\<open>}%endsnip\<close>
 
 lemma no_further_steps:
-  "s \<noteq> s' \<Longrightarrow> \<not> gets_us_to s e s' r []"
+  "s \<noteq> s' \<Longrightarrow> \<not> visits s e s' r []"
   apply safe
-  apply (rule gets_us_to.cases)
+  apply (rule visits.cases)
   by auto
 
-lemma gets_us_to_base: "gets_us_to target e s r [] = (s = target)"
-  by (metis gets_us_to.base no_further_steps)
+lemma visits_base: "visits target e s r [] = (s = target)"
+  by (metis visits.base no_further_steps)
 
-definition "reachable s e = (\<exists>t. gets_us_to s e 0 <> t)"
+lemma visits_step:
+  "visits target e s r (h#t) = (\<exists>(s', T) |\<in>| possible_steps e s r (fst h) (snd h). visits target e s' (evaluate_updates T (snd h) r) t)"
+  apply standard
+  apply (rule visits.cases)
+  using visits.step_some by auto
 
 lemma reachable_initial: "reachable 0 e"
   apply (simp add: reachable_def)
   apply (rule_tac x="[]" in exI)
   by simp
 
-inductive visits :: "cfstate \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
-  base [simp]: "s = s' \<Longrightarrow> visits s e s' r t" |
-  step: "\<exists>(s', T) |\<in>| possible_steps e s r (fst h) (snd h). visits target e s' (evaluate_updates T (snd h) r) t \<Longrightarrow>
-         visits target e s r (h#t)"
-
-lemma gets_us_to_implies_visits:
-  "gets_us_to s e s' r t \<Longrightarrow> visits s e s' r t"
-proof(induct t arbitrary: s' r)
-  case Nil
-  then show ?case
-    using no_further_steps visits.base by blast
-next
-  case (Cons a t)
-  then show ?case
-    apply (cases a)
-    apply (rule gets_us_to.cases)
-       apply simp
-      apply simp
-     apply clarsimp
-     apply (rule visits.step)
-    by auto
-qed
-
-lemma visits_append: "visits s e s' r t \<Longrightarrow> visits s e s' r (t@ts)"
-proof(induct t arbitrary: s' r)
-  case Nil
-  then show ?case
-    by (metis list.simps(3) visits.simps)
-next
-  case (Cons a t)
-  then show ?case
-    apply simp
-    apply (rule visits.cases)
-      apply simp
-     apply simp
-    apply clarsimp
-    apply (rule visits.step)
-    by auto
-qed
-
-lemma visits_append_contra: "\<not>visits s e s' r (t@ts) \<Longrightarrow> \<not>visits s e s' r t"
-  using visits_append by blast
-
-lemma visits_step: "(visits s e s' r (h # t)) = (s=s' \<or> (\<exists>(s', T) |\<in>| possible_steps e s' r (fst h) (snd h). visits s e s' (evaluate_updates T (snd h) r) t))"
-  apply standard
-   apply (rule visits.cases)
-     apply simp
-    apply simp
-   apply simp
-  using visits.base visits.step by presburger
-
-lemma visits_take:
-  "\<exists>p \<le> length t. visits s e s' r (take p t) \<Longrightarrow> visits s e s' r t"
-proof(induct t)
-  case Nil
-  then show ?case
-    by simp
-next
-  case (Cons a t)
-  then show ?case
-    by (metis append_take_drop_id visits_append)
-qed
-
-lemma visits_take_2: "\<not> visits s e s' r t \<Longrightarrow> (\<forall>p \<le> length t. \<not> visits s e s' r (take p t))"
-  using visits_take by blast
-
-lemma visits_min_prefix:
-  "visits s e s' r t \<Longrightarrow> \<exists>p. visits s e s' r (take p t) \<and> (\<forall>p' < p. \<not> visits s e s' r (take p' t))"
-proof(induct t rule: rev_induct)
-  case Nil
-  then show ?case
-    by auto
-next
-  case (snoc a t)
-  then show ?case
-    apply (case_tac "visits s e s' r t")
-     apply simp
-     apply clarify
-     apply (rule_tac x=p in exI)
-     apply standard
-    using visits_append apply blast
-     apply (metis append_Nil2 diff_is_0_eq' nat_le_linear take_Cons' take_all)
-    apply (rule_tac x="length t + 1" in exI)
-    apply simp
-    apply (rule visits.cases)
-      apply simp
-     apply simp
-    apply clarsimp
-    by (metis append_take_drop_id visits_append)
-qed
-
-lemma visits_min_prefix_2:
-  "\<nexists>p. visits s e s' r (take p t) \<and> (\<forall>p'<p. \<not> visits s e s' r (take p' t)) \<Longrightarrow>
-  \<not> visits s e s' r (take x t)"
-  by (metis visits_min_prefix nat_le_linear take_all visits_take_2)
-
-lemma visits_empty: "visits s e s' r [] = (s = s')"
-  apply standard
-  by (rule visits.cases, auto)
-
-lemma "(s'', tt) |\<in>| possible_steps e s' r (fst a) (snd a) \<Longrightarrow>
-          visits s e s'' (evaluate_updates tt (snd a) r) t \<Longrightarrow>
-visits s e s' r (a#t)"
-  apply (rule visits.step)
-  by auto
-
-lemma take_head: "take p' (h # t) = ha # ta \<Longrightarrow> ha = h"
-  by (induct p', auto)
-
-lemma visits_gets_us_to_min:
-  "visits s e s' r t \<Longrightarrow> \<forall>p'<length t. \<not> visits s e s' r (take p' t) \<Longrightarrow> gets_us_to s e s' r t"
-proof(induct t arbitrary: s' r)
-  case Nil
-  then show ?case
-    by (metis gets_us_to.simps list.simps(3) visits.cases)
-next
-  case (Cons a t)
-  then show ?case
-    apply (simp add: visits_step)
-    apply (erule disjE)
-     apply auto[1]
-    apply (rule gets_us_to.step_some)
-    apply (erule fBexE)
-    apply (rule_tac x=x in fBexI)
-     defer apply simp
-    apply (case_tac x)
-    apply clarsimp
-    subgoal for s'' tt
-      apply (rule Cons(1)[of s'' "evaluate_updates tt (snd a) r"])
-       apply simp
-      apply (rule allI)
-      subgoal for p'
-        apply (induct p')
-         apply (simp add: visits_empty)
-         apply (erule_tac x=1 in allE)
-         apply (simp add: One_nat_def visits_step)
-         apply force
-        apply simp
-        apply (rule impI)
-        apply simp
-        apply (erule_tac x="Suc (Suc p')" in allE)
-         apply (simp add: One_nat_def visits_step)
-        by auto
-      done
-    done
-qed
-
-lemma gets_us_to_min:
-  "gets_us_to s e s' r t \<Longrightarrow> \<exists>p. gets_us_to s e s' r (take p t) \<and> (\<forall>p' < p. \<not> gets_us_to s e s' r (take p' t))"
-  apply (insert gets_us_to_implies_visits[of s e s' r t] visits_min_prefix[of s e s' r t])
-  apply simp
-  apply clarify
-  apply (rule_tac x=p in exI)
-  apply standard
-  defer
-  using gets_us_to_implies_visits apply blast
-  using visits_gets_us_to_min by force
-
 lemma visits_finsert:
   "visits s e s' r t \<Longrightarrow> visits s (finsert ((aa, ba), b) e) s' r t"
 proof(induct t arbitrary: s' r)
   case Nil
   then show ?case
-    by (simp add: visits_empty)
+    by (simp add: visits_base)
 next
   case (Cons a t)
   then show ?case
     apply (simp add: visits_step)
-    apply (erule disjE)
-     apply simp
     apply (erule fBexE)
-    apply (rule disjI2)
     apply (rule_tac x=x in fBexI)
      apply auto[1]
     by (simp add: possible_steps_finsert)
 qed
 
-lemma visits_trace_gets_us_to:
-  "visits s e s' r t \<Longrightarrow> \<exists>t. gets_us_to s e s' r t"
-  using visits_min_prefix visits_gets_us_to_min
-  by fastforce
-
 lemma reachable_finsert:
   "reachable s e \<Longrightarrow> reachable s (finsert ((aa, ba), b) e)"
   apply (simp add: reachable_def)
-  apply clarify
-  by (meson visits_trace_gets_us_to gets_us_to_implies_visits visits_finsert)
+  by (meson visits_finsert)
 
 lemma reachable_finsert_contra:
   "\<not> reachable s (finsert ((aa, ba), b) e) \<Longrightarrow> \<not>reachable s e"
   using reachable_finsert by blast
+
+lemma visits_empty: "visits s e s' r [] = (s = s')"
+  apply standard
+  by (rule visits.cases, auto)
 
 definition "remove_state s e = ffilter (\<lambda>((from, to), t). from \<noteq> s \<and> to \<noteq> s) e"
 
@@ -1473,7 +1314,7 @@ lemma obtainable_empty_efsm:
   apply (metis ffilter_empty no_outgoing_transitions no_step_none obtains.cases obtains_recognises step_None)
   using obtains_base by blast
 
-lemma obtains_gets_us_to: "obtains s r e s' r' t \<Longrightarrow> gets_us_to s e s' r' t"
+lemma obtains_visits: "obtains s r e s' r' t \<Longrightarrow> visits s e s' r' t"
 proof(induct t arbitrary: s' r')
   case Nil
   then show ?case
@@ -1486,12 +1327,12 @@ next
       apply simp
      apply simp
     apply clarsimp
-    apply (rule gets_us_to.step_some)
+    apply (rule visits.step_some)
     by auto
 qed
 
-lemma unobtainable_if: "\<not> gets_us_to s e s' r' t \<Longrightarrow> \<not> obtains s r e s' r' t"
-  using obtains_gets_us_to by blast
+lemma unobtainable_if: "\<not> visits s e s' r' t \<Longrightarrow> \<not> obtains s r e s' r' t"
+  using obtains_visits by blast
 
 lemma obtainable_if_unreachable: "\<not>reachable s e \<Longrightarrow> \<not>obtainable s r e"
   by (simp add: reachable_def obtainable_def unobtainable_if)
@@ -1543,7 +1384,8 @@ lemma possible_steps_remove_unreachable:
   apply (simp add: remove_state_def)
   by (metis (mono_tags, lifting) ffmember_filter in_possible_steps obtainable_if_unreachable old.prod.case)
 
-lemma executionally_equivalent_remove_unreachable_state:
+text_raw\<open>\snip{removeUnreachable}{1}{2}{%\<close>
+lemma executionally_equivalent_remove_unreachable_state_arbitrary:
   "obtainable s r e \<Longrightarrow> \<not> reachable s' e \<Longrightarrow> executionally_equivalent e s r (remove_state s' e) s r x"
 proof(induct x arbitrary: s r)
 case Nil
@@ -1559,16 +1401,19 @@ next
      apply (rule fBallI)
      apply clarsimp
      apply (rule_tac x="(ab, ba)" in fBexI)
-      prefer 2 apply simp
+      apply (metis (mono_tags, lifting) obtainable_def obtains_step_append case_prodI)
      apply simp
-    apply (meson obtainable_def obtains_step_append)
     apply (rule fBallI)
-     apply clarsimp
-     apply (rule_tac x="(ab, ba)" in fBexI)
-      prefer 2 apply simp
-     apply simp
-    by (meson obtainable_def obtains_step_append)
+    apply clarsimp
+    apply (rule_tac x="(ab, ba)" in fBexI)
+    apply (metis (mono_tags, lifting) case_prodI obtainable_def obtains_step_append)
+    by simp
 qed
+
+lemma executionally_equivalent_remove_unreachable_state:
+  "\<not> reachable s' e \<Longrightarrow> executionally_equivalent e 0 <> (remove_state s' e) 0 <> x"
+  by (meson executionally_equivalent_remove_unreachable_state_arbitrary obtains.simps obtains_obtainable)
+text_raw\<open>}%endsnip\<close>
 
 subsection\<open>Transition Replacement\<close>
 text\<open>Here, we define the function \texttt{replace} to replace one transition with another, and prove
@@ -1586,6 +1431,5 @@ lemma possible_steps_replace_unchanged:
   (aa, ba) |\<in>| possible_steps (replace e1 ((s1, s2), t1) ((s1, s2), t2)) s r l i"
   apply (simp add: in_possible_steps[symmetric] replace_def)
   by fastforce
-
 
 end
