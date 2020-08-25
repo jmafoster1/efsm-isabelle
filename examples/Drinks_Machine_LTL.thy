@@ -294,8 +294,8 @@ lemma output_vend_aux:
 
 text_raw\<open>\snip{outputVend}{1}{2}{%\<close>
 lemma LTL_output_vend:
-  "alw (((label_eq ''vend'') aand (nxt (output_eq [Some d]))) impl (check_exp (Ge (V (Rg 2)) (L (Num 100)))))
-  (watch drinks t)"
+  "alw (((label_eq ''vend'') aand (nxt (output_eq [Some d]))) impl
+         (check_exp (Ge (V (Rg 2)) (L (Num 100))))) (watch drinks t)"
 proof(coinduction)
   case alw
   then show ?case
@@ -310,7 +310,8 @@ proof(coinduction)
      apply simp
     apply simp
     subgoal for a b
-      using output_vend_aux[of "(make_full_observation drinks (Some 1) <1 $:= Some (hd b), 2 $:= Some (Num 0)> [] (stl t))" d]
+      using output_vend_aux[of "(make_full_observation drinks (Some 1)
+              <1 $:= Some (hd b), 2 $:= Some (Num 0)> [] (stl t))" d]
       using implode_vend by auto
     done
 qed
@@ -318,7 +319,8 @@ text_raw\<open>}%endsnip\<close>
 
 text_raw\<open>\snip{outputVendUnfolded}{1}{2}{%\<close>
 lemma LTL_output_vend_unfolded:
-  "alw (\<lambda>xs. label (shd xs) = STR ''vend'' \<and> nxt (\<lambda>s. output (shd s) = [Some d]) xs \<longrightarrow>
+  "alw (\<lambda>xs. (label (shd xs) = STR ''vend'' \<and>
+             nxt (\<lambda>s. output (shd s) = [Some d]) xs) \<longrightarrow>
               \<not>\<^sub>? value_gt (Some (Num 100)) (datastate (shd xs) $ 2) = trilean.true)
      (watch drinks t)"
   apply (insert LTL_output_vend[of d t])

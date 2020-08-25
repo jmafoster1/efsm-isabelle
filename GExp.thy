@@ -20,7 +20,8 @@ declare I_def [simp]
 hide_const I
 
 text_raw\<open>\snip{gexptype}{1}{2}{%\<close>
-datatype 'a gexp = Bc bool | Eq "'a aexp" "'a aexp" | Gt "'a aexp" "'a aexp" | In 'a "value list" |  Nor "'a gexp" "'a gexp"
+datatype 'a gexp = Bc bool | Eq "'a aexp" "'a aexp" | Gt "'a aexp" "'a aexp" |
+                   In 'a "value list" |  Nor "'a gexp" "'a gexp"
 text_raw\<open>}%endsnip\<close>
 
 fun gval :: "'a gexp \<Rightarrow> 'a datastate \<Rightarrow> trilean" where

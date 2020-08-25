@@ -17,7 +17,8 @@ type_synonym registers = "nat \<Rightarrow>f value option"
 type_synonym 'a datastate = "'a \<Rightarrow> value option"
 
 text_raw\<open>\snip{aexptype}{1}{2}{%\<close>
-datatype 'a aexp = L "value" | V 'a | Plus "'a aexp" "'a aexp" | Minus "'a aexp" "'a aexp" | Times "'a aexp" "'a aexp"
+datatype 'a aexp = L "value" | V 'a | Plus "'a aexp" "'a aexp" |
+                   Minus "'a aexp" "'a aexp" | Times "'a aexp" "'a aexp"
 text_raw\<open>}%endsnip\<close>
 
 fun is_lit :: "'a aexp \<Rightarrow> bool" where

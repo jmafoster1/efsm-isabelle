@@ -171,7 +171,7 @@ next
   case (Cons a t)
   then show ?case
     apply (cases a, clarsimp)
-    apply (rule executionally_equivalent.step)
+    apply (simp add: executionally_equivalent_step)
     apply (case_tac "fst a = STR ''coin'' \<and> length (snd a) = 1")
      apply (simp add: Drinks_Machine.possible_steps_1_coin possible_steps_2_coin)
     apply (case_tac "a = (STR ''vend'', [])")
@@ -197,7 +197,7 @@ next
   case (Cons a t)
   then show ?case
     apply (cases a, clarsimp)
-    apply (rule executionally_equivalent.step)
+    apply (simp add: executionally_equivalent_step)
     apply (case_tac "aa = STR ''coin'' \<and> length b = 1")
      apply (simp add: possible_steps_1_coin possible_steps_1 equiv_1_2)
     apply (case_tac "a = (STR ''vend'', [])")
@@ -218,7 +218,7 @@ next
   case (Cons a t)
   then show ?case
     apply (cases a, clarify)
-    apply (rule executionally_equivalent.step)
+    apply (simp add: executionally_equivalent_step)
     apply (case_tac "aa = STR ''select'' \<and> length b = 1")
      apply (simp add: Drinks_Machine.possible_steps_0 possible_steps_0)
      apply (simp add: apply_updates_def select_def equiv_1_1)

@@ -479,7 +479,7 @@ lemma step_outputs: "step e s r l i = Some (t, s', p, r') \<Longrightarrow> eval
   apply (case_tac "random_member (possible_steps e s r l i)")
   by auto
 
-lemma step_some:
+lemma step:
   "possibilities = (possible_steps e s r l i) \<Longrightarrow>
    random_member possibilities = Some (s', t) \<Longrightarrow>
    evaluate_outputs t i r = p \<Longrightarrow>
@@ -511,7 +511,8 @@ text\<open>One of the key features of this formalisation of EFSMs is their abili
 EFSM, they produce a corresponding \emph{observation}.\<close>
 
 text_raw\<open>\snip{observe}{1}{2}{%\<close>
-fun observe_execution :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> outputs list" where
+fun observe_execution :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow>
+outputs list" where
   "observe_execution _ _ _ [] = []" |
   "observe_execution e s r ((l, i)#as)  = (
     let viable = possible_steps e s r l i in
@@ -564,7 +565,7 @@ lemma observe_execution_possible_step:
    apply_updates (Updates t) (join_ir (snd h) r) r = r' \<Longrightarrow>
    observe_execution e s' r' es = obs \<Longrightarrow>
    observe_execution e s r (h#es) = p#obs"
-  by (simp add: observe_execution_step step_some)
+  by (simp add: observe_execution_step step)
 
 lemma observe_execution_no_possible_step:
   "possible_steps e s r (fst h) (snd h) = {||} \<Longrightarrow>
@@ -631,7 +632,8 @@ outputs produced. When a recognised execution is observed, it produces an accept
 EFSM.\<close>
 
 text_raw\<open>\snip{recognises}{1}{2}{%\<close>
-inductive recognises_execution :: "transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
+inductive recognises_execution :: "transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow>
+bool" where
   base [simp]: "recognises_execution e s d []" |
   step: "(s', t) |\<in>| possible_steps e s r l i \<Longrightarrow>
          recognises_execution e s' (evaluate_updates t i r) ts \<Longrightarrow>
@@ -765,7 +767,8 @@ the EFSM is able to respond to each event in sequence \emph{and} is able to prod
 output. Accepted traces represent valid runs of an EFSM.\<close>
 
 text_raw\<open>\snip{accepts}{1}{2}{%\<close>
-inductive accepts_trace :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> trace \<Rightarrow> bool" where
+inductive accepts_trace :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> trace \<Rightarrow>
+bool" where
   base [simp]: "accepts_trace e s d []" |
   step: "\<exists>(s', T) |\<in>| possible_steps e s d l i.
          evaluate_outputs T i d = map Some p \<and>
@@ -877,7 +880,8 @@ states of $e_1$ and $e_1$ such that in each state, if $e_1$ can respond to the e
 the correct output, so can $e_2$.\<close>
 
 text_raw\<open>\snip{traceSim}{1}{2}{%\<close>
-inductive trace_simulation :: "(cfstate \<Rightarrow> cfstate) \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> trace \<Rightarrow> bool" where
+inductive trace_simulation :: "(cfstate \<Rightarrow> cfstate) \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow>
+registers \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> trace \<Rightarrow> bool" where
   base: "s2 = f s1 \<Longrightarrow> trace_simulation f e1 s1 r1 e2 s2 r2 []" |
   step: "s2 = f s1 \<Longrightarrow>
          \<forall>(s1', t1) |\<in>| ffilter (\<lambda>(s1', t1). evaluate_outputs t1 i r1 = map Some o) (possible_steps e1 s1 r1 l i).
@@ -988,13 +992,16 @@ Execution simulation has no notion of ``expected'' output. It simply requires th
 EFSM must be able to produce equivalent output for each action.\<close>
 
 text_raw\<open>\snip{execSim}{1}{2}{%\<close>
-inductive execution_simulation :: "(cfstate \<Rightarrow> cfstate) \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
+inductive execution_simulation :: "(cfstate \<Rightarrow> cfstate) \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow>
+registers \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
   base: "s2 = f s1 \<Longrightarrow> execution_simulation f e1 s1 r1 e2 s2 r2 []" |
   step: "s2 = f s1 \<Longrightarrow>
          \<forall>(s1', t1) |\<in>| (possible_steps e1 s1 r1 l i).
-         (\<exists>(s2', t2) |\<in>| possible_steps e2 s2 r2 l i. evaluate_outputs t1 i r1 = evaluate_outputs t2 i r2 \<and>
-         execution_simulation f e1 s1' (evaluate_updates t1 i r1) e2 s2' (evaluate_updates t2 i r2) es) \<Longrightarrow>
-         execution_simulation f e1 s1 r1 e2 s2 r2 ((l, i)#es)"
+           \<exists>(s2', t2) |\<in>| possible_steps e2 s2 r2 l i.
+            evaluate_outputs t1 i r1 = evaluate_outputs t2 i r2 \<and>
+            execution_simulation f e1 s1' (evaluate_updates t1 i r1)
+                                   e2 s2' (evaluate_updates t2 i r2) es
+         \<Longrightarrow> execution_simulation f e1 s1 r1 e2 s2 r2 ((l, i)#es)"
 text_raw\<open>}%endsnip\<close>
 
 definition "execution_simulates e1 e2 = (\<exists>f. \<forall>t. execution_simulation f e1 0 <> e2 0 <> t)"
@@ -1017,7 +1024,8 @@ lemma execution_simulation_step:
 
 text_raw\<open>\snip{execTraceSim}{1}{2}{%\<close>
 lemma execution_simulation_trace_simulation:
-  "execution_simulation f e1 s1 r1 e2 s2 r2 (map (\<lambda>(l, i, o). (l, i)) t) \<Longrightarrow> trace_simulation f e1 s1 r1 e2 s2 r2 t"
+  "execution_simulation f e1 s1 r1 e2 s2 r2 (map (\<lambda>(l, i, o). (l, i)) t) \<Longrightarrow>
+   trace_simulation f e1 s1 r1 e2 s2 r2 t"
 proof(induct t arbitrary: s1 s2 r1 r2)
 case Nil
   then show ?case
@@ -1051,13 +1059,20 @@ text\<open>Two EFSMs are executionally equivalent if there is no execution which
 the two. That is, for every execution, they must produce equivalent outputs.\<close>
 
 text_raw\<open>\snip{execEquiv}{1}{2}{%\<close>
-inductive executionally_equivalent :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
+inductive executionally_equivalent :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow>
+transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
   base [simp]: "executionally_equivalent e1 s1 r1 e2 s2 r2 []" |
-  step: "((\<forall>(s1', t1) |\<in>| (possible_steps e1 s1 r1 l i). (\<exists>(s2', t2) |\<in>| possible_steps e2 s2 r2 l i. evaluate_outputs t1 i r1 = evaluate_outputs t2 i r2 \<and>
-           executionally_equivalent e1 s1' (evaluate_updates t1 i r1) e2 s2' (evaluate_updates t2 i r2) es)) \<and>
-          (\<forall>(s2', t2) |\<in>| (possible_steps e2 s2 r2 l i). (\<exists>(s1', t1) |\<in>| possible_steps e1 s1 r1 l i. evaluate_outputs t1 i r1 = evaluate_outputs t2 i r2 \<and>
-           executionally_equivalent e1 s1' (evaluate_updates t1 i r1) e2 s2' (evaluate_updates t2 i r2) es))) \<Longrightarrow>
-         executionally_equivalent e1 s1 r1 e2 s2 r2 ((l, i)#es)"
+  step: "\<forall>(s1', t1) |\<in>| possible_steps e1 s1 r1 l i.
+           \<exists>(s2', t2) |\<in>| possible_steps e2 s2 r2 l i.
+             evaluate_outputs t1 i r1 = evaluate_outputs t2 i r2 \<and>
+             executionally_equivalent e1 s1' (evaluate_updates t1 i r1)
+                                      e2 s2' (evaluate_updates t2 i r2) es
+     \<Longrightarrow> \<forall>(s2', t2) |\<in>| possible_steps e2 s2 r2 l i.
+           \<exists>(s1', t1) |\<in>| possible_steps e1 s1 r1 l i.
+             evaluate_outputs t1 i r1 = evaluate_outputs t2 i r2 \<and>
+             executionally_equivalent e1 s1' (evaluate_updates t1 i r1)
+                                      e2 s2' (evaluate_updates t2 i r2) es
+     \<Longrightarrow> executionally_equivalent e1 s1 r1 e2 s2 r2 ((l, i)#es)"
 text_raw\<open>}%endsnip\<close>
 
 lemma executionally_equivalent_step:
@@ -1065,8 +1080,7 @@ lemma executionally_equivalent_step:
   (\<forall>(s1', t1) |\<in>| (possible_steps e1 s1 r1 l i). (\<exists>(s2', t2) |\<in>| possible_steps e2 s2 r2 l i. evaluate_outputs t1 i r1 = evaluate_outputs t2 i r2 \<and>
    executionally_equivalent e1 s1' (evaluate_updates t1 i r1) e2 s2' (evaluate_updates t2 i r2) es)) \<and>
   (\<forall>(s2', t2) |\<in>| (possible_steps e2 s2 r2 l i). (\<exists>(s1', t1) |\<in>| possible_steps e1 s1 r1 l i. evaluate_outputs t1 i r1 = evaluate_outputs t2 i r2 \<and>
-   executionally_equivalent e1 s1' (evaluate_updates t1 i r1) e2 s2' (evaluate_updates t2 i r2) es))
-)"
+   executionally_equivalent e1 s1' (evaluate_updates t1 i r1) e2 s2' (evaluate_updates t2 i r2) es)))"
   apply standard
    apply (rule executionally_equivalent.cases)
      apply simp
@@ -1208,10 +1222,12 @@ text\<open>Here, we define the function \texttt{gets\_us\_to} which returns true
 leaves the given EFSM in the given state.\<close>
 
 text_raw\<open>\snip{reachable}{1}{2}{%\<close>
-inductive visits :: "cfstate \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
+inductive visits :: "cfstate \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow>
+bool" where
   base [simp]: "visits s e s r []" |
-  step_some: "\<exists>(s', T) |\<in>| possible_steps e s r (fst h) (snd h). visits target e s' (evaluate_updates T (snd h) r) t \<Longrightarrow>
-   visits target e s r (h#t)"
+  step: "\<exists>(s', T) |\<in>| possible_steps e s r l i.
+           visits target e s' (evaluate_updates T i r) t
+     \<Longrightarrow> visits target e s r ((l, i)#t)"
 
 definition "reachable s e = (\<exists>t. visits s e 0 <> t)"
 text_raw\<open>}%endsnip\<close>
@@ -1228,8 +1244,10 @@ lemma visits_base: "visits target e s r [] = (s = target)"
 lemma visits_step:
   "visits target e s r (h#t) = (\<exists>(s', T) |\<in>| possible_steps e s r (fst h) (snd h). visits target e s' (evaluate_updates T (snd h) r) t)"
   apply standard
-  apply (rule visits.cases)
-  using visits.step_some by auto
+   apply (rule visits.cases)
+     apply simp+
+  apply (cases h)
+  using visits.step by auto
 
 lemma reachable_initial: "reachable 0 e"
   apply (simp add: reachable_def)
@@ -1268,9 +1286,11 @@ lemma visits_empty: "visits s e s' r [] = (s = s')"
 definition "remove_state s e = ffilter (\<lambda>((from, to), t). from \<noteq> s \<and> to \<noteq> s) e"
 
 text_raw\<open>\snip{obtainable}{1}{2}{%\<close>
-inductive "obtains" :: "cfstate \<Rightarrow> registers \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
+inductive "obtains" :: "cfstate \<Rightarrow> registers \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow>
+registers \<Rightarrow> execution \<Rightarrow> bool" where
   base [simp]: "obtains s r e s r []" |
-  step: "\<exists>(s'', T) |\<in>| possible_steps e s' r' l i. obtains s r e s'' (evaluate_updates T i r') t \<Longrightarrow>
+  step: "\<exists>(s'', T) |\<in>| possible_steps e s' r' l i.
+           obtains s r e s'' (evaluate_updates T i r') t \<Longrightarrow>
          obtains s r e s' r' ((l, i)#t)"
 
 definition "obtainable s r e = (\<exists>t. obtains s r e 0 <> t)"
@@ -1327,7 +1347,7 @@ next
       apply simp
      apply simp
     apply clarsimp
-    apply (rule visits.step_some)
+    apply (rule visits.step)
     by auto
 qed
 
@@ -1386,7 +1406,8 @@ lemma possible_steps_remove_unreachable:
 
 text_raw\<open>\snip{removeUnreachable}{1}{2}{%\<close>
 lemma executionally_equivalent_remove_unreachable_state_arbitrary:
-  "obtainable s r e \<Longrightarrow> \<not> reachable s' e \<Longrightarrow> executionally_equivalent e s r (remove_state s' e) s r x"
+  "obtainable s r e \<Longrightarrow> \<not> reachable s' e \<Longrightarrow>
+   executionally_equivalent e s r (remove_state s' e) s r x"
 proof(induct x arbitrary: s r)
 case Nil
   then show ?case
@@ -1398,7 +1419,6 @@ next
     apply (rule executionally_equivalent.step)
     apply (simp add: possible_steps_remove_unreachable)
     apply standard
-     apply (rule fBallI)
      apply clarsimp
      apply (rule_tac x="(ab, ba)" in fBexI)
       apply (metis (mono_tags, lifting) obtainable_def obtains_step_append case_prodI)
@@ -1406,13 +1426,15 @@ next
     apply (rule fBallI)
     apply clarsimp
     apply (rule_tac x="(ab, ba)" in fBexI)
-    apply (metis (mono_tags, lifting) case_prodI obtainable_def obtains_step_append)
-    by simp
+    apply simp
+     apply (metis obtainable_def obtains_step_append possible_steps_remove_unreachable)
+    by (simp add: possible_steps_remove_unreachable)
 qed
 
 lemma executionally_equivalent_remove_unreachable_state:
   "\<not> reachable s' e \<Longrightarrow> executionally_equivalent e 0 <> (remove_state s' e) 0 <> x"
-  by (meson executionally_equivalent_remove_unreachable_state_arbitrary obtains.simps obtains_obtainable)
+  by (meson executionally_equivalent_remove_unreachable_state_arbitrary
+      obtains.simps obtains_obtainable)
 text_raw\<open>}%endsnip\<close>
 
 subsection\<open>Transition Replacement\<close>

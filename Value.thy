@@ -17,7 +17,8 @@ fun is_Num :: "value \<Rightarrow> bool" where
   "is_Num (Str _) = False"
 
 text_raw\<open>\snip{maybeIntArith}{1}{2}{%\<close>
-fun MaybeArithInt :: "(int \<Rightarrow> int \<Rightarrow> int) \<Rightarrow> value option \<Rightarrow> value option \<Rightarrow> value option" where
+fun MaybeArithInt :: "(int \<Rightarrow> int \<Rightarrow> int) \<Rightarrow> value option \<Rightarrow> value option \<Rightarrow>
+                      value option" where
   "MaybeArithInt f (Some (Num x)) (Some (Num y)) = Some (Num (f x y))" |
   "MaybeArithInt _ _ _ = None"
 text_raw\<open>}%endsnip\<close>
