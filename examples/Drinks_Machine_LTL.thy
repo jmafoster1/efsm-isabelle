@@ -27,7 +27,7 @@ lemma P_ltl_step_1:
   assumes invalid: "P (None, [], r)"
   assumes coin: "l = STR ''coin'' \<longrightarrow> P (Some 1, [value_plus (r $ 2) (Some (hd i))], r(2 $:= value_plus (r $ 2) (Some (i ! 0))))"
   assumes vend_fail: "value_gt (Some (Num 100)) (r $ 2) = trilean.true \<longrightarrow> P (Some 1, [],r)"
-  assumes vend: "\<not>\<^sub>? value_gt (Some (Num 100)) (r $ 2) = trilean.true \<longrightarrow> P (Some 2, [r$1], r)"
+  assumes vend: "\<not>? value_gt (Some (Num 100)) (r $ 2) = trilean.true \<longrightarrow> P (Some 2, [r$1], r)"
   shows "P (ltl_step drinks (Some 1) r (l, i))"
 proof-
   have length_i: "\<And>s. \<exists>d. (l, i) = (s, [d]) \<Longrightarrow> length i = 1"
@@ -296,6 +296,7 @@ text_raw\<open>\snip{outputVend}{1}{2}{%\<close>
 lemma LTL_output_vend:
   "alw (((label_eq ''vend'') aand (nxt (output_eq [Some d]))) impl
          (check_exp (Ge (V (Rg 2)) (L (Num 100))))) (watch drinks t)"
+text_raw\<open>\isanewline$\langle \isa{proof}\rangle$}%endsnip\<close>
 proof(coinduction)
   case alw
   then show ?case
@@ -315,16 +316,15 @@ proof(coinduction)
       using implode_vend by auto
     done
 qed
-text_raw\<open>}%endsnip\<close>
 
 text_raw\<open>\snip{outputVendUnfolded}{1}{2}{%\<close>
 lemma LTL_output_vend_unfolded:
   "alw (\<lambda>xs. (label (shd xs) = STR ''vend'' \<and>
              nxt (\<lambda>s. output (shd s) = [Some d]) xs) \<longrightarrow>
-              \<not>\<^sub>? value_gt (Some (Num 100)) (datastate (shd xs) $ 2) = trilean.true)
+              \<not>? value_gt (Some (Num 100)) (datastate (shd xs) $ 2) = trilean.true)
      (watch drinks t)"
+text_raw\<open>\isanewline$\langle \isa{proof}\rangle$}%endsnip\<close>
   apply (insert LTL_output_vend[of d t])
   by (simp add: implode_vend)
-text_raw\<open>}%endsnip\<close>
 
 end

@@ -20,17 +20,16 @@ declare I_def [simp]
 hide_const I
 
 text_raw\<open>\snip{gexptype}{1}{2}{%\<close>
-datatype 'a gexp = Bc bool | Eq "'a aexp" "'a aexp" | Gt "'a aexp" "'a aexp" |
-                   In 'a "value list" |  Nor "'a gexp" "'a gexp"
+datatype 'a gexp = Bc bool | Eq "'a aexp" "'a aexp" | Gt "'a aexp" "'a aexp" | In 'a "value list" |  Nor "'a gexp" "'a gexp"
 text_raw\<open>}%endsnip\<close>
 
 fun gval :: "'a gexp \<Rightarrow> 'a datastate \<Rightarrow> trilean" where
   "gval (Bc True) _ = true" |
   "gval (Bc False) _ = false" |
-  "gval (Gt a\<^sub>1 a\<^sub>2) s = value_gt (aval a\<^sub>1 s) (aval a\<^sub>2 s)" |
-  "gval (Eq a\<^sub>1 a\<^sub>2) s = value_eq (aval a\<^sub>1 s) (aval a\<^sub>2 s)" |
+  "gval (Gt a1 a2) s = value_gt (aval a1 s) (aval a2 s)" |
+  "gval (Eq a1 a2) s = value_eq (aval a1 s) (aval a2 s)" |
   "gval (In v l) s = (case s v of None \<Rightarrow> invalid | Some vv \<Rightarrow> if vv \<in> set l then true else false)" |
-  "gval (Nor a\<^sub>1 a\<^sub>2) s = \<not>\<^sub>? ((gval a\<^sub>1 s) \<or>\<^sub>? (gval a\<^sub>2 s))"
+  "gval (Nor a1 a2) s = \<not>? ((gval a1 s) \<or>? (gval a2 s))"
 
 text_raw\<open>\snip{connectives}{1}{2}{%\<close>
 definition gNot :: "'a gexp \<Rightarrow> 'a gexp"  where
@@ -59,31 +58,31 @@ definition Ne :: "'a aexp \<Rightarrow> 'a aexp \<Rightarrow> 'a gexp" (*infix "
 text_raw\<open>}%endsnip\<close>
 
 lemma gval_Lt [simp]:
-  "gval (Lt a\<^sub>1 a\<^sub>2) s = value_gt (aval a\<^sub>2 s) (aval a\<^sub>1 s)"
+  "gval (Lt a1 a2) s = value_gt (aval a2 s) (aval a1 s)"
   by (simp add: Lt_def)
 
 lemma gval_Le [simp]:
-  "gval (Le a\<^sub>1 a\<^sub>2) s = \<not>\<^sub>? (value_gt (aval a\<^sub>1 s) (aval a\<^sub>2 s))"
+  "gval (Le a1 a2) s = \<not>? (value_gt (aval a1 s) (aval a2 s))"
   by (simp add: Le_def value_gt_def gNot_def maybe_or_idempotent)
 
 lemma gval_Ge [simp]:
-  "gval (Ge a\<^sub>1 a\<^sub>2) s = \<not>\<^sub>? (value_gt (aval a\<^sub>2 s) (aval a\<^sub>1 s))"
+  "gval (Ge a1 a2) s = \<not>? (value_gt (aval a2 s) (aval a1 s))"
   by (simp add: Ge_def value_gt_def gNot_def maybe_or_idempotent)
 
 lemma gval_Ne [simp]:
-  "gval (Ne a\<^sub>1 a\<^sub>2) s = \<not>\<^sub>? (value_eq (aval a\<^sub>1 s) (aval a\<^sub>2 s))"
+  "gval (Ne a1 a2) s = \<not>? (value_eq (aval a1 s) (aval a2 s))"
   by (simp add: Ne_def value_gt_def gNot_def maybe_or_idempotent)
 
 lemmas connectives = gAnd_def gOr_def gNot_def Lt_def Le_def Ge_def Ne_def
 
-lemma gval_gOr [simp]: "gval (gOr x y) r = (gval x r) \<or>\<^sub>? (gval y r)"
+lemma gval_gOr [simp]: "gval (gOr x y) r = (gval x r) \<or>? (gval y r)"
   by (simp add: maybe_double_negation maybe_or_idempotent gOr_def)
 
-lemma gval_gNot [simp]: "gval (gNot x) s = \<not>\<^sub>? (gval x s)"
+lemma gval_gNot [simp]: "gval (gNot x) s = \<not>? (gval x s)"
   by (simp add: maybe_or_idempotent gNot_def)
 
 lemma gval_gAnd [simp]:
-  "gval (gAnd g1 g2) s = (gval g1 s) \<and>\<^sub>? (gval g2 s)"
+  "gval (gAnd g1 g2) s = (gval g1 s) \<and>? (gval g2 s)"
   by (simp add: de_morgans_1 maybe_double_negation maybe_or_idempotent gAnd_def)
 
 lemma gAnd_commute: "gval (gAnd a b) s = gval (gAnd b a) s"
@@ -221,7 +220,7 @@ lemma max_reg_Nor: "max_reg (Nor a b) = max (max_reg a) (max_reg b)"
   by (metis GExp.finite_enumerate_regs Max.union bot_option_def max_bot2 sup_Some sup_max)
 
 lemma gval_In_cons:
-  "gval (In v (a # as)) s = (gval (Eq (V v) (L a)) s \<or>\<^sub>? gval (In v as) s)"
+  "gval (In v (a # as)) s = (gval (Eq (V v) (L a)) s \<or>? gval (In v as) s)"
   by (cases "s v", auto)
 
 lemma possible_to_be_in: "s \<noteq> [] \<Longrightarrow> satisfiable (In v s)"
@@ -418,7 +417,7 @@ lemma gval_fold_gOr_foldr: "gval (fold gOr l g) s = gval (foldr gOr l g) s"
   by (simp add: foldr_conv_fold gval_fold_gOr_rev)
 
 lemma gval_fold_gOr:
-  "gval (fold gOr (a # l) g) s = (gval a s \<or>\<^sub>? gval (fold gOr l g) s)"
+  "gval (fold gOr (a # l) g) s = (gval a s \<or>? gval (fold gOr l g) s)"
   by (simp only: gval_fold_gOr_foldr foldr.simps comp_def gval_gOr)
 
 lemma gval_In_fold:
@@ -462,7 +461,7 @@ next
     by fastforce
 qed
 
-lemma fold_maybe_or_invalid_base: "fold (\<or>\<^sub>?) l invalid = invalid"
+lemma fold_maybe_or_invalid_base: "fold (\<or>?) l invalid = invalid"
 proof(induct l)
   case Nil
   then show ?case
@@ -474,7 +473,7 @@ next
 qed
 
 lemma fold_maybe_or_true_base_never_false:
-  "fold (\<or>\<^sub>?) l true \<noteq> false"
+  "fold (\<or>?) l true \<noteq> false"
 proof(induct l)
   case Nil
   then show ?case
@@ -486,8 +485,8 @@ next
 qed
 
 lemma fold_true_fold_false_not_invalid:
-  "fold (\<or>\<^sub>?) l true = true \<Longrightarrow>
-   fold (\<or>\<^sub>?) (rev l) false \<noteq> invalid"
+  "fold (\<or>?) l true = true \<Longrightarrow>
+   fold (\<or>?) (rev l) false \<noteq> invalid"
 proof(induct l)
   case Nil
   then show ?case
@@ -500,8 +499,8 @@ next
 qed
 
 lemma fold_true_invalid_fold_rev_false_invalid:
-  "fold (\<or>\<^sub>?) l true = invalid \<Longrightarrow>
-   fold (\<or>\<^sub>?) (rev l) false = invalid"
+  "fold (\<or>?) l true = invalid \<Longrightarrow>
+   fold (\<or>?) (rev l) false = invalid"
 proof(induct l)
   case Nil
   then show ?case
@@ -514,7 +513,7 @@ next
 qed
 
 lemma fold_maybe_or_rev:
-  "fold (\<or>\<^sub>?) l b = fold (\<or>\<^sub>?) (rev l) b"
+  "fold (\<or>?) l b = fold (\<or>?) (rev l) b"
 proof(induct l)
   case Nil
   then show ?case
@@ -543,9 +542,9 @@ next
     case "3_2"
     then show ?case
       apply simp
-      apply (case_tac "fold (\<or>\<^sub>?) l true")
+      apply (case_tac "fold (\<or>?) l true")
         apply (simp add: eq_commute[of true])
-        apply (case_tac "fold (\<or>\<^sub>?) (rev l) false")
+        apply (case_tac "fold (\<or>?) (rev l) false")
           apply simp
          apply simp
         apply (simp add: fold_true_fold_false_not_invalid)
@@ -563,11 +562,11 @@ next
 qed
 
 lemma fold_maybe_or_cons:
-  "fold (\<or>\<^sub>?) (a#l) b = a \<or>\<^sub>? (fold (\<or>\<^sub>?) l b)"
+  "fold (\<or>?) (a#l) b = a \<or>? (fold (\<or>?) l b)"
   by (metis fold_maybe_or_rev foldr.simps(2) foldr_conv_fold o_apply)
 
 lemma gval_fold_gOr_map:
-  "gval (fold gOr l (Bc False)) s = fold (\<or>\<^sub>?) (map (\<lambda>g. gval g s) l) (false)"
+  "gval (fold gOr l (Bc False)) s = fold (\<or>?) (map (\<lambda>g. gval g s) l) (false)"
 proof(induct l)
   case Nil
   then show ?case
@@ -601,12 +600,12 @@ next
 qed
 
 lemma fold_Eq_true:
-  "\<forall>v. fold (\<or>\<^sub>?) (map (\<lambda>x. if v = x then true else false) vs) true = true"
+  "\<forall>v. fold (\<or>?) (map (\<lambda>x. if v = x then true else false) vs) true = true"
   by(induct vs, auto)
 
 lemma x_in_set_fold_eq:
   "x \<in> set ll \<Longrightarrow>
-   fold (\<or>\<^sub>?) (map (\<lambda>xa. if x = xa then true else false) ll) false = true"
+   fold (\<or>?) (map (\<lambda>xa. if x = xa then true else false) ll) false = true"
 proof(induct ll)
   case Nil
   then show ?case
@@ -622,7 +621,7 @@ qed
 
 lemma x_not_in_set_fold_eq:
   "s v \<notin> Some ` set ll \<Longrightarrow>
-   false = fold (\<or>\<^sub>?) (map (\<lambda>x. if s v = Some x then true else false) ll) false"
+   false = fold (\<or>?) (map (\<lambda>x. if s v = Some x then true else false) ll) false"
   by(induct ll, auto)
 
 lemma gval_take: "max_input g < Some a \<Longrightarrow>
@@ -651,7 +650,7 @@ next
 qed
 
 lemma gval_fold_gAnd_append_singleton:
-  "gval (fold gAnd (a @ [G]) (Bc True)) s = gval (fold gAnd a (Bc True)) s \<and>\<^sub>? gval G s"
+  "gval (fold gAnd (a @ [G]) (Bc True)) s = gval (fold gAnd a (Bc True)) s \<and>? gval G s"
   apply simp
   using times_trilean_commutative by blast
 
@@ -754,7 +753,7 @@ lemma gval_foldr_equiv_gval_fold:
   by (simp add: gval_fold_equiv_gval_foldr)
 
 lemma gval_fold_cons:
-  "gval (fold gAnd (g # gs) (Bc True)) s = gval g s \<and>\<^sub>? gval (fold gAnd gs (Bc True)) s"
+  "gval (fold gAnd (g # gs) (Bc True)) s = gval g s \<and>? gval (fold gAnd gs (Bc True)) s"
   apply (simp only: apply_guards_fold gval_fold_equiv_gval_foldr)
   by (simp only: foldr.simps comp_def gval_gAnd)
 

@@ -14,10 +14,10 @@ begin
 
 fun height :: "'a gexp \<Rightarrow> nat" where
   "height (Bc _) = 1" |
-  "height (Eq a\<^sub>1 a\<^sub>2) = 1 + max (AExp_Lexorder.height a\<^sub>1) (AExp_Lexorder.height a\<^sub>2)" |
-  "height (Gt a\<^sub>1 a\<^sub>2) = 1 + max (AExp_Lexorder.height a\<^sub>1) (AExp_Lexorder.height a\<^sub>2)" |
+  "height (Eq a1 a2) = 1 + max (AExp_Lexorder.height a1) (AExp_Lexorder.height a2)" |
+  "height (Gt a1 a2) = 1 + max (AExp_Lexorder.height a1) (AExp_Lexorder.height a2)" |
   "height (In v l) = 2 + size l" |
-  "height (Nor g\<^sub>1 g\<^sub>2) = 1 + max (height g\<^sub>1) (height g\<^sub>2)"
+  "height (Nor g1 g2) = 1 + max (height g1) (height g2)"
 
 instantiation gexp :: (linorder) linorder begin
 fun less_gexp_aux :: "'a gexp \<Rightarrow> 'a gexp \<Rightarrow> bool"  where

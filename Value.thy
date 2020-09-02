@@ -17,49 +17,48 @@ fun is_Num :: "value \<Rightarrow> bool" where
   "is_Num (Str _) = False"
 
 text_raw\<open>\snip{maybeIntArith}{1}{2}{%\<close>
-fun MaybeArithInt :: "(int \<Rightarrow> int \<Rightarrow> int) \<Rightarrow> value option \<Rightarrow> value option \<Rightarrow>
-                      value option" where
-  "MaybeArithInt f (Some (Num x)) (Some (Num y)) = Some (Num (f x y))" |
-  "MaybeArithInt _ _ _ = None"
+fun maybe_arith_int :: "(int \<Rightarrow> int \<Rightarrow> int) \<Rightarrow> value option \<Rightarrow> value option \<Rightarrow> value option" where
+  "maybe_arith_int f (Some (Num x)) (Some (Num y)) = Some (Num (f x y))" |
+  "maybe_arith_int _ _ _ = None"
 text_raw\<open>}%endsnip\<close>
 
-lemma MaybeArithInt_not_None:
-  "MaybeArithInt f a b \<noteq> None = (\<exists>n n'. a = Some (Num n) \<and> b = Some (Num n'))"
-  using MaybeArithInt.elims MaybeArithInt.simps(1) by blast
+lemma maybe_arith_int_not_None:
+  "maybe_arith_int f a b \<noteq> None = (\<exists>n n'. a = Some (Num n) \<and> b = Some (Num n'))"
+  using maybe_arith_int.elims maybe_arith_int.simps(1) by blast
 
-lemma MaybeArithInt_Some:
-  "MaybeArithInt f a b = Some (Num x) = (\<exists>n n'. a = Some (Num n) \<and> b = Some (Num n') \<and> f n n' = x)"
-  using MaybeArithInt.elims MaybeArithInt.simps(1) by blast
+lemma maybe_arith_int_Some:
+  "maybe_arith_int f a b = Some (Num x) = (\<exists>n n'. a = Some (Num n) \<and> b = Some (Num n') \<and> f n n' = x)"
+  using maybe_arith_int.elims maybe_arith_int.simps(1) by blast
 
-lemma MaybeArithInt_None:
-  "(MaybeArithInt f a1 a2 = None) = (\<nexists>n n'. a1 = Some (Num n) \<and> a2 = Some (Num n'))"
-  using MaybeArithInt_not_None by blast
+lemma maybe_arith_int_None:
+  "(maybe_arith_int f a1 a2 = None) = (\<nexists>n n'. a1 = Some (Num n) \<and> a2 = Some (Num n'))"
+  using maybe_arith_int_not_None by blast
 
-lemma MaybeArithInt_Not_Num:
-  "(\<forall>n. MaybeArithInt f a1 a2 \<noteq> Some (Num n)) = (MaybeArithInt f a1 a2 = None)"
-  by (metis MaybeArithInt.elims option.distinct(1))
+lemma maybe_arith_int_Not_Num:
+  "(\<forall>n. maybe_arith_int f a1 a2 \<noteq> Some (Num n)) = (maybe_arith_int f a1 a2 = None)"
+  by (metis maybe_arith_int.elims option.distinct(1))
 
-lemma MaybeArithInt_never_string: "MaybeArithInt f a b \<noteq> Some (Str x)"
-  using MaybeArithInt.elims by blast
+lemma maybe_arith_int_never_string: "maybe_arith_int f a b \<noteq> Some (Str x)"
+  using maybe_arith_int.elims by blast
 
-definition "value_plus = MaybeArithInt (+)"
+definition "value_plus = maybe_arith_int (+)"
 
 lemma value_plus_never_string: "value_plus a b \<noteq> Some (Str x)"
-  by (simp add: value_plus_def MaybeArithInt_never_string)
+  by (simp add: value_plus_def maybe_arith_int_never_string)
 
 lemma value_plus_symmetry: "value_plus x y = value_plus y x"
-  apply (induct x y rule: MaybeArithInt.induct)
+  apply (induct x y rule: maybe_arith_int.induct)
   by (simp_all add: value_plus_def)
 
-definition "value_minus = MaybeArithInt (-)"
+definition "value_minus = maybe_arith_int (-)"
 
 lemma value_minus_never_string: "value_minus a b \<noteq> Some (Str x)"
-  by (simp add: MaybeArithInt_never_string value_minus_def)
+  by (simp add: maybe_arith_int_never_string value_minus_def)
 
-definition "value_times = MaybeArithInt (*)"
+definition "value_times = maybe_arith_int (*)"
 
 lemma value_times_never_string: "value_times a b \<noteq> Some (Str x)"
-  by (simp add: MaybeArithInt_never_string value_times_def)
+  by (simp add: maybe_arith_int_never_string value_times_def)
 
 fun MaybeBoolInt :: "(int \<Rightarrow> int \<Rightarrow> bool) \<Rightarrow> value option \<Rightarrow> value option \<Rightarrow> trilean" where
   "MaybeBoolInt f (Some (Num a)) (Some (Num b)) = (if f a b then true else false)" |

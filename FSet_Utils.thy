@@ -4,6 +4,10 @@ theory FSet_Utils
   imports "HOL-Library.FSet"
 begin
 
+notation (latex output)
+  "FSet.fempty" ("\<emptyset>") and
+  "FSet.fmember" ("\<in>")
+
 syntax (ASCII)
   "_fBall"       :: "pttrn \<Rightarrow> 'a fset \<Rightarrow> bool \<Rightarrow> bool"      ("(3ALL (_/:_)./ _)" [0, 0, 10] 10)
   "_fBex"        :: "pttrn \<Rightarrow> 'a fset \<Rightarrow> bool \<Rightarrow> bool"      ("(3EX (_/:_)./ _)" [0, 0, 10] 10)

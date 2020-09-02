@@ -129,23 +129,24 @@ lemma possible_steps_2_vend:
 
 lemma recognises_from_2:
   "recognises_execution drinks 1 <1 $:= d, 2 $:= Some (Num 100)> [(STR ''vend'', [])]"
-  apply (rule recognises_execution.step[of 2 vend])
-   apply (simp add: possible_steps_2_vend)
-  by (simp add: recognises_execution.base)
+  apply (rule recognises_execution.step)
+  apply (rule_tac x="(2, vend)" in fBexI)
+   apply simp
+  by (simp add: possible_steps_2_vend)
 
 lemma recognises_from_1a:
   "recognises_execution drinks 1 <1 $:= d, 2 $:= Some (Num 50)> [(STR ''coin'', [Num 50]), (STR ''vend'', [])]"
-  apply (rule recognises_execution.step[of 1 coin])
-   apply (simp add: possible_steps_1_coin)
-  apply (simp add: apply_updates_def coin_def finfun_update_twist value_plus_def)
-  using recognises_from_2 by auto
+  apply (rule recognises_execution.step)
+  apply (rule_tac x="(1, coin)" in fBexI)
+   apply (simp add: apply_updates_def coin_def finfun_update_twist value_plus_def recognises_from_2)
+  by (simp add: possible_steps_1_coin)
 
 lemma recognises_from_1: "recognises_execution drinks 1 <2 $:= Some (Num 0), 1 $:= Some d>
      [(STR ''coin'', [Num 50]), (STR ''coin'', [Num 50]), (STR ''vend'', [])]"
-  apply (rule recognises_execution.step[of 1 coin])
-   apply (simp add: possible_steps_1_coin)
-  apply (simp add: apply_updates_def coin_def value_plus_def finfun_update_twist)
-  using recognises_from_1a by auto
+  apply (rule recognises_execution.step)
+  apply (rule_tac x="(1, coin)" in fBexI)
+   apply (simp add: apply_updates_def coin_def value_plus_def finfun_update_twist recognises_from_1a)
+  by (simp add: possible_steps_1_coin)
 
 lemma purchase_coke:
   "observe_execution drinks 0 <> [(STR ''select'', [Str ''coke'']), (STR ''coin'', [Num 50]), (STR ''coin'', [Num 50]), (STR ''vend'', [])] =
@@ -248,7 +249,7 @@ lemma invalid_other_states:
 
 lemma vend_ge_100:
   "possible_steps drinks 1 r l i = {|(2, vend)|} \<Longrightarrow>
-   \<not>\<^sub>? value_gt (Some (Num 100)) (r $ 2) = trilean.true"
+   \<not>? value_gt (Some (Num 100)) (r $ 2) = trilean.true"
   apply (insert possible_steps_apply_guards[of drinks 1 r l i 2 vend])
   by (simp add: possible_steps_def apply_guards_def vend_def)
 

@@ -461,10 +461,10 @@ definition step :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> regist
   )"
 
 lemma possible_steps_not_empty_iff:
-  "step e s d a b \<noteq> None \<Longrightarrow>
-   \<exists>aa ba. (aa, ba) |\<in>| possible_steps e s d a b"
+  "step e s r a b \<noteq> None \<Longrightarrow>
+   \<exists>aa ba. (aa, ba) |\<in>| possible_steps e s r a b"
   apply (simp add: step_def)
-  apply (case_tac "possible_steps e s d a b")
+  apply (case_tac "possible_steps e s r a b")
    apply (simp add: random_member_def)
   by auto
 
@@ -511,8 +511,7 @@ text\<open>One of the key features of this formalisation of EFSMs is their abili
 EFSM, they produce a corresponding \emph{observation}.\<close>
 
 text_raw\<open>\snip{observe}{1}{2}{%\<close>
-fun observe_execution :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow>
-outputs list" where
+fun observe_execution :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> outputs list" where
   "observe_execution _ _ _ [] = []" |
   "observe_execution e s r ((l, i)#as)  = (
     let viable = possible_steps e s r l i in
@@ -609,6 +608,7 @@ definition all_regs :: "transition_matrix \<Rightarrow> nat set" where
 
 text_raw\<open>\snip{finiteRegs}{1}{2}{%\<close>
 lemma finite_all_regs: "finite (all_regs e)"
+text_raw\<open>\isanewline$\langle \isa{proof}\rangle$}%endsnip\<close>
   apply (simp add: all_regs_def enumerate_regs_def)
   apply clarify
   apply standard
@@ -617,7 +617,6 @@ lemma finite_all_regs: "finite (all_regs e)"
   using AExp.finite_enumerate_regs apply blast
    apply (simp add: AExp.finite_enumerate_regs prod.case_eq_if)
   by auto
-text_raw\<open>}%endsnip\<close>
 
 definition max_input :: "transition_matrix \<Rightarrow> nat option" where
   "max_input e = fMax (fimage (\<lambda>(_, t). Transition.max_input t) e)"
@@ -632,12 +631,11 @@ outputs produced. When a recognised execution is observed, it produces an accept
 EFSM.\<close>
 
 text_raw\<open>\snip{recognises}{1}{2}{%\<close>
-inductive recognises_execution :: "transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow>
-bool" where
-  base [simp]: "recognises_execution e s d []" |
-  step: "(s', t) |\<in>| possible_steps e s r l i \<Longrightarrow>
-         recognises_execution e s' (evaluate_updates t i r) ts \<Longrightarrow>
-         recognises_execution e s r ((l, i)#ts)"
+inductive recognises_execution :: "transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
+  base [simp]: "recognises_execution e s r []" |
+  step: "\<exists>(s', T) |\<in>| possible_steps e s r l i.
+         recognises_execution e s' (evaluate_updates T i r) t \<Longrightarrow>
+         recognises_execution e s r ((l, i)#t)"
 text_raw\<open>}%endsnip\<close>
 
 abbreviation "recognises e t \<equiv> recognises_execution e 0 <> t"
@@ -645,22 +643,21 @@ abbreviation "recognises e t \<equiv> recognises_execution e 0 <> t"
 definition "E e = {x. recognises e x}"
 
 lemma no_possible_steps_rejects:
-  "possible_steps e s d l i = {||} \<Longrightarrow> \<not> recognises_execution e s d ((l, i)#t)"
-  using recognises_execution.cases by blast
+  "possible_steps e s r l i = {||} \<Longrightarrow> \<not> recognises_execution e s r ((l, i)#t)"
+  apply clarify
+  by (rule recognises_execution.cases, auto)
 
-lemma recognises_step_equiv: "recognises_execution e s d ((l, i)#t) =
-   (\<exists>(s', T) |\<in>| possible_steps e s d l i. recognises_execution e s' (evaluate_updates T i d) t)"
+lemma recognises_step_equiv: "recognises_execution e s r ((l, i)#t) =
+   (\<exists>(s', T) |\<in>| possible_steps e s r l i. recognises_execution e s' (evaluate_updates T i r) t)"
   apply standard
-   apply (rule recognises_execution.cases, simp)
-    apply simp
-   apply auto[1]
-  using recognises_execution.step by blast
+   apply (rule recognises_execution.cases)
+  by (auto simp: recognises_execution.step)
 
 fun recognises_prim :: "transition_matrix \<Rightarrow> nat \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
-  "recognises_prim e s d [] = True" |
-  "recognises_prim e s d ((l, i)#t) = (
-    let poss_steps = possible_steps e s d l i in
-    (\<exists>(s', T) |\<in>| poss_steps. recognises_prim e s' (evaluate_updates T i d) t)
+  "recognises_prim e s r [] = True" |
+  "recognises_prim e s r ((l, i)#t) = (
+    let poss_steps = possible_steps e s r l i in
+    (\<exists>(s', T) |\<in>| poss_steps. recognises_prim e s' (evaluate_updates T i r) t)
   )"
 
 lemma recognises_prim [code]: "recognises_execution e s r t = recognises_prim e s r t"
@@ -681,17 +678,17 @@ next
 qed
 
 lemma recognises_single_possible_step:
-  assumes "possible_steps e s d l i = {|(s', t)|}"
-      and "recognises_execution e s' (evaluate_updates t i d) trace"
-    shows "recognises_execution e s d ((l, i)#trace)"
-  apply (rule recognises_execution.step[of s' t])
+  assumes "possible_steps e s r l i = {|(s', t)|}"
+      and "recognises_execution e s' (evaluate_updates t i r) trace"
+    shows "recognises_execution e s r ((l, i)#trace)"
+  apply (rule recognises_execution.step)
   using assms by auto
 
 lemma recognises_single_possible_step_atomic:
-  assumes "possible_steps e s d (fst h) (snd h) = {|(s', t)|}"
-      and "recognises_execution e s' (apply_updates (Updates t) (join_ir (snd h) d) d) trace"
-    shows "recognises_execution e s d (h#trace)"
-  by (metis recognises_single_possible_step assms(1) assms(2) prod.collapse)
+  assumes "possible_steps e s r (fst h) (snd h) = {|(s', t)|}"
+      and "recognises_execution e s' (apply_updates (Updates t) (join_ir (snd h) r) r) trace"
+    shows "recognises_execution e s r (h#trace)"
+  by (metis assms prod.collapse recognises_single_possible_step)
 
 lemma recognises_must_be_possible_step:
   "recognises_execution e s r (h # t) \<Longrightarrow>
@@ -699,17 +696,17 @@ lemma recognises_must_be_possible_step:
   using recognises_step_equiv by fastforce
 
 lemma recognises_possible_steps_not_empty:
-  "recognises_execution e s d (h#t) \<Longrightarrow> possible_steps e s d (fst h) (snd h) \<noteq> {||}"
+  "recognises_execution e s r (h#t) \<Longrightarrow> possible_steps e s r (fst h) (snd h) \<noteq> {||}"
   apply (rule recognises_execution.cases)
   by auto
 
 lemma recognises_must_be_step:
-  "recognises_execution e s d (h#ts) \<Longrightarrow>
-   \<exists>t s' p d'. step e s d (fst h) (snd h) = Some (t, s', p, d')"
+  "recognises_execution e s r (h#ts) \<Longrightarrow>
+   \<exists>t s' p d'. step e s r (fst h) (snd h) = Some (t, s', p, d')"
   apply (cases h)
   apply (simp add: recognises_step_equiv step_def)
   apply clarify
-  apply (case_tac "(possible_steps e s d a b)")
+  apply (case_tac "(possible_steps e s r a b)")
    apply (simp add: random_member_def)
   apply (simp add: random_member_def)
   apply (case_tac "SOME xa. xa = x \<or> xa |\<in>| S'")
@@ -724,24 +721,24 @@ lemma no_step_none:
   using recognises_cons_step by fastforce
 
 lemma step_none_rejects:
-  "step e s d (fst h) (snd h) = None \<Longrightarrow> \<not> recognises_execution e s d (h#t)"
+  "step e s r (fst h) (snd h) = None \<Longrightarrow> \<not> recognises_execution e s r (h#t)"
   using no_step_none surjective_pairing by fastforce
 
 lemma trace_reject:
-  "(\<not> recognises_execution e s d ((a, b)#t)) = (possible_steps e s d a b = {||} \<or> (\<forall>(s', T) |\<in>| possible_steps e s d a b. \<not> recognises_execution e s' (evaluate_updates T b d) t))"
+  "(\<not> recognises_execution e s r ((l, i)#t)) = (possible_steps e s r l i = {||} \<or> (\<forall>(s', T) |\<in>| possible_steps e s r l i. \<not> recognises_execution e s' (evaluate_updates T i r) t))"
   using recognises_prim by fastforce
 
 lemma trace_reject_no_possible_steps_atomic:
-  "possible_steps e s d (fst a) (snd a) = {||} \<Longrightarrow> \<not> recognises_execution e s d (a#t)"
+  "possible_steps e s r (fst a) (snd a) = {||} \<Longrightarrow> \<not> recognises_execution e s r (a#t)"
   using recognises_possible_steps_not_empty by auto
 
 lemma trace_reject_later:
-  "\<forall>(s', T) |\<in>| possible_steps e s d a b. \<not> recognises_execution e s' (evaluate_updates T b d) t \<Longrightarrow>
-   \<not> recognises_execution e s d ((a, b)#t)"
+  "\<forall>(s', T) |\<in>| possible_steps e s r l i. \<not> recognises_execution e s' (evaluate_updates T i r) t \<Longrightarrow>
+   \<not> recognises_execution e s r ((l, i)#t)"
   using trace_reject by auto
 
-lemma recognition_prefix_closure: "recognises_execution e s d (t@t') \<Longrightarrow> recognises_execution e s d t"
-proof(induct t arbitrary: s d)
+lemma recognition_prefix_closure: "recognises_execution e s r (t@t') \<Longrightarrow> recognises_execution e s r t"
+proof(induct t arbitrary: s r)
   case Nil
   then show ?case
     by simp
@@ -755,11 +752,11 @@ next
     by (rule recognises_execution.step, auto)
 qed
 
-lemma rejects_prefix: "\<not> recognises_execution e s d t \<Longrightarrow> \<not> recognises_execution e s d (t @ t')"
+lemma rejects_prefix: "\<not> recognises_execution e s r t \<Longrightarrow> \<not> recognises_execution e s r (t @ t')"
   using recognition_prefix_closure by blast
 
-lemma recognises_head: "recognises_execution e s d (h#t) \<Longrightarrow> recognises_execution e s d [h]"
-  by (metis recognises_execution.simps recognises_must_be_possible_step prod.exhaust_sel)
+lemma recognises_head: "recognises_execution e s r (h#t) \<Longrightarrow> recognises_execution e s r [h]"
+  by (simp add: recognition_prefix_closure)
 
 subsubsection\<open>Trace Acceptance\<close>
 text\<open>The \texttt{accepts} function returns true if the given EFSM accepts a given trace. That is,
@@ -767,13 +764,11 @@ the EFSM is able to respond to each event in sequence \emph{and} is able to prod
 output. Accepted traces represent valid runs of an EFSM.\<close>
 
 text_raw\<open>\snip{accepts}{1}{2}{%\<close>
-inductive accepts_trace :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> trace \<Rightarrow>
-bool" where
-  base [simp]: "accepts_trace e s d []" |
-  step: "\<exists>(s', T) |\<in>| possible_steps e s d l i.
-         evaluate_outputs T i d = map Some p \<and>
-         accepts_trace e s' (evaluate_updates T i d) t \<Longrightarrow>
-         accepts_trace e s d ((l, i, p)#t)"
+inductive accepts_trace :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> trace \<Rightarrow> bool" where
+  base [simp]: "accepts_trace e s r []" |
+  step: "\<exists>(s', T) |\<in>| possible_steps e s r l i.
+         evaluate_outputs T i r = map Some p \<and> accepts_trace e s' (evaluate_updates T i r) t \<Longrightarrow>
+         accepts_trace e s r ((l, i, p)#t)"
 text_raw\<open>}%endsnip\<close>
 
 text_raw\<open>\snip{T}{1}{2}{%\<close>
@@ -781,17 +776,14 @@ definition T :: "transition_matrix \<Rightarrow> trace set" where
   "T e = {t. accepts_trace e 0 <> t}"
 text_raw\<open>}%endsnip\<close>
 
-abbreviation "rejects_trace e s d t \<equiv> \<not> accepts_trace e s d t"
+abbreviation "rejects_trace e s r t \<equiv> \<not> accepts_trace e s r t"
 
 lemma accepts_trace_step:
-  "accepts_trace e s d ((l, i, p)#t) = (\<exists>(s', T) |\<in>| possible_steps e s d l i.
-         evaluate_outputs T i d = map Some p \<and>
-         accepts_trace e s' (evaluate_updates T i d) t)"
+  "accepts_trace e s r ((l, i, p)#t) = (\<exists>(s', T) |\<in>| possible_steps e s r l i.
+         evaluate_outputs T i r = map Some p \<and>
+         accepts_trace e s' (evaluate_updates T i r) t)"
   apply standard
-   defer
-   apply (simp add: accepts_trace.step)
-  apply (rule accepts_trace.cases)
-  by auto
+  by (rule accepts_trace.cases, auto simp: accepts_trace.step)
 
 lemma accepts_trace_exists_possible_step:
   "accepts_trace e1 s1 r1 ((aa, b, c) # t) \<Longrightarrow>
@@ -800,8 +792,8 @@ lemma accepts_trace_exists_possible_step:
   using accepts_trace_step by auto
 
 lemma rejects_trace_step:
-"rejects_trace e s d ((l, i, p)#t) = (
-  (\<forall>(s', T) |\<in>| possible_steps e s d l i.  evaluate_outputs T i d \<noteq> map Some p \<or> rejects_trace e s' (evaluate_updates T i d) t)
+"rejects_trace e s r ((l, i, p)#t) = (
+  (\<forall>(s', T) |\<in>| possible_steps e s r l i.  evaluate_outputs T i r \<noteq> map Some p \<or> rejects_trace e s' (evaluate_updates T i r) t)
 )"
   apply (simp add: accepts_trace_step)
   by auto
@@ -811,6 +803,7 @@ definition accepts_log :: "trace set \<Rightarrow> transition_matrix \<Rightarro
 
 text_raw\<open>\snip{prefixClosure}{1}{2}{%\<close>
 lemma prefix_closure: "accepts_trace e s r (t@t') \<Longrightarrow> accepts_trace e s r t"
+text_raw\<open>\isanewline$\langle \isa{proof}\rangle$}%endsnip\<close>
 proof(induct t arbitrary: s r)
   case Nil
   then show ?case
@@ -822,26 +815,25 @@ next
     apply (simp add: accepts_trace_step)
     by auto
 qed
-text_raw\<open>}%endsnip\<close>
 
 text\<open>For code generation, it is much more efficient to re-implement the \texttt{accepts\_trace}
 function primitively than to use the code generator's default setup for inductive definitions.\<close>
 fun accepts_trace_prim :: "transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> trace \<Rightarrow> bool" where
   "accepts_trace_prim _ _ _ [] = True" |
-  "accepts_trace_prim e s d ((l, i, p)#t) = (
-    let poss_steps = possible_steps e s d l i in
+  "accepts_trace_prim e s r ((l, i, p)#t) = (
+    let poss_steps = possible_steps e s r l i in
     if fis_singleton poss_steps then
       let (s', T) = fthe_elem poss_steps in
-      if evaluate_outputs T i d = map Some p then
-        accepts_trace_prim e s' (evaluate_updates T i d) t
+      if evaluate_outputs T i r = map Some p then
+        accepts_trace_prim e s' (evaluate_updates T i r) t
       else False
     else
       (\<exists>(s', T) |\<in>| poss_steps.
-         evaluate_outputs T i d = (map Some p) \<and>
-         accepts_trace_prim e s' (evaluate_updates T i d) t))"
+         evaluate_outputs T i r = (map Some p) \<and>
+         accepts_trace_prim e s' (evaluate_updates T i r) t))"
 
-lemma accepts_trace_prim [code]: "accepts_trace e s d l = accepts_trace_prim e s d l"
-proof(induct l arbitrary: s d)
+lemma accepts_trace_prim [code]: "accepts_trace e s r l = accepts_trace_prim e s r l"
+proof(induct l arbitrary: s r)
   case Nil
   then show ?case
     by simp
@@ -880,13 +872,13 @@ states of $e_1$ and $e_1$ such that in each state, if $e_1$ can respond to the e
 the correct output, so can $e_2$.\<close>
 
 text_raw\<open>\snip{traceSim}{1}{2}{%\<close>
-inductive trace_simulation :: "(cfstate \<Rightarrow> cfstate) \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow>
-registers \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> trace \<Rightarrow> bool" where
+inductive trace_simulation :: "(cfstate \<Rightarrow> cfstate) \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow>
+transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> trace \<Rightarrow> bool" where
   base: "s2 = f s1 \<Longrightarrow> trace_simulation f e1 s1 r1 e2 s2 r2 []" |
   step: "s2 = f s1 \<Longrightarrow>
          \<forall>(s1', t1) |\<in>| ffilter (\<lambda>(s1', t1). evaluate_outputs t1 i r1 = map Some o) (possible_steps e1 s1 r1 l i).
-         (\<exists>(s2', t2) |\<in>| possible_steps e2 s2 r2 l i. evaluate_outputs t2 i r2 = map Some o \<and>
-         trace_simulation f e1 s1' (evaluate_updates t1 i r1) e2 s2' (evaluate_updates t2 i r2) es) \<Longrightarrow>
+           \<exists>(s2', t2) |\<in>| possible_steps e2 s2 r2 l i. evaluate_outputs t2 i r2 = map Some o \<and>
+            trace_simulation f e1 s1' (evaluate_updates t1 i r1) e2 s2' (evaluate_updates t2 i r2) es \<Longrightarrow>
          trace_simulation f e1 s1 r1 e2 s2 r2 ((l, i, o)#es)"
 text_raw\<open>}%endsnip\<close>
 
@@ -959,8 +951,8 @@ text_raw\<open>}%endsnip\<close>
 text_raw\<open>\snip{simEquiv}{1}{2}{%\<close>
 lemma simulation_implies_trace_equivalent:
   "trace_simulates e1 e2 \<Longrightarrow> trace_simulates e2 e1 \<Longrightarrow> trace_equivalent e1 e2"
+text_raw\<open>\isanewline$\langle \isa{proof}\rangle$}%endsnip\<close>
   using simulates_trace_subset trace_equivalent_def by auto
-text_raw\<open>}%endsnip\<close>
 
 lemma trace_equivalent_reflexive: "trace_equivalent e1 e1"
   by (simp add: trace_equivalent_def)
@@ -999,9 +991,8 @@ registers \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> re
          \<forall>(s1', t1) |\<in>| (possible_steps e1 s1 r1 l i).
            \<exists>(s2', t2) |\<in>| possible_steps e2 s2 r2 l i.
             evaluate_outputs t1 i r1 = evaluate_outputs t2 i r2 \<and>
-            execution_simulation f e1 s1' (evaluate_updates t1 i r1)
-                                   e2 s2' (evaluate_updates t2 i r2) es
-         \<Longrightarrow> execution_simulation f e1 s1 r1 e2 s2 r2 ((l, i)#es)"
+            execution_simulation f e1 s1' (evaluate_updates t1 i r1) e2 s2' (evaluate_updates t2 i r2) es \<Longrightarrow>
+         execution_simulation f e1 s1 r1 e2 s2 r2 ((l, i)#es)"
 text_raw\<open>}%endsnip\<close>
 
 definition "execution_simulates e1 e2 = (\<exists>f. \<forall>t. execution_simulation f e1 0 <> e2 0 <> t)"
@@ -1026,6 +1017,7 @@ text_raw\<open>\snip{execTraceSim}{1}{2}{%\<close>
 lemma execution_simulation_trace_simulation:
   "execution_simulation f e1 s1 r1 e2 s2 r2 (map (\<lambda>(l, i, o). (l, i)) t) \<Longrightarrow>
    trace_simulation f e1 s1 r1 e2 s2 r2 t"
+text_raw\<open>\isanewline$\langle \isa{proof}\rangle$}%endsnip\<close>
 proof(induct t arbitrary: s1 s2 r1 r2)
 case Nil
   then show ?case
@@ -1047,7 +1039,6 @@ next
      apply blast
     by simp
 qed
-text_raw\<open>}%endsnip\<close>
 
 lemma execution_simulates_trace_simulates:
   "execution_simulates e1 e2 \<Longrightarrow> trace_simulates e1 e2"
@@ -1065,14 +1056,12 @@ transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> ex
   step: "\<forall>(s1', t1) |\<in>| possible_steps e1 s1 r1 l i.
            \<exists>(s2', t2) |\<in>| possible_steps e2 s2 r2 l i.
              evaluate_outputs t1 i r1 = evaluate_outputs t2 i r2 \<and>
-             executionally_equivalent e1 s1' (evaluate_updates t1 i r1)
-                                      e2 s2' (evaluate_updates t2 i r2) es
-     \<Longrightarrow> \<forall>(s2', t2) |\<in>| possible_steps e2 s2 r2 l i.
+             executionally_equivalent e1 s1' (evaluate_updates t1 i r1) e2 s2' (evaluate_updates t2 i r2) es \<Longrightarrow>
+         \<forall>(s2', t2) |\<in>| possible_steps e2 s2 r2 l i.
            \<exists>(s1', t1) |\<in>| possible_steps e1 s1 r1 l i.
              evaluate_outputs t1 i r1 = evaluate_outputs t2 i r2 \<and>
-             executionally_equivalent e1 s1' (evaluate_updates t1 i r1)
-                                      e2 s2' (evaluate_updates t2 i r2) es
-     \<Longrightarrow> executionally_equivalent e1 s1 r1 e2 s2 r2 ((l, i)#es)"
+             executionally_equivalent e1 s1' (evaluate_updates t1 i r1) e2 s2' (evaluate_updates t2 i r2) es \<Longrightarrow>
+         executionally_equivalent e1 s1 r1 e2 s2 r2 ((l, i)#es)"
 text_raw\<open>}%endsnip\<close>
 
 lemma executionally_equivalent_step:
@@ -1222,12 +1211,10 @@ text\<open>Here, we define the function \texttt{gets\_us\_to} which returns true
 leaves the given EFSM in the given state.\<close>
 
 text_raw\<open>\snip{reachable}{1}{2}{%\<close>
-inductive visits :: "cfstate \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow>
-bool" where
+inductive visits :: "cfstate \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
   base [simp]: "visits s e s r []" |
-  step: "\<exists>(s', T) |\<in>| possible_steps e s r l i.
-           visits target e s' (evaluate_updates T i r) t
-     \<Longrightarrow> visits target e s r ((l, i)#t)"
+  step: "\<exists>(s', T) |\<in>| possible_steps e s r l i. visits target e s' (evaluate_updates T i r) t \<Longrightarrow>
+         visits target e s r ((l, i)#t)"
 
 definition "reachable s e = (\<exists>t. visits s e 0 <> t)"
 text_raw\<open>}%endsnip\<close>
@@ -1286,11 +1273,9 @@ lemma visits_empty: "visits s e s' r [] = (s = s')"
 definition "remove_state s e = ffilter (\<lambda>((from, to), t). from \<noteq> s \<and> to \<noteq> s) e"
 
 text_raw\<open>\snip{obtainable}{1}{2}{%\<close>
-inductive "obtains" :: "cfstate \<Rightarrow> registers \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow>
-registers \<Rightarrow> execution \<Rightarrow> bool" where
+inductive "obtains" :: "cfstate \<Rightarrow> registers \<Rightarrow> transition_matrix \<Rightarrow> cfstate \<Rightarrow> registers \<Rightarrow> execution \<Rightarrow> bool" where
   base [simp]: "obtains s r e s r []" |
-  step: "\<exists>(s'', T) |\<in>| possible_steps e s' r' l i.
-           obtains s r e s'' (evaluate_updates T i r') t \<Longrightarrow>
+  step: "\<exists>(s'', T) |\<in>| possible_steps e s' r' l i. obtains s r e s'' (evaluate_updates T i r') t \<Longrightarrow>
          obtains s r e s' r' ((l, i)#t)"
 
 definition "obtainable s r e = (\<exists>t. obtains s r e 0 <> t)"
@@ -1324,7 +1309,34 @@ next
       apply simp
      apply simp
     apply clarsimp
-    by (simp add: recognises_execution.step)
+    using recognises_execution.step by fastforce
+qed
+
+lemma ex_comm4:
+  "(\<exists>c1 s a b. (a, b) \<in> fset (possible_steps e s' r l i) \<and> obtains s c1 e a (evaluate_updates b i r) t) =
+   (\<exists>a b s c1. (a, b) \<in> fset (possible_steps e s' r l i) \<and> obtains s c1 e a (evaluate_updates b i r) t)"
+  by auto
+
+lemma recognises_execution_obtains:
+  "recognises_execution e s' r t \<Longrightarrow> \<exists>c1 s. obtains s c1 e s' r t"
+proof(induct t arbitrary: s' r)
+  case Nil
+  then show ?case
+    by (simp add: obtains_base)
+next
+  case (Cons a t)
+  then show ?case
+    apply (cases a)
+    apply (simp add: obtains_step)
+    apply (rule recognises_execution.cases)
+      apply simp
+     apply simp
+    apply clarsimp
+    apply (simp add: fBex_def Bex_def ex_comm4)
+    apply (rule_tac x=aa in exI)
+    apply (rule_tac x=ba in exI)
+    apply (simp add: fmember_implies_member)
+    by blast
 qed
 
 lemma obtainable_empty_efsm:
@@ -1404,10 +1416,10 @@ lemma possible_steps_remove_unreachable:
   apply (simp add: remove_state_def)
   by (metis (mono_tags, lifting) ffmember_filter in_possible_steps obtainable_if_unreachable old.prod.case)
 
-text_raw\<open>\snip{removeUnreachable}{1}{2}{%\<close>
+text_raw\<open>\snip{removeUnreachableArb}{1}{2}{%\<close>
 lemma executionally_equivalent_remove_unreachable_state_arbitrary:
-  "obtainable s r e \<Longrightarrow> \<not> reachable s' e \<Longrightarrow>
-   executionally_equivalent e s r (remove_state s' e) s r x"
+  "obtainable s r e \<Longrightarrow> \<not> reachable s' e \<Longrightarrow> executionally_equivalent e s r (remove_state s' e) s r x"
+text_raw\<open>\isanewline$\langle \isa{proof}\rangle$}%endsnip\<close>
 proof(induct x arbitrary: s r)
 case Nil
   then show ?case
@@ -1431,11 +1443,12 @@ next
     by (simp add: possible_steps_remove_unreachable)
 qed
 
+text_raw\<open>\snip{removeUnreachable}{1}{2}{%\<close>
 lemma executionally_equivalent_remove_unreachable_state:
   "\<not> reachable s' e \<Longrightarrow> executionally_equivalent e 0 <> (remove_state s' e) 0 <> x"
+text_raw\<open>\isanewline$\langle \isa{proof}\rangle$}%endsnip\<close>
   by (meson executionally_equivalent_remove_unreachable_state_arbitrary
       obtains.simps obtains_obtainable)
-text_raw\<open>}%endsnip\<close>
 
 subsection\<open>Transition Replacement\<close>
 text\<open>Here, we define the function \texttt{replace} to replace one transition with another, and prove

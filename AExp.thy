@@ -17,8 +17,7 @@ type_synonym registers = "nat \<Rightarrow>f value option"
 type_synonym 'a datastate = "'a \<Rightarrow> value option"
 
 text_raw\<open>\snip{aexptype}{1}{2}{%\<close>
-datatype 'a aexp = L "value" | V 'a | Plus "'a aexp" "'a aexp" |
-                   Minus "'a aexp" "'a aexp" | Times "'a aexp" "'a aexp"
+datatype 'a aexp = L "value" | V 'a | Plus "'a aexp" "'a aexp" | Minus "'a aexp" "'a aexp" | Times "'a aexp" "'a aexp"
 text_raw\<open>}%endsnip\<close>
 
 fun is_lit :: "'a aexp \<Rightarrow> bool" where
@@ -38,9 +37,9 @@ lemma aexp_induct_separate_V_cases  [case_names L I R Plus Minus Times]:
 fun aval :: "'a aexp \<Rightarrow> 'a datastate \<Rightarrow> value option" where
   "aval (L x) s = Some x" |
   "aval (V x) s = s x" |
-  "aval (Plus a\<^sub>1 a\<^sub>2) s = value_plus (aval a\<^sub>1 s)(aval a\<^sub>2 s)" |
-  "aval (Minus a\<^sub>1 a\<^sub>2) s = value_minus (aval a\<^sub>1 s) (aval a\<^sub>2 s)" |
-  "aval (Times a\<^sub>1 a\<^sub>2) s = value_times (aval a\<^sub>1 s) (aval a\<^sub>2 s)"
+  "aval (Plus a1 a2) s = value_plus (aval a1 s)(aval a2 s)" |
+  "aval (Minus a1 a2) s = value_minus (aval a1 s) (aval a2 s)" |
+  "aval (Times a1 a2) s = value_times (aval a1 s) (aval a2 s)"
 
 lemma aval_plus_symmetry: "aval (Plus x y) s = aval (Plus y x) s"
   by (simp add: value_plus_symmetry)
@@ -499,17 +498,17 @@ next
   case (Plus x1a x2a)
   then show ?case
     apply simp
-    by (metis MaybeArithInt_not_None option.simps(3) value_plus_def)
+    by (metis maybe_arith_int_not_None option.simps(3) value_plus_def)
 next
   case (Minus x1a x2a)
   then show ?case
     apply simp
-    by (metis MaybeArithInt_not_None option.simps(3) value_minus_def)
+    by (metis maybe_arith_int_not_None option.simps(3) value_minus_def)
 next
   case (Times x1a x2a)
   then show ?case
     apply simp
-    by (metis MaybeArithInt_not_None option.simps(3) value_times_def)
+    by (metis maybe_arith_int_not_None option.simps(3) value_times_def)
 qed
 
 lemma aval_reg_none_superset:
@@ -530,17 +529,17 @@ next
   case (Plus a1 a2)
   then show ?case
     apply simp
-    by (metis (no_types, lifting) MaybeArithInt_None Plus.prems(1) aval_reg_some_superset value_plus_def)
+    by (metis (no_types, lifting) maybe_arith_int_None Plus.prems(1) aval_reg_some_superset value_plus_def)
 next
   case (Minus a1 a2)
   then show ?case
     apply simp
-    by (metis (no_types, lifting) MaybeArithInt_None Minus.prems(1) aval_reg_some_superset value_minus_def)
+    by (metis (no_types, lifting) maybe_arith_int_None Minus.prems(1) aval_reg_some_superset value_minus_def)
 next
   case (Times a1 a2)
   then show ?case
     apply simp
-    by (metis (no_types, lifting) MaybeArithInt_None Times.prems(1) aval_reg_some_superset value_times_def)
+    by (metis (no_types, lifting) maybe_arith_int_None Times.prems(1) aval_reg_some_superset value_times_def)
 qed
 
 lemma enumerate_regs_empty_reg_unconstrained:
