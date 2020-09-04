@@ -53,20 +53,45 @@
    \else+++++++ERROR: Snippet ``#1 not defined''+++++++ \fi}
 
 \title{A Formal Model of Extended Finite State Machines}%
-\author{Michael~Foster\orcidID{0000-0001-8233-9873} \and
- Ramsay~G.~Taylor\orcidID{0000-0002-4036-7590} \and
- Achim~D.~Brucker\orcidID{0000-0002-6355-1200} \and
- John~Derrick\orcidID{0000-0002-6631-8914}}
+% \author{Michael~Foster\orcidID{0000-0001-8233-9873} \and
+%  Achim~D.~Brucker\orcidID{0000-0002-6355-1200} \and
+%  Ramsay~G.~Taylor\orcidID{0000-0002-4036-7590} \and
+%  John~Derrick\orcidID{0000-0002-6631-8914}}
+% \publishers{%
+%   Department of Computer Science\\
+%   The University of Sheffield\\
+%   Sheffield, UK\\
+%   \texttt{\{%
+% 	\href{mailto:jmafoster1@sheffield.ac.uk}{jmafoster1},%
+% 	\href{mailto:r.g.taylor@sheffield.ac.uk}{r.g.taylor},%
+% 	\href{mailto:j.derrick@sheffield.ac.uk}{j.derrick}%
+%   \}@sheffield.ac.uk}%
+%   \texttt{\href{mailto:a.brucker@sheffield.ac.uk}{a.brucker}@sheffield.ac.uk}%
+% }
+
+\author{%
+\begin{minipage}{.8\textwidth}
+  \centering
+      Michael~Foster\footnotemark[1]\orcidID{0000-0001-8233-9873}%
+      \qquad\qquad%
+      Achim~D.~Brucker\footnotemark[2]\orcidID{0000-0002-6355-1200}%
+      \\%
+      Ramsay~G.~Taylor\footnotemark[1]\orcidID{0000-0002-4036-7590}%
+      \qquad\qquad%
+      John Derrick\footnotemark[1]\orcidID{0000-0002-6631-8914}%
+     \end{minipage}
+}
+
 \publishers{%
-  Department of Computer Science\\
-  The University of Sheffield\\
-  Sheffield, UK\\
+  \footnotemark[1]~Department of Computer Science, The University of Sheffield, Sheffield, UK\texorpdfstring{\\}{, }%
   \texttt{\{%
-	\href{mailto:jmafoster1@sheffield.ac.uk}{jmafoster1},
-	\href{mailto:a.brucker@sheffield.ac.uk}{a.brucker},
-	\href{mailto:r.g.taylor@sheffield.ac.uk}{r.g.taylor},
-	\href{mailto:j.derrick@sheffield.ac.uk}{j.derrick}
-  \}@sheffield.ac.uk}
+  	\href{mailto:jmafoster1@sheffield.ac.uk}{jmafoster1},%
+  	\href{mailto:r.g.taylor@sheffield.ac.uk}{r.g.taylor},%
+  	\href{mailto:j.derrick@sheffield.ac.uk}{j.derrick}%
+    \}@sheffield.ac.uk}\\[2em]%
+  \footnotemark[2]~%
+  Department of Computer Science, University of Exeter, Exeter, UK\texorpdfstring{\\}{, }%
+  \href{mailto:a.brucker@exeter.ac.uk}{\texttt{a.brucker@exeter.ac.uk}}%
 }
 
 \begin{document}
@@ -84,7 +109,7 @@
 \cleardoublepage
 
 \chapter{Introduction}
-This AFP entry defines extended finite state machines (EFSMs) as defined in \cite{foster2018}. Here, models maintain both a \emph{control-flow state} and a \emph{data state}, which takes the form of a set of \emph{registers} to which values may be assigned. Transitions may take additional input parameters, and may impose guard conditions on the values of both inputs and registers. Additionally, transitions may produce observable outputs and update the data state by evaluating arithmetic functions over inputs and registers.
+This AFP entry formalises extended finite state machines (EFSMs) as defined in \cite{foster2018}. Here, models maintain both a \emph{control flow state} and a \emph{data state}, which takes the form of a set of \emph{registers} to which values may be assigned. Transitions may take additional input parameters, and may impose guard conditions on the values of both inputs and registers. Additionally, transitions may produce observable outputs and update the data state by evaluating arithmetic functions over inputs and registers.
 
 As defined in \cite{foster2018}, an EFSM is a tuple, $(S, s_0, T)$ where
 \begin{where}

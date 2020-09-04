@@ -144,14 +144,12 @@ next
   then show ?case by (cases z, auto)
 qed
 
-
-
 lemma less_aexp_trans: "(x::'a aexp) < y \<Longrightarrow> y < z \<Longrightarrow> x < z"
   apply (simp add: Let_def)
   apply standard
    apply (metis AExp_Lexorder.less_aexp_aux_trans dual_order.asym)
   by presburger
-    
+
 instance proof
     fix x y z :: "'a aexp"
     show "(x < y) = (x \<le> y \<and> \<not> y \<le> x)"

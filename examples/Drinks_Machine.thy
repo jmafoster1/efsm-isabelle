@@ -23,11 +23,11 @@ definition select :: "transition" where
 "select \<equiv> \<lparr>
         Label = STR ''select'',
         Arity = 1,
-        Guards = [], \<comment> \<open> No guards \<close>
+        Guards = [],
         Outputs = [],
-        Updates = [ \<comment> \<open> Two updates: \<close>
-                    (1, V (I 0)), \<comment> \<open>  Firstly set value of r1 to value of i1 \<close>
-                    (2, L (Num 0)) \<comment> \<open> Secondly set the value of r2 to literal zero \<close>
+        Updates = [
+                    (1, V (I 0)),
+                    (2, L (Num 0))
                   ]
       \<rparr>"
 text_raw\<open>}%endsnip\<close>
@@ -71,10 +71,10 @@ text_raw\<open>}%endsnip\<close>
 text_raw\<open>\snip{drinksdef}{1}{2}{%\<close>
 definition drinks :: "transition_matrix" where
 "drinks \<equiv> {|
-          ((0,1), select),    \<comment> \<open> If we want to go from state 1 to state 2 then select will do that \<close>
+          ((0,1), select),
           ((1,1), coin),
-          ((1,1), vend_fail), \<comment> \<open> If we want to go from state 2 to state 2 then coin will do that \<close>
-          ((1,2), vend) \<comment> \<open> If we want to go from state 2 to state 3 then vend will do that \<close>
+          ((1,1), vend_fail),
+          ((1,2), vend)
          |}"
 text_raw\<open>}%endsnip\<close>
 

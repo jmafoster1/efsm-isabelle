@@ -296,7 +296,7 @@ text_raw\<open>\snip{outputVend}{1}{2}{%\<close>
 lemma LTL_output_vend:
   "alw (((label_eq ''vend'') aand (nxt (output_eq [Some d]))) impl
          (check_exp (Ge (V (Rg 2)) (L (Num 100))))) (watch drinks t)"
-text_raw\<open>\isanewline$\langle \isa{proof}\rangle$}%endsnip\<close>
+text_raw\<open>}%endsnip\<close>
 proof(coinduction)
   case alw
   then show ?case
@@ -323,7 +323,7 @@ lemma LTL_output_vend_unfolded:
              nxt (\<lambda>s. output (shd s) = [Some d]) xs) \<longrightarrow>
               \<not>? value_gt (Some (Num 100)) (datastate (shd xs) $ 2) = trilean.true)
      (watch drinks t)"
-text_raw\<open>\isanewline$\langle \isa{proof}\rangle$}%endsnip\<close>
+text_raw\<open>}%endsnip\<close>
   apply (insert LTL_output_vend[of d t])
   by (simp add: implode_vend)
 

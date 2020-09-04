@@ -608,7 +608,7 @@ definition all_regs :: "transition_matrix \<Rightarrow> nat set" where
 
 text_raw\<open>\snip{finiteRegs}{1}{2}{%\<close>
 lemma finite_all_regs: "finite (all_regs e)"
-text_raw\<open>\isanewline$\langle \isa{proof}\rangle$}%endsnip\<close>
+text_raw\<open>}%endsnip\<close>
   apply (simp add: all_regs_def enumerate_regs_def)
   apply clarify
   apply standard
@@ -803,7 +803,7 @@ definition accepts_log :: "trace set \<Rightarrow> transition_matrix \<Rightarro
 
 text_raw\<open>\snip{prefixClosure}{1}{2}{%\<close>
 lemma prefix_closure: "accepts_trace e s r (t@t') \<Longrightarrow> accepts_trace e s r t"
-text_raw\<open>\isanewline$\langle \isa{proof}\rangle$}%endsnip\<close>
+text_raw\<open>}%endsnip\<close>
 proof(induct t arbitrary: s r)
   case Nil
   then show ?case
@@ -951,7 +951,7 @@ text_raw\<open>}%endsnip\<close>
 text_raw\<open>\snip{simEquiv}{1}{2}{%\<close>
 lemma simulation_implies_trace_equivalent:
   "trace_simulates e1 e2 \<Longrightarrow> trace_simulates e2 e1 \<Longrightarrow> trace_equivalent e1 e2"
-text_raw\<open>\isanewline$\langle \isa{proof}\rangle$}%endsnip\<close>
+text_raw\<open>}%endsnip\<close>
   using simulates_trace_subset trace_equivalent_def by auto
 
 lemma trace_equivalent_reflexive: "trace_equivalent e1 e1"
@@ -1017,7 +1017,7 @@ text_raw\<open>\snip{execTraceSim}{1}{2}{%\<close>
 lemma execution_simulation_trace_simulation:
   "execution_simulation f e1 s1 r1 e2 s2 r2 (map (\<lambda>(l, i, o). (l, i)) t) \<Longrightarrow>
    trace_simulation f e1 s1 r1 e2 s2 r2 t"
-text_raw\<open>\isanewline$\langle \isa{proof}\rangle$}%endsnip\<close>
+text_raw\<open>}%endsnip\<close>
 proof(induct t arbitrary: s1 s2 r1 r2)
 case Nil
   then show ?case
@@ -1207,7 +1207,7 @@ next
 qed
 
 subsection\<open>Reachability\<close>
-text\<open>Here, we define the function \texttt{gets\_us\_to} which returns true if the given execution
+text\<open>Here, we define the function \texttt{visits} which returns true if the given execution
 leaves the given EFSM in the given state.\<close>
 
 text_raw\<open>\snip{reachable}{1}{2}{%\<close>
@@ -1419,7 +1419,7 @@ lemma possible_steps_remove_unreachable:
 text_raw\<open>\snip{removeUnreachableArb}{1}{2}{%\<close>
 lemma executionally_equivalent_remove_unreachable_state_arbitrary:
   "obtainable s r e \<Longrightarrow> \<not> reachable s' e \<Longrightarrow> executionally_equivalent e s r (remove_state s' e) s r x"
-text_raw\<open>\isanewline$\langle \isa{proof}\rangle$}%endsnip\<close>
+text_raw\<open>}%endsnip\<close>
 proof(induct x arbitrary: s r)
 case Nil
   then show ?case
@@ -1446,7 +1446,7 @@ qed
 text_raw\<open>\snip{removeUnreachable}{1}{2}{%\<close>
 lemma executionally_equivalent_remove_unreachable_state:
   "\<not> reachable s' e \<Longrightarrow> executionally_equivalent e 0 <> (remove_state s' e) 0 <> x"
-text_raw\<open>\isanewline$\langle \isa{proof}\rangle$}%endsnip\<close>
+text_raw\<open>}%endsnip\<close>
   by (meson executionally_equivalent_remove_unreachable_state_arbitrary
       obtains.simps obtains_obtainable)
 
