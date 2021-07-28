@@ -34,12 +34,14 @@ lemma aexp_induct_separate_V_cases  [case_names L I R Plus Minus Times]:
    P a"
   by (metis aexp.induct vname.exhaust)
 
+text_raw\<open>\snip{avaldef}{1}{2}{%\<close>
 fun aval :: "'a aexp \<Rightarrow> 'a datastate \<Rightarrow> value option" where
   "aval (L x) s = Some x" |
   "aval (V x) s = s x" |
   "aval (Plus a1 a2) s = value_plus (aval a1 s)(aval a2 s)" |
   "aval (Minus a1 a2) s = value_minus (aval a1 s) (aval a2 s)" |
   "aval (Times a1 a2) s = value_times (aval a1 s) (aval a2 s)"
+text_raw\<open>}%endsnip\<close>
 
 lemma aval_plus_symmetry: "aval (Plus x y) s = aval (Plus y x) s"
   by (simp add: value_plus_symmetry)
